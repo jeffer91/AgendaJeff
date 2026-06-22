@@ -1,0 +1,372 @@
+/*
+  Nombre completo: nt-styles.css
+  Ruta: notificaciones-desktop/css/nt-styles.css
+  Función:
+    - Estilos visuales compactos del módulo independiente Notificaciones Desktop.
+    - Mantiene una pantalla clara para probar modo Web y modo Electron.
+    - No cambia IDs, rutas ni lógica de la app.
+    - Usa prefijo nt- para no chocar con Telegram, Google Calendar ni Microsoft Calendar.
+
+  Se conecta con:
+    - notificaciones-desktop/nt-index.html
+*/
+
+:root {
+  --nt-bg: #f4f7fb;
+  --nt-card: #ffffff;
+  --nt-text: #172033;
+  --nt-muted: #667085;
+  --nt-border: #d9e2ec;
+  --nt-primary: #2563eb;
+  --nt-primary-dark: #1d4ed8;
+  --nt-danger: #dc2626;
+  --nt-danger-dark: #b91c1c;
+  --nt-success: #16a34a;
+  --nt-warning: #f59e0b;
+  --nt-info: #0891b2;
+  --nt-electron: #7c3aed;
+  --nt-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+  --nt-radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--nt-bg);
+  color: var(--nt-text);
+  font-size: 14px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  user-select: none;
+}
+
+code {
+  border-radius: 6px;
+  padding: 1px 5px;
+  background: #eef2ff;
+  color: #1e3a8a;
+  font-size: 13px;
+}
+
+.nt-page {
+  width: min(1120px, calc(100% - 24px));
+  margin: 14px auto;
+}
+
+.nt-card {
+  background: var(--nt-card);
+  border: 1px solid var(--nt-border);
+  border-radius: var(--nt-radius);
+  box-shadow: var(--nt-shadow);
+  padding: 14px;
+}
+
+.nt-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.nt-section {
+  margin-bottom: 14px;
+}
+
+.nt-section-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.nt-kicker {
+  margin: 0 0 4px;
+  color: var(--nt-primary);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 4px;
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.nt-hero p,
+.nt-help {
+  color: var(--nt-muted);
+  line-height: 1.35;
+  font-size: 13px;
+}
+
+.nt-hero p {
+  margin-bottom: 0;
+}
+
+.nt-help {
+  margin: 10px 0 0;
+}
+
+.nt-status {
+  min-width: 125px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--nt-border);
+  white-space: nowrap;
+}
+
+.nt-status--idle {
+  color: var(--nt-muted);
+  background: #f8fafc;
+}
+
+.nt-status--ok {
+  color: #ffffff;
+  background: var(--nt-success);
+}
+
+.nt-status--error {
+  color: #ffffff;
+  background: var(--nt-danger);
+}
+
+.nt-status--loading {
+  color: #111827;
+  background: var(--nt-warning);
+}
+
+.nt-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.nt-grid--top {
+  grid-template-columns: 1.1fr 0.9fr;
+  margin-bottom: 14px;
+}
+
+.nt-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.nt-info-box {
+  border: 1px solid var(--nt-border);
+  border-radius: 10px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.nt-info-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--nt-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nt-info-box strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.nt-pill {
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #eef2ff;
+  color: #1e3a8a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.nt-pill--idle {
+  background: #f8fafc;
+  color: var(--nt-muted);
+  border: 1px solid var(--nt-border);
+}
+
+.nt-pill--web {
+  background: #ecfeff;
+  color: #155e75;
+}
+
+.nt-pill--electron {
+  background: #f5f3ff;
+  color: #5b21b6;
+}
+
+.nt-pill--ok {
+  background: var(--nt-success);
+  color: #ffffff;
+}
+
+.nt-pill--error {
+  background: var(--nt-danger);
+  color: #ffffff;
+}
+
+.nt-pill--warning {
+  background: var(--nt-warning);
+  color: #111827;
+}
+
+.nt-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 10px;
+  color: #344054;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.nt-check input {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  accent-color: var(--nt-primary);
+}
+
+.nt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.nt-button-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.nt-btn {
+  border: 0;
+  border-radius: 9px;
+  padding: 9px 12px;
+  cursor: pointer;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 38px;
+  text-align: center;
+}
+
+.nt-btn:hover {
+  filter: brightness(0.96);
+}
+
+.nt-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.nt-btn--primary {
+  background: var(--nt-primary);
+  color: #ffffff;
+}
+
+.nt-btn--primary:hover {
+  background: var(--nt-primary-dark);
+}
+
+.nt-btn--danger {
+  background: var(--nt-danger);
+  color: #ffffff;
+}
+
+.nt-btn--danger:hover {
+  background: var(--nt-danger-dark);
+}
+
+.nt-note {
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 9px 10px;
+  margin-bottom: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  line-height: 1.35;
+  font-size: 13px;
+}
+
+.nt-output {
+  min-height: 140px;
+  margin: 0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #0f172a;
+  color: #d1fae5;
+  white-space: pre-wrap;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+@media (max-width: 900px) {
+  .nt-page {
+    width: min(100% - 18px, 1120px);
+    margin: 10px auto;
+  }
+
+  .nt-hero,
+  .nt-grid--top {
+    grid-template-columns: 1fr;
+  }
+
+  .nt-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .nt-button-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nt-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nt-section-title {
+    flex-direction: column;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+}

@@ -1,0 +1,366 @@
+<!--
+  Nombre completo: mc-index.html
+  Ruta: microsoft-calendar/mc-index.html
+  Función:
+    - Pantalla principal independiente para probar Microsoft Calendar.
+    - Permite guardar configuración Microsoft App.
+    - Permite configurar dos cuentas Microsoft Calendar.
+    - Permite conectar cada cuenta Microsoft por separado.
+    - Permite probar cada cuenta creando un evento automático en el siguiente minuto.
+    - Permite leer próximos eventos de cada cuenta.
+    - Carga Microsoft Authentication Library para iniciar sesión con Microsoft.
+    - Carga Firebase por CDN para guardar solo lo importante en Firestore.
+
+  Se conecta con:
+    - css/mc-styles.css
+    - js/mc-config.js
+    - js/mc-storage.js
+    - js/mc-microsoft-api.js
+    - js/mc-event.service.js
+    - js/mc-firebase-config.js
+    - js/mc-firebase.service.js
+    - js/mc-ui.js
+    - js/mc-token.service.js
+    - js/mc-connection.actions.js
+    - js/mc-calendar.actions.js
+    - js/mc-bindings.js
+
+  Firestore:
+    - Colección: conexiones
+    - Documento: microsoftCalendar
+
+  Importante:
+    - Este módulo NO se conecta con Telegram.
+    - Este módulo NO se conecta con Google Calendar.
+    - Este módulo usa su propio namespace window.MC.
+    - Este módulo NO debe guardar access_token, refresh_token, id_token ni authorization_code en Firebase.
+    - Para navegador/Live Server no se usa Client Secret.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Microsoft Calendar - AgendaJeff</title>
+
+  <link rel="stylesheet" href="./css/mc-styles.css" />
+</head>
+
+<body>
+  <main class="mc-page">
+    <section class="mc-card mc-hero">
+      <div>
+        <p class="mc-kicker">AgendaJeff / Módulo independiente</p>
+        <h1>Conexión Microsoft Calendar</h1>
+        <p>
+          Esta pantalla conecta hasta dos cuentas Microsoft Calendar, prueba la conexión
+          creando eventos reales y guarda solo lo importante en Firebase.
+        </p>
+      </div>
+
+      <div id="mcStatusBadge" class="mc-status mc-status--idle">
+        Sin probar
+      </div>
+    </section>
+
+    <section class="mc-card mc-section">
+      <div class="mc-section-title">
+        <div>
+          <p class="mc-kicker">Paso 1</p>
+          <h2>Configuración de Microsoft App</h2>
+        </div>
+        <span class="mc-pill">Firebase: conexiones/microsoftCalendar</span>
+      </div>
+
+      <form id="mcConnectionForm" class="mc-form">
+        <div class="mc-grid mc-grid--app">
+          <label class="mc-field">
+            <span>Microsoft Application / Client ID</span>
+            <input
+              id="mcClientId"
+              type="text"
+              placeholder="Ejemplo: 00000000-0000-0000-0000-000000000000"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="mc-field">
+            <span>Tipo de cuenta / Tenant mode</span>
+            <select id="mcTenantMode">
+              <option value="common">common - Personal y organización</option>
+              <option value="consumers">consumers - Outlook/Hotmail personal</option>
+              <option value="organizations">organizations - Cuentas de empresa</option>
+              <option value="tenant">tenantId específico</option>
+            </select>
+          </label>
+
+          <label class="mc-field">
+            <span>Tenant ID específico</span>
+            <input
+              id="mcTenantId"
+              type="text"
+              placeholder="Solo si usas tenantId específico"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="mc-field">
+            <span>Tipo de ejecución activa</span>
+            <select id="mcActiveRedirectType">
+              <option value="web">Web / Live Server</option>
+              <option value="desktop">Escritorio / Electron</option>
+            </select>
+          </label>
+
+          <label class="mc-field">
+            <span>Redirect URI Web</span>
+            <input
+              id="mcRedirectUriWeb"
+              type="text"
+              placeholder="Ejemplo: http://127.0.0.1:5500/microsoft-calendar/mc-index.html"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="mc-field">
+            <span>Redirect URI Escritorio</span>
+            <input
+              id="mcRedirectUriDesktop"
+              type="text"
+              placeholder="Ejemplo: http://localhost"
+              autocomplete="off"
+            />
+          </label>
+        </div>
+
+        <div class="mc-note">
+          <strong>Importante:</strong>
+          para esta versión web no necesitas guardar Client Secret. Solo necesitas
+          Client ID, tipo de cuenta, Redirect URI y permisos de calendario.
+        </div>
+
+        <div class="mc-actions">
+          <button type="submit" class="mc-btn mc-btn--primary">
+            Guardar configuración
+          </button>
+
+          <button type="button" id="mcReadCalendarsBtn" class="mc-btn">
+            Leer calendarios
+          </button>
+
+          <button type="button" id="mcClearConnectionBtn" class="mc-btn mc-btn--danger">
+            Borrar datos
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="mc-grid mc-grid--accounts">
+      <article class="mc-card mc-account" data-account-card="account1">
+        <div class="mc-account-head">
+          <div>
+            <p class="mc-kicker">Cuenta 1</p>
+            <h2>Microsoft Calendar 1</h2>
+          </div>
+          <div id="mcAccount1Status" class="mc-mini-status mc-mini-status--idle">
+            Sin conectar
+          </div>
+        </div>
+
+        <div class="mc-form">
+          <label class="mc-field">
+            <span>Correo Microsoft 1</span>
+            <input
+              id="mcAccount1Email"
+              type="email"
+              placeholder="correo1@outlook.com"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="mc-field">
+            <span>Modo de calendario</span>
+            <select id="mcAccount1CalendarMode">
+              <option value="default">Calendario principal/default</option>
+              <option value="specific">Calendar ID específico</option>
+            </select>
+          </label>
+
+          <label class="mc-field">
+            <span>Calendar ID específico</span>
+            <input
+              id="mcAccount1CalendarId"
+              type="text"
+              placeholder="Déjalo vacío si usarás el calendario principal"
+              autocomplete="off"
+            />
+          </label>
+
+          <div class="mc-actions">
+            <button type="button" id="mcConnectAccount1Btn" class="mc-btn">
+              Conectar cuenta 1
+            </button>
+
+            <button type="button" id="mcTestAccount1Btn" class="mc-btn">
+              Probar cuenta 1
+            </button>
+
+            <button type="button" id="mcReadEventsAccount1Btn" class="mc-btn">
+              Leer eventos cuenta 1
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <article class="mc-card mc-account" data-account-card="account2">
+        <div class="mc-account-head">
+          <div>
+            <p class="mc-kicker">Cuenta 2</p>
+            <h2>Microsoft Calendar 2</h2>
+          </div>
+          <div id="mcAccount2Status" class="mc-mini-status mc-mini-status--idle">
+            Sin conectar
+          </div>
+        </div>
+
+        <div class="mc-form">
+          <label class="mc-field">
+            <span>Correo Microsoft 2</span>
+            <input
+              id="mcAccount2Email"
+              type="email"
+              placeholder="correo2@outlook.com"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="mc-field">
+            <span>Modo de calendario</span>
+            <select id="mcAccount2CalendarMode">
+              <option value="default">Calendario principal/default</option>
+              <option value="specific">Calendar ID específico</option>
+            </select>
+          </label>
+
+          <label class="mc-field">
+            <span>Calendar ID específico</span>
+            <input
+              id="mcAccount2CalendarId"
+              type="text"
+              placeholder="Déjalo vacío si usarás el calendario principal"
+              autocomplete="off"
+            />
+          </label>
+
+          <div class="mc-actions">
+            <button type="button" id="mcConnectAccount2Btn" class="mc-btn">
+              Conectar cuenta 2
+            </button>
+
+            <button type="button" id="mcTestAccount2Btn" class="mc-btn">
+              Probar cuenta 2
+            </button>
+
+            <button type="button" id="mcReadEventsAccount2Btn" class="mc-btn">
+              Leer eventos cuenta 2
+            </button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="mc-card mc-section">
+      <div class="mc-section-title">
+        <div>
+          <p class="mc-kicker">Paso 3</p>
+          <h2>Evento manual de prueba</h2>
+        </div>
+      </div>
+
+      <form id="mcEventForm" class="mc-form">
+        <div class="mc-grid mc-grid--event">
+          <label class="mc-field">
+            <span>Cuenta destino</span>
+            <select id="mcEventAccountSlot">
+              <option value="account1">Cuenta Microsoft 1</option>
+              <option value="account2">Cuenta Microsoft 2</option>
+            </select>
+          </label>
+
+          <label class="mc-field">
+            <span>Título del evento</span>
+            <input
+              id="mcEventTitle"
+              type="text"
+              value="Reunión de prueba Microsoft Calendar"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="mc-field">
+            <span>Fecha</span>
+            <input id="mcEventDate" type="date" />
+          </label>
+
+          <label class="mc-field">
+            <span>Hora</span>
+            <input id="mcEventTime" type="time" value="08:00" />
+          </label>
+
+          <label class="mc-field">
+            <span>Duración en minutos</span>
+            <input
+              id="mcEventDuration"
+              type="number"
+              value="30"
+              min="5"
+              step="5"
+            />
+          </label>
+        </div>
+
+        <label class="mc-field">
+          <span>Descripción</span>
+          <textarea
+            id="mcEventDescription"
+            rows="4"
+            placeholder="Descripción del evento"
+          >Este es un evento de prueba creado desde el módulo Microsoft Calendar de AgendaJeff.</textarea>
+        </label>
+
+        <button type="submit" class="mc-btn mc-btn--primary mc-btn--full">
+          Crear evento manual en Microsoft Calendar
+        </button>
+      </form>
+    </section>
+
+    <section class="mc-card">
+      <h2>Resultado</h2>
+      <pre id="mcOutput" class="mc-output">Esperando acción...</pre>
+    </section>
+  </main>
+
+  <!-- Microsoft Authentication Library. Permite iniciar sesión con Microsoft en navegador. -->
+  <script src="https://alcdn.msauth.net/browser/3.27.0/js/msal-browser.min.js"></script>
+
+  <!-- Firebase SDK por CDN. Esto permite funcionar sin npm y sin Electron. -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+  <!-- Módulo Microsoft Calendar independiente -->
+  <script src="./js/mc-config.js"></script>
+  <script src="./js/mc-storage.js"></script>
+  <script src="./js/mc-microsoft-api.js"></script>
+
+  <!-- Estos archivos se crean en los siguientes bloques -->
+  <script src="./js/mc-event.service.js"></script>
+  <script src="./js/mc-firebase-config.js"></script>
+  <script src="./js/mc-firebase.service.js"></script>
+  <script src="./js/mc-ui.js"></script>
+  <script src="./js/mc-token.service.js"></script>
+  <script src="./js/mc-connection.actions.js"></script>
+  <script src="./js/mc-calendar.actions.js"></script>
+  <script src="./js/mc-bindings.js"></script>
+</body>

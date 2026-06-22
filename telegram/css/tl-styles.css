@@ -1,0 +1,248 @@
+/*
+  Nombre completo: tl-styles.css
+  Ruta: telegram/css/tl-styles.css
+  Función:
+    - Estilos visuales del módulo independiente Telegram.
+    - Mantiene una pantalla limpia, clara y fácil de probar.
+  Se conecta con:
+    - telegram/tl-index.html
+*/
+
+:root {
+  --tl-bg: #f4f7fb;
+  --tl-card: #ffffff;
+  --tl-text: #172033;
+  --tl-muted: #667085;
+  --tl-border: #d9e2ec;
+  --tl-primary: #2563eb;
+  --tl-primary-dark: #1d4ed8;
+  --tl-danger: #dc2626;
+  --tl-danger-dark: #b91c1c;
+  --tl-success: #16a34a;
+  --tl-warning: #f59e0b;
+  --tl-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --tl-radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--tl-bg);
+  color: var(--tl-text);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.tl-page {
+  width: min(1120px, calc(100% - 32px));
+  margin: 32px auto;
+}
+
+.tl-card {
+  background: var(--tl-card);
+  border: 1px solid var(--tl-border);
+  border-radius: var(--tl-radius);
+  box-shadow: var(--tl-shadow);
+  padding: 22px;
+}
+
+.tl-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 22px;
+}
+
+.tl-kicker {
+  margin: 0 0 8px;
+  color: var(--tl-primary);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 8px;
+  font-size: 34px;
+}
+
+h2 {
+  margin-bottom: 18px;
+  font-size: 20px;
+}
+
+.tl-hero p,
+.tl-help {
+  color: var(--tl-muted);
+  line-height: 1.5;
+}
+
+.tl-status {
+  min-width: 130px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 700;
+  border: 1px solid var(--tl-border);
+}
+
+.tl-status--idle {
+  color: var(--tl-muted);
+  background: #f8fafc;
+}
+
+.tl-status--ok {
+  color: #ffffff;
+  background: var(--tl-success);
+}
+
+.tl-status--error {
+  color: #ffffff;
+  background: var(--tl-danger);
+}
+
+.tl-status--loading {
+  color: #111827;
+  background: var(--tl-warning);
+}
+
+.tl-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-bottom: 22px;
+}
+
+.tl-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tl-field span {
+  font-weight: 700;
+  color: #344054;
+}
+
+.tl-field input,
+.tl-field textarea {
+  width: 100%;
+  border: 1px solid var(--tl-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #ffffff;
+  color: var(--tl-text);
+  outline: none;
+}
+
+.tl-field input:focus,
+.tl-field textarea:focus {
+  border-color: var(--tl-primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.tl-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.tl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tl-btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  background: #e5e7eb;
+  color: #111827;
+  font-weight: 700;
+}
+
+.tl-btn:hover {
+  filter: brightness(0.96);
+}
+
+.tl-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.tl-btn--primary {
+  background: var(--tl-primary);
+  color: #ffffff;
+}
+
+.tl-btn--primary:hover {
+  background: var(--tl-primary-dark);
+}
+
+.tl-btn--danger {
+  background: var(--tl-danger);
+  color: #ffffff;
+}
+
+.tl-btn--danger:hover {
+  background: var(--tl-danger-dark);
+}
+
+.tl-btn--full {
+  width: 100%;
+}
+
+.tl-output {
+  min-height: 150px;
+  margin: 0;
+  border-radius: 14px;
+  padding: 16px;
+  background: #0f172a;
+  color: #d1fae5;
+  white-space: pre-wrap;
+  overflow: auto;
+}
+
+@media (max-width: 850px) {
+  .tl-hero,
+  .tl-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tl-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tl-two {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+}

@@ -1,0 +1,71 @@
+# Nombre completo: .gitignore
+# Ruta: .gitignore
+#
+# Función:
+#   - Evitar subir dependencias, builds, cachés y archivos temporales.
+#   - Mantener limpio el repositorio de AgendaJeff.
+#   - Proteger archivos locales de Electron y configuraciones personales.
+#
+# Se conecta con:
+#   - package.json
+#   - electron/
+#   - entorno local de desarrollo
+
+# Dependencias
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Builds y empaquetado
+dist/
+build/
+out/
+release/
+releases/
+*.AppImage
+*.exe
+*.dmg
+*.deb
+*.rpm
+*.msi
+*.zip
+*.7z
+
+# Cachés
+.cache/
+.parcel-cache/
+.eslintcache
+.vite/
+.next/
+.nuxt/
+
+# Electron
+electron-user-data/
+*.asar
+*.asar.unpacked
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Variables locales
+.env
+.env.local
+.env.development
+.env.production
+
+# Backups temporales
+*.bak
+*.backup
+*.tmp
+*.temp
+~$*

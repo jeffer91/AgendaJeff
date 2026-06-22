@@ -1,0 +1,511 @@
+<!--
+  Nombre completo: ag-index.html
+  Ruta: Agendador/ag-index.html
+
+  Función:
+    - Pantalla principal independiente del Agendador.
+    - Permite crear Evento, Pendiente o Recordatorio.
+    - Guarda primero en base local usando localStorage.
+    - Muestra eventos próximos, de hoy, pasados, pendientes y todos.
+    - Muestra reloj actual, próximo evento y contador de eventos de mañana.
+    - Muestra íconos/chips superiores de estado de conexiones.
+    - Permite agregar responsables externos desde un modal compacto.
+    - Agrega acceso visual hacia Carga Masiva.
+    - Carga servicios, componentes y adaptadores en orden correcto.
+    - Conecta con Google Calendar, Microsoft Calendar, Telegram, Notificaciones Desktop y Firebase mediante adaptadores.
+
+  Se conecta con:
+    - css/ag-styles.css
+
+    Núcleo:
+    - js/ag-config.js
+    - js/ag-storage.js
+    - js/ag-ui.js
+    - js/ag-app.js
+    - js/ag-bindings.js
+
+    Servicios:
+    - js/servicios/ag-event.service.js
+    - js/servicios/ag-pending.service.js
+    - js/servicios/ag-reminder.service.js
+    - js/servicios/ag-responsible.service.js
+    - js/servicios/ag-filter.service.js
+    - js/servicios/ag-clock.service.js
+    - js/servicios/ag-dashboard.service.js
+    - js/servicios/ag-sync.service.js
+
+    Adaptadores:
+    - js/conexiones/ag-google.adapter.js
+    - js/conexiones/ag-microsoft.adapter.js
+    - js/conexiones/ag-telegram.adapter.js
+    - js/conexiones/ag-notifications.adapter.js
+    - js/conexiones/ag-firebase.adapter.js
+
+    Componentes:
+    - js/componentes/ag-header-status.component.js
+    - js/componentes/ag-summary-cards.component.js
+    - js/componentes/ag-event-form.component.js
+    - js/componentes/ag-event-list.component.js
+    - js/componentes/ag-responsible-modal.component.js
+    - js/componentes/ag-toast.component.js
+
+    También carga dependencias mínimas de:
+    - google-calendar
+    - microsoft-calendar
+    - telegram
+    - notificaciones-desktop
+
+  Importante:
+    - Este módulo usa namespace propio: window.AG.
+    - No depende visualmente de las pantallas de Google, Microsoft, Telegram o Notificaciones.
+    - No carga gc-bindings.js, mc-bindings.js, tl-app.js ni nt-app.js.
+    - Primero guarda localmente; luego sincroniza con adaptadores.
+    - El botón Carga Masiva abre ../carga-masiva/cm-index.html.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Agendador - AgendaJeff</title>
+
+  <link rel="stylesheet" href="./css/ag-styles.css" />
+</head>
+
+<body>
+  <main class="ag-page">
+    <header class="ag-topbar">
+      <div class="ag-brand">
+        <p class="ag-kicker">AgendaJeff</p>
+        <h1>Agendador</h1>
+      </div>
+
+      <div
+        class="ag-top-actions"
+        style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap;"
+      >
+        <button
+          class="ag-btn ag-btn--soft"
+          type="button"
+          onclick="window.location.href='../carga-masiva/cm-index.html'"
+        >
+          Carga masiva
+        </button>
+
+        <div id="agClock" class="ag-clock">--:--</div>
+      </div>
+    </header>
+
+    <section class="ag-status-panel">
+      <div id="agConnectionStatus" class="ag-status-list">
+        <button class="ag-chip ag-chip--idle" type="button">
+          <span class="ag-dot"></span>
+          Local
+        </button>
+
+        <button class="ag-chip ag-chip--idle" type="button">
+          <span class="ag-dot"></span>
+          Firebase
+        </button>
+
+        <button class="ag-chip ag-chip--idle" type="button">
+          <span class="ag-dot"></span>
+          Telegram
+        </button>
+
+        <button class="ag-chip ag-chip--idle" type="button">
+          <span class="ag-dot"></span>
+          Google
+        </button>
+
+        <button class="ag-chip ag-chip--idle" type="button">
+          <span class="ag-dot"></span>
+          Microsoft
+        </button>
+
+        <button class="ag-chip ag-chip--idle" type="button">
+          <span class="ag-dot"></span>
+          Notificaciones
+        </button>
+      </div>
+    </section>
+
+    <section class="ag-summary-grid">
+      <article class="ag-card ag-summary-card ag-summary-card--primary">
+        <span>Próximo evento</span>
+        <strong id="agNextEventTitle">Sin eventos próximos</strong>
+        <small id="agNextEventTime">Crea un evento para verlo aquí.</small>
+      </article>
+
+      <article class="ag-card ag-summary-card">
+        <span>Hoy</span>
+        <strong id="agTodayCount">0</strong>
+        <small>eventos o recordatorios</small>
+      </article>
+
+      <article class="ag-card ag-summary-card">
+        <span>Mañana</span>
+        <strong id="agTomorrowCount">0</strong>
+        <small>eventos programados</small>
+      </article>
+
+      <article class="ag-card ag-summary-card">
+        <span>Pendientes</span>
+        <strong id="agPendingCount">0</strong>
+        <small>sin completar</small>
+      </article>
+    </section>
+
+    <section class="ag-layout">
+      <form id="agItemForm" class="ag-card ag-form">
+        <div class="ag-section-title">
+          <div>
+            <h2>Nuevo registro</h2>
+            <p>Agrega eventos, pendientes o recordatorios.</p>
+          </div>
+        </div>
+
+        <label class="ag-field">
+          <span>Tipo</span>
+          <select id="agType">
+            <option value="event">Evento</option>
+            <option value="pending">Pendiente</option>
+            <option value="reminder">Recordatorio</option>
+          </select>
+        </label>
+
+        <label class="ag-field">
+          <span>Título</span>
+          <input
+            id="agTitle"
+            type="text"
+            placeholder="Ejemplo: Defensa de titulación"
+            autocomplete="off"
+            required
+          />
+        </label>
+
+        <div class="ag-two">
+          <label class="ag-field">
+            <span>Fecha</span>
+            <input id="agDate" type="date" required />
+          </label>
+
+          <label class="ag-field">
+            <span>Hora</span>
+            <input id="agTime" type="time" />
+          </label>
+        </div>
+
+        <div class="ag-two">
+          <label class="ag-field">
+            <span>Duración</span>
+            <select id="agDuration">
+              <option value="15">15 min</option>
+              <option value="30" selected>30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">1 hora</option>
+              <option value="90">1h 30min</option>
+              <option value="120">2 horas</option>
+            </select>
+          </label>
+
+          <label class="ag-field">
+            <span>Prioridad</span>
+            <select id="agPriority">
+              <option value="normal" selected>Normal</option>
+              <option value="high">Alta</option>
+              <option value="urgent">Urgente</option>
+              <option value="low">Baja</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="ag-field">
+          <span>Responsable</span>
+          <div class="ag-inline-control">
+            <select id="agResponsible"></select>
+            <button id="agOpenResponsibleModalBtn" class="ag-btn ag-btn--soft" type="button">
+              Agregar
+            </button>
+          </div>
+        </label>
+
+        <label class="ag-field">
+          <span>Descripción</span>
+          <textarea
+            id="agDescription"
+            rows="3"
+            placeholder="Detalle corto para recordar qué se debe hacer."
+          ></textarea>
+        </label>
+
+        <div class="ag-box">
+          <div class="ag-box-title">Recordatorios</div>
+
+          <div class="ag-check-grid">
+            <label>
+              <input type="checkbox" name="agReminder" value="5d" checked />
+              5 días antes
+            </label>
+
+            <label>
+              <input type="checkbox" name="agReminder" value="3d" checked />
+              3 días antes
+            </label>
+
+            <label>
+              <input type="checkbox" name="agReminder" value="1d" checked />
+              1 día antes
+            </label>
+
+            <label>
+              <input type="checkbox" name="agReminder" value="0d" checked />
+              Mismo día
+            </label>
+
+            <label>
+              <input type="checkbox" name="agReminder" value="30m" />
+              30 min antes
+            </label>
+          </div>
+        </div>
+
+        <div class="ag-box">
+          <div class="ag-box-title">Canales</div>
+
+          <div class="ag-check-grid">
+            <label>
+              <input type="checkbox" name="agChannel" value="local" checked disabled />
+              Local
+            </label>
+
+            <label>
+              <input type="checkbox" name="agChannel" value="telegram" checked />
+              Telegram
+            </label>
+
+            <label>
+              <input type="checkbox" name="agChannel" value="googleCalendar" checked />
+              Google
+            </label>
+
+            <label>
+              <input type="checkbox" name="agChannel" value="microsoftCalendar" checked />
+              Microsoft
+            </label>
+
+            <label>
+              <input type="checkbox" name="agChannel" value="desktopNotifications" checked />
+              Notificaciones
+            </label>
+
+            <label>
+              <input type="checkbox" name="agChannel" value="firebase" checked />
+              Firebase
+            </label>
+          </div>
+        </div>
+
+        <div class="ag-actions">
+          <button class="ag-btn ag-btn--primary" type="submit">
+            Guardar en Agendador
+          </button>
+
+          <button id="agResetFormBtn" class="ag-btn" type="button">
+            Limpiar
+          </button>
+        </div>
+      </form>
+
+      <section class="ag-card ag-list-panel">
+        <div class="ag-section-title ag-section-title--list">
+          <div>
+            <h2>Agenda</h2>
+            <p id="agFilterSubtitle">Mostrando próximos registros.</p>
+          </div>
+
+          <button id="agSeedDemoBtn" class="ag-btn ag-btn--soft" type="button">
+            Demo
+          </button>
+        </div>
+
+        <div class="ag-filters">
+          <button class="ag-filter-btn ag-filter-btn--active" data-filter="upcoming" type="button">
+            Próximos
+          </button>
+
+          <button class="ag-filter-btn" data-filter="today" type="button">
+            Hoy
+          </button>
+
+          <button class="ag-filter-btn" data-filter="pending" type="button">
+            Pendientes
+          </button>
+
+          <button class="ag-filter-btn" data-filter="past" type="button">
+            Pasados
+          </button>
+
+          <button class="ag-filter-btn" data-filter="all" type="button">
+            Todos
+          </button>
+        </div>
+
+        <div id="agItemList" class="ag-item-list">
+          <div class="ag-empty">
+            No hay registros todavía.
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="ag-card ag-output-card">
+      <div class="ag-section-title">
+        <div>
+          <h2>Estado</h2>
+          <p>Resultado de la última acción.</p>
+        </div>
+      </div>
+
+      <pre id="agOutput" class="ag-output">Esperando acción...</pre>
+    </section>
+  </main>
+
+  <div id="agResponsibleModal" class="ag-modal ag-hidden" aria-hidden="true">
+    <div class="ag-modal-backdrop" data-close-modal="true"></div>
+
+    <section class="ag-modal-card">
+      <div class="ag-modal-header">
+        <div>
+          <h2>Agregar responsable</h2>
+          <p>Se guardará localmente y aparecerá en el selector.</p>
+        </div>
+
+        <button id="agCloseResponsibleModalBtn" class="ag-icon-btn" type="button">
+          ×
+        </button>
+      </div>
+
+      <label class="ag-field">
+        <span>Nombre</span>
+        <input
+          id="agResponsibleName"
+          type="text"
+          placeholder="Ejemplo: Secretaría Académica"
+          autocomplete="off"
+        />
+      </label>
+
+      <label class="ag-field">
+        <span>Correo opcional</span>
+        <input
+          id="agResponsibleEmail"
+          type="email"
+          placeholder="correo@ejemplo.com"
+          autocomplete="off"
+        />
+      </label>
+
+      <label class="ag-field">
+        <span>Teléfono o referencia opcional</span>
+        <input
+          id="agResponsiblePhone"
+          type="text"
+          placeholder="Ejemplo: 0999999999"
+          autocomplete="off"
+        />
+      </label>
+
+      <div class="ag-actions ag-actions--right">
+        <button id="agCancelResponsibleBtn" class="ag-btn" type="button">
+          Cancelar
+        </button>
+
+        <button id="agSaveResponsibleBtn" class="ag-btn ag-btn--primary" type="button">
+          Guardar responsable
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div id="agToast" class="ag-toast ag-hidden"></div>
+
+  <!-- Google Identity Services. Necesario para el adaptador Google Calendar. -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Firebase SDK compat. Necesario para guardar Agendador en Firestore. -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+  <!-- MSAL Browser. Necesario para Microsoft Calendar. -->
+  <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+
+  <!-- Dependencias mínimas de Google Calendar. No cargar gc-bindings.js ni gc-ui.js aquí. -->
+  <script src="../google-calendar/js/gc-config.js"></script>
+  <script src="../google-calendar/js/gc-firebase-config.js"></script>
+  <script src="../google-calendar/js/gc-storage.js"></script>
+  <script src="../google-calendar/js/gc-google-api.js"></script>
+  <script src="../google-calendar/js/gc-event.service.js"></script>
+  <script src="../google-calendar/js/gc-token.service.js"></script>
+
+  <!-- Dependencias mínimas de Microsoft Calendar. No cargar mc-bindings.js ni mc-ui.js aquí. -->
+  <script src="../microsoft-calendar/js/mc-config.js"></script>
+  <script src="../microsoft-calendar/js/mc-firebase-config.js"></script>
+  <script src="../microsoft-calendar/js/mc-storage.js"></script>
+  <script src="../microsoft-calendar/js/mc-microsoft-api.js"></script>
+  <script src="../microsoft-calendar/js/mc-token.service.js"></script>
+
+  <!-- Dependencias mínimas de Telegram. No cargar tl-app.js aquí. -->
+  <script src="../telegram/js/tl-config.js"></script>
+  <script src="../telegram/js/tl-firebase-config.js"></script>
+  <script src="../telegram/js/tl-storage.js"></script>
+  <script src="../telegram/js/tl-telegram-api.js"></script>
+
+  <!-- Dependencias mínimas de Notificaciones Desktop. No cargar nt-app.js ni nt-actions.js aquí. -->
+  <script src="../notificaciones-desktop/js/nt-config.js"></script>
+  <script src="../notificaciones-desktop/js/nt-firebase-config.js"></script>
+  <script src="../notificaciones-desktop/js/nt-storage.js"></script>
+  <script src="../notificaciones-desktop/js/nt-environment.service.js"></script>
+  <script src="../notificaciones-desktop/js/nt-electron-bridge.js"></script>
+  <script src="../notificaciones-desktop/js/nt-notification-api.js"></script>
+
+  <!-- Núcleo del Agendador -->
+  <script src="./js/ag-config.js"></script>
+  <script src="./js/ag-storage.js"></script>
+
+  <!-- Servicios internos del Agendador -->
+  <script src="./js/servicios/ag-event.service.js"></script>
+  <script src="./js/servicios/ag-pending.service.js"></script>
+  <script src="./js/servicios/ag-reminder.service.js"></script>
+  <script src="./js/servicios/ag-responsible.service.js"></script>
+  <script src="./js/servicios/ag-filter.service.js"></script>
+  <script src="./js/servicios/ag-clock.service.js"></script>
+  <script src="./js/servicios/ag-dashboard.service.js"></script>
+  <script src="./js/servicios/ag-sync.service.js"></script>
+
+  <!-- Adaptadores por conexión -->
+  <script src="./js/conexiones/ag-google.adapter.js"></script>
+  <script src="./js/conexiones/ag-microsoft.adapter.js"></script>
+  <script src="./js/conexiones/ag-telegram.adapter.js"></script>
+  <script src="./js/conexiones/ag-notifications.adapter.js"></script>
+  <script src="./js/conexiones/ag-firebase.adapter.js"></script>
+
+  <!-- UI base -->
+  <script src="./js/ag-ui.js"></script>
+
+  <!-- Componentes visuales -->
+  <script src="./js/componentes/ag-header-status.component.js"></script>
+  <script src="./js/componentes/ag-summary-cards.component.js"></script>
+  <script src="./js/componentes/ag-event-form.component.js"></script>
+  <script src="./js/componentes/ag-event-list.component.js"></script>
+  <script src="./js/componentes/ag-responsible-modal.component.js"></script>
+  <script src="./js/componentes/ag-toast.component.js"></script>
+
+  <!-- App y bindings al final -->
+  <script src="./js/ag-app.js"></script>
+  <script src="./js/ag-bindings.js"></script>
+</body>
+</html>
