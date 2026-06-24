@@ -12,23 +12,7 @@
     - Abrir pop-up de revisión.
     - Confirmar importación solo cuando todo esté OK.
     - Enviar eventos confirmados al Agendador mediante ImportService.
-
-  Se conecta con:
-    - cm-config.js
-    - cm-storage.js
-    - cm-ui.js
-    - servicios/cm-input.service.js
-    - servicios/cm-file.service.js
-    - servicios/cm-parser.service.js
-    - servicios/cm-normalizer.service.js
-    - servicios/cm-validator.service.js
-    - servicios/cm-review.service.js
-    - servicios/cm-import.service.js
-    - parsers/*
-    - componentes/*
-    - conexiones/cm-agendador.adapter.js
-    - conexiones/cm-firebase-batch.adapter.js
-    - cm-bindings.js
+    - Mostrar cuántos eventos se agregaron realmente.
 */
 
 (function initCmApp(global) {
@@ -405,6 +389,22 @@
     CM.UI.toastSuccess("Advertencias confirmadas manualmente.");
   }
 
+  function createImportSuccessMessage(result, selectedEvents) {
+    const agendador = result && result.agendador ? result.agendador : {};
+    const saved = Number(agendador.saved || result.saved || selectedEvents.length || 0);
+    const failed = Number(agendador.failed || result.failed || 0);
+
+    if (failed > 0) {
+      return `Se agregaron ${saved} eventos. ${failed} no se agregaron.`;
+    }
+
+    if (saved === 1) {
+      return "Se agregó 1 evento.";
+    }
+
+    return `Se agregaron ${saved} eventos.`;
+  }
+
   async function importSelectedEvents() {
     if (!state.batch) {
       CM.UI.toastWarning("No hay lote activo.");
@@ -436,14 +436,19 @@
         events: selectedEvents
       });
 
+      const successMessage = createImportSuccessMessage(result, selectedEvents);
+
       state.batch = CM.Storage.updateBatchStatus(state.batch.id, CONFIG.BATCH_STATUS.IMPORTED, {
-        importedAt: CM.nowISO()
+        importedAt: CM.nowISO(),
+        importMessage: successMessage
       }) || state.batch;
 
-      CM.UI.toastSuccess(CONFIG.MESSAGES.IMPORT_SUCCESS);
+      CM.UI.toastSuccess(successMessage);
       CM.UI.setOutput({
         ok: true,
-        message: CONFIG.MESSAGES.IMPORT_SUCCESS,
+        message: successMessage,
+        telegram: result && result.agendador ? result.agendador.telegramSummary : null,
+        background: result && result.agendador ? result.agendador.backgroundSync : null,
         result
       });
 
@@ -495,6 +500,7 @@
     cancelEdit,
     confirmWarningsManually,
 
+    createImportSuccessMessage,
     importSelectedEvents
   };
 })(window);
