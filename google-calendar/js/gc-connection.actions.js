@@ -1,11 +1,13 @@
 /*
   Nombre completo: gc-connection.actions.js
   Ruta: google-calendar/js/gc-connection.actions.js
+
   Función:
     - Maneja guardar configuración de Google Calendar.
     - Maneja cargar configuración guardada.
     - Maneja conectar Google Calendar.
     - Maneja borrar conexión local y Firebase.
+    - No crea eventos desde esta pantalla.
 */
 
 (function initGcConnectionActions(global) {
@@ -148,7 +150,7 @@
           message: "Configuración de Google Calendar cargada desde localStorage.",
           local: safeLocalConnectionForOutput(connection),
           firebase: firebaseStatus,
-          note: "Usa Conectar para autorizar Google. Después usa Probar para crear un evento real en el siguiente minuto."
+          note: "Usa Conectar o Probar conexión para validar. Los eventos se crean solo desde Agendador o Carga Masiva."
         });
       } catch (error) {
         GC.UI.setStatus("idle", "Guardado local");
@@ -195,7 +197,7 @@
         savedAt: connection.savedAt,
         local: safeLocalConnectionForOutput(connection),
         firebase: firebasePayload,
-        note: "Ahora usa Conectar o Probar. Probar puede pedir autorización si no hay token activo."
+        note: "Ahora usa Conectar o Probar conexión. Esta pantalla no crea eventos."
       });
     } catch (error) {
       GC.UI.setStatus("error", "Error");
@@ -252,7 +254,7 @@
 
       GC.UI.setOutput({
         ok: true,
-        message: "Google Calendar quedó conectado. Ahora presiona Probar para crear un evento automático en el siguiente minuto.",
+        message: "Google Calendar quedó conectado correctamente. No se creó ningún evento desde esta pantalla.",
         firestorePath: "conexiones/googleCalendar",
         savedConfigFirebase: savedFirebasePayload,
         runtimeMode: connection.runtimeMode,
@@ -268,7 +270,8 @@
         },
         calendar: cleanCalendarForOutput(configuredCalendar),
         primaryCalendar: cleanCalendarForOutput(primaryCalendar),
-        firebase: connectedFirebasePayload
+        firebase: connectedFirebasePayload,
+        rule: "Los eventos solo se crean desde Agendador o Carga Masiva."
       });
     } catch (error) {
       try {
