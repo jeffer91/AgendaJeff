@@ -1,11 +1,15 @@
 /*
   Nombre completo: gc-calendar.actions.js
   Ruta: google-calendar/js/gc-calendar.actions.js
+
   Función:
-    - Maneja acciones de calendario.
-    - Crea evento automático con el botón Probar.
-    - Lee próximos eventos.
-    - Crea evento manual de prueba.
+    - Maneja acciones de calendario permitidas para la pantalla Google Calendar.
+    - Probar conexión sin crear eventos.
+    - Leer próximos eventos.
+    - Bloquear cualquier creación de eventos desde esta pantalla.
+
+  Regla funcional:
+    - Los eventos solo se crean desde Agendador o Carga Masiva.
 */
 
 (function initGcCalendarActions(global) {
@@ -14,85 +18,8 @@
   const GC = global.GC = global.GC || {};
   const CONFIG = GC.CONFIG;
 
-  function getBrowserTimeZone() {
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Guayaquil";
-    } catch (error) {
-      return "America/Guayaquil";
-    }
-  }
-
-  function pad2(value) {
-    return String(value).padStart(2, "0");
-  }
-
-  function addMinutes(date, minutes) {
-    const safeDate = new Date(date.getTime());
-    safeDate.setMinutes(safeDate.getMinutes() + minutes);
-    return safeDate;
-  }
-
-  function formatLocalDateTimeForGoogle(date) {
-    const year = date.getFullYear();
-    const month = pad2(date.getMonth() + 1);
-    const day = pad2(date.getDate());
-    const hour = pad2(date.getHours());
-    const minute = pad2(date.getMinutes());
-    const second = pad2(date.getSeconds());
-
-    return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-  }
-
-  function createNextMinuteDate() {
-    const startDate = new Date();
-
-    startDate.setSeconds(0, 0);
-    startDate.setMinutes(startDate.getMinutes() + 1);
-
-    return startDate;
-  }
-
-  function createAutomaticTestEventPayload() {
-    const startDate = createNextMinuteDate();
-    const durationMinutes = CONFIG.DEFAULT_EVENT_DURATION_MINUTES || 30;
-    const endDate = addMinutes(startDate, durationMinutes);
-    const timeZone = getBrowserTimeZone();
-
-    const title = "Evento de prueba desde AgendaJeff";
-    const description = [
-      "Evento creado automáticamente para verificar que Google Calendar está funcionando.",
-      "",
-      "Origen: módulo Google Calendar de AgendaJeff.",
-      "Acción: botón Probar.",
-      "Este evento confirma que la app puede crear eventos reales en Google Calendar.",
-      `Creado desde la app el: ${new Date().toLocaleString("es-EC")}`
-    ].join("\n");
-
-    return {
-      local: {
-        title,
-        description,
-        durationMinutes,
-        timeZone,
-        startLocal: formatLocalDateTimeForGoogle(startDate),
-        endLocal: formatLocalDateTimeForGoogle(endDate)
-      },
-      googleEvent: {
-        summary: title,
-        description,
-        start: {
-          dateTime: formatLocalDateTimeForGoogle(startDate),
-          timeZone
-        },
-        end: {
-          dateTime: formatLocalDateTimeForGoogle(endDate),
-          timeZone
-        },
-        reminders: {
-          useDefault: true
-        }
-      }
-    };
+  function normalizeText(value) {
+    return String(value || "").trim();
   }
 
   function getCalendarIdForError(connection) {
@@ -110,48 +37,79 @@
     });
   }
 
+  function guessAccountEmail(primaryCalendar, configuredCalendar) {
+    const primaryId = normalizeText(primaryCalendar && primaryCalendar.id);
+    const configuredId = normalizeText(configuredCalendar && configuredCalendar.id);
+
+    if (primaryId.includes("@")) {
+      return primaryId;
+    }
+
+    if (configuredId.includes("@")) {
+      return configuredId;
+    }
+
+    return "";
+  }
+
+  function cleanCalendarForOutput(calendar) {
+    const safeCalendar = calendar && typeof calendar === "object" ? calendar : {};
+
+    return {
+      id: normalizeText(safeCalendar.id),
+      summary: normalizeText(safeCalendar.summary),
+      description: normalizeText(safeCalendar.description),
+      timeZone: normalizeText(safeCalendar.timeZone)
+    };
+  }
+
   async function testConnection() {
     GC.UI.setBusy(true);
-    GC.UI.setStatus("loading", "Creando prueba");
+    GC.UI.setStatus("loading", "Probando");
 
     let connection = GC.ConnectionActions.createConnectionDraft();
 
     try {
-      connection = GC.Storage.readConnection();
+      connection = GC.Storage.saveConnection(GC.UI.readConnectionFromInputs());
+      await GC.ConnectionActions.saveConnectionToFirebase(connection);
 
       if (!connection.clientId || !connection.calendarId) {
-        throw new Error("Primero guarda la configuración. Luego usa Probar para crear el evento automático.");
+        throw new Error("Primero guarda la configuración de Google Calendar.");
       }
 
       const reusedExistingToken = GC.TokenService.hasValidToken();
       const token = await GC.TokenService.ensureToken(connection);
 
-      const automaticTestEvent = createAutomaticTestEventPayload();
-
-      const createdEvent = await GC.GoogleApi.insertEvent({
+      const primaryCalendar = await GC.GoogleApi.getCalendar({
         accessToken: token.accessToken,
+        calendarId: CONFIG.DEFAULT_CALENDAR_ID
+      });
+
+      const configuredCalendar = await GC.GoogleApi.getCalendar({
+        accessToken: token.accessToken,
+        calendarId: connection.calendarId
+      });
+
+      const accountEmail = guessAccountEmail(primaryCalendar, configuredCalendar);
+
+      GC.Storage.saveConnectedAccount({
+        accountEmail,
+        primaryCalendarId: normalizeText(primaryCalendar.id)
+      });
+
+      const firebasePayload = await GC.FirebaseService.saveGoogleCalendarConnectedStatus({
         calendarId: connection.calendarId,
-        event: automaticTestEvent.googleEvent
+        accountEmail,
+        primaryCalendarId: normalizeText(primaryCalendar.id),
+        calendarSummary: normalizeText(configuredCalendar.summary),
+        timeZone: normalizeText(configuredCalendar.timeZone)
       });
 
-      const normalizedEvent = GC.EventService.normalizeGoogleEvent(createdEvent);
-
-      GC.Storage.saveCreatedEvent({
-        eventId: normalizedEvent.id,
-        htmlLink: normalizedEvent.htmlLink
-      });
-
-      const firebasePayload =
-        await GC.FirebaseService.saveGoogleCalendarEventCreatedStatus({
-          calendarId: connection.calendarId,
-          event: normalizedEvent
-        });
-
-      GC.UI.setStatus("ok", "Prueba creada");
+      GC.UI.setStatus("ok", "Conectado");
 
       GC.UI.setOutput({
         ok: true,
-        message: "Prueba correcta. Se creó un evento real en Google Calendar para el siguiente minuto.",
+        message: "Google Calendar conectado correctamente. No se creó ningún evento desde esta pantalla.",
         firestorePath: "conexiones/googleCalendar",
         runtimeMode: connection.runtimeMode,
         activeCredentialType: connection.activeCredentialType,
@@ -165,28 +123,26 @@
           issuedAt: token.issuedAt,
           expiresIn: token.expiresIn
         },
-        testEventLocal: automaticTestEvent.local,
-        googleCalendar: normalizedEvent,
-        firebase: firebasePayload
+        calendar: cleanCalendarForOutput(configuredCalendar),
+        primaryCalendar: cleanCalendarForOutput(primaryCalendar),
+        firebase: firebasePayload,
+        rule: "Los eventos solo se crean desde Agendador o Carga Masiva."
       });
     } catch (error) {
       try {
         await saveErrorStatus(error, connection);
       } catch (firebaseError) {
         GC.UI.setStatus("error", "Error");
-
         GC.UI.setOutput({
           ok: false,
           message: error.message,
           firebaseError: firebaseError.message,
           help: "La prueba falló y además Firebase no pudo guardar el error."
         });
-
         return;
       }
 
       GC.UI.setStatus("error", "Error");
-
       GC.UI.setOutput({
         ok: false,
         message: error.message,
@@ -229,6 +185,7 @@
       const firebasePayload =
         await GC.FirebaseService.saveGoogleCalendarEventsReadStatus({
           calendarId: connection.calendarId,
+          eventsCount: eventsSummary.length,
           events: eventsSummary
         });
 
@@ -236,7 +193,7 @@
 
       GC.UI.setOutput({
         ok: true,
-        message: "Próximos eventos leídos correctamente y Firebase actualizado.",
+        message: "Próximos eventos leídos correctamente. No se creó ningún evento.",
         firestorePath: "conexiones/googleCalendar",
         runtimeMode: connection.runtimeMode,
         activeCredentialType: connection.activeCredentialType,
@@ -250,18 +207,15 @@
         await saveErrorStatus(error, connection);
       } catch (firebaseError) {
         GC.UI.setStatus("error", "Error");
-
         GC.UI.setOutput({
           ok: false,
           message: error.message,
           firebaseError: firebaseError.message
         });
-
         return;
       }
 
       GC.UI.setStatus("error", "Error");
-
       GC.UI.setOutput({
         ok: false,
         message: error.message,
@@ -274,93 +228,24 @@
     }
   }
 
-  async function createTestEvent(event) {
+  async function blockEventCreationFromModule(event) {
     if (event && typeof event.preventDefault === "function") {
       event.preventDefault();
     }
 
-    GC.UI.setBusy(true);
-    GC.UI.setStatus("loading", "Creando");
-
-    let connection = GC.ConnectionActions.createConnectionDraft();
-
-    try {
-      connection = GC.Storage.saveConnection(GC.UI.readConnectionFromInputs());
-
-      await GC.ConnectionActions.saveConnectionToFirebase(connection);
-
-      const token = await GC.TokenService.ensureToken(connection);
-
-      const testEvent = GC.EventService.createTestEvent(
-        GC.UI.readManualEventFromInputs()
-      );
-
-      const googleEvent = GC.EventService.toGoogleCalendarEvent(testEvent);
-
-      const createdEvent = await GC.GoogleApi.insertEvent({
-        accessToken: token.accessToken,
-        calendarId: connection.calendarId,
-        event: googleEvent
-      });
-
-      const normalizedEvent = GC.EventService.normalizeGoogleEvent(createdEvent);
-
-      GC.Storage.saveCreatedEvent({
-        eventId: normalizedEvent.id,
-        htmlLink: normalizedEvent.htmlLink
-      });
-
-      const firebasePayload =
-        await GC.FirebaseService.saveGoogleCalendarEventCreatedStatus({
-          calendarId: connection.calendarId,
-          event: normalizedEvent
-        });
-
-      GC.UI.setStatus("ok", "Evento creado");
-
-      GC.UI.setOutput({
-        ok: true,
-        message: "Evento manual de prueba creado en Google Calendar y Firebase actualizado.",
-        firestorePath: "conexiones/googleCalendar",
-        runtimeMode: connection.runtimeMode,
-        activeCredentialType: connection.activeCredentialType,
-        localEvent: testEvent,
-        googleCalendar: normalizedEvent,
-        firebase: firebasePayload
-      });
-    } catch (error) {
-      try {
-        await saveErrorStatus(error, connection);
-      } catch (firebaseError) {
-        GC.UI.setStatus("error", "Error");
-
-        GC.UI.setOutput({
-          ok: false,
-          message: error.message,
-          firebaseError: firebaseError.message
-        });
-
-        return;
-      }
-
-      GC.UI.setStatus("error", "Error");
-
-      GC.UI.setOutput({
-        ok: false,
-        message: error.message,
-        runtimeMode: connection.runtimeMode,
-        activeCredentialType: connection.activeCredentialType,
-        firestorePath: "conexiones/googleCalendar"
-      });
-    } finally {
-      GC.UI.setBusy(false);
-    }
+    GC.UI.setStatus("error", "Bloqueado");
+    GC.UI.setOutput({
+      ok: false,
+      blocked: true,
+      message: "La creación de eventos desde Google Calendar está bloqueada.",
+      rule: "Crea eventos únicamente desde Agendador o Carga Masiva."
+    });
   }
 
   GC.CalendarActions = {
-    createAutomaticTestEventPayload,
     testConnection,
     readUpcomingEvents,
-    createTestEvent
+    blockEventCreationFromModule,
+    createTestEvent: blockEventCreationFromModule
   };
 })(window);
