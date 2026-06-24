@@ -1,21 +1,17 @@
 <!--
   Nombre completo: tl-index.html
   Ruta: telegram/tl-index.html
+
   Función:
-    - Pantalla principal independiente para probar Telegram.
+    - Pantalla principal independiente para configurar Telegram.
     - Permite guardar Bot Token y Chat ID en localStorage.
     - Permite probar conexión real con Telegram.
-    - Permite enviar 1 evento de prueba a Telegram.
     - Carga Firebase por CDN para guardar estado en Firestore.
-  Se conecta con:
-    - css/tl-styles.css
-    - js/tl-config.js
-    - js/tl-storage.js
-    - js/tl-telegram-api.js
-    - js/tl-event.service.js
-    - js/tl-firebase-config.js
-    - js/tl-firebase.service.js
-    - js/tl-app.js
+    - No permite enviar eventos desde esta pantalla.
+
+  Regla funcional:
+    - Los eventos y avisos se originan desde Agendador o Carga Masiva.
+    - Telegram solo es canal de notificación.
 -->
 
 <!DOCTYPE html>
@@ -28,16 +24,15 @@
 
   <link rel="stylesheet" href="./css/tl-styles.css" />
 </head>
-
 <body>
   <main class="tl-page">
     <section class="tl-card tl-hero">
       <div>
-        <p class="tl-kicker">AgendaJeff / Módulo independiente</p>
+        <p class="tl-kicker">AgendaJeff / Módulo de conexión</p>
         <h1>Conexión Telegram</h1>
         <p>
-          Esta pantalla solo prueba Telegram y guarda el estado limpio en Firebase.
-          No usa Electron, no usa calendario y no toca otros módulos.
+          Esta pantalla configura Telegram como canal de avisos. Los eventos se crean solo desde
+          Agendador o Carga Masiva.
         </p>
       </div>
 
@@ -89,44 +84,15 @@
         </p>
       </form>
 
-      <form id="tlEventForm" class="tl-card tl-form">
-        <h2>2. Evento de prueba</h2>
-
-        <label class="tl-field">
-          <span>Título del evento</span>
-          <input
-            id="tlEventTitle"
-            type="text"
-            value="Reunión de prueba"
-            autocomplete="off"
-          />
-        </label>
-
-        <div class="tl-two">
-          <label class="tl-field">
-            <span>Fecha</span>
-            <input id="tlEventDate" type="date" />
-          </label>
-
-          <label class="tl-field">
-            <span>Hora</span>
-            <input id="tlEventTime" type="time" value="08:00" />
-          </label>
-        </div>
-
-        <label class="tl-field">
-          <span>Descripción</span>
-          <textarea
-            id="tlEventDescription"
-            rows="5"
-            placeholder="Descripción del evento"
-          >Este es un evento de prueba enviado desde el módulo Telegram.</textarea>
-        </label>
-
-        <button type="submit" class="tl-btn tl-btn--primary tl-btn--full">
-          Enviar evento de prueba a Telegram
-        </button>
-      </form>
+      <section class="tl-card tl-form">
+        <h2>2. Regla de uso</h2>
+        <p class="tl-help">
+          Telegram no crea eventos. Solo recibe mensajes de resumen o recordatorios generados por AgendaJeff.
+        </p>
+        <p class="tl-help">
+          Para crear eventos usa <strong>Agendador</strong> o <strong>Carga Masiva</strong>.
+        </p>
+      </section>
     </section>
 
     <section class="tl-card">
@@ -135,11 +101,9 @@
     </section>
   </main>
 
-  <!-- Firebase SDK por CDN. Esto permite funcionar sin npm y sin Electron. -->
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 
-  <!-- Módulo Telegram independiente -->
   <script src="./js/tl-config.js"></script>
   <script src="./js/tl-storage.js"></script>
   <script src="./js/tl-telegram-api.js"></script>
