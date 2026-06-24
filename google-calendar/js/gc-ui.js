@@ -1,11 +1,12 @@
 /*
   Nombre completo: gc-ui.js
   Ruta: google-calendar/js/gc-ui.js
+
   Función:
-    - Centraliza los elementos HTML del módulo Google Calendar.
-    - Permite leer y escribir los campos de conexión.
-    - Permite leer los campos del evento manual.
-    - Permite mostrar estado, salida y bloquear/desbloquear botones.
+    - Centralizar los elementos HTML del módulo Google Calendar.
+    - Permitir leer y escribir los campos de conexión.
+    - Mostrar estado, salida y bloquear/desbloquear botones.
+    - Tolerar que no exista formulario de eventos, porque esta pantalla no crea eventos.
 */
 
 (function initGcUi(global) {
@@ -47,6 +48,10 @@
     return element;
   }
 
+  function getOptionalElement(name) {
+    return elements[name] || null;
+  }
+
   function getElements() {
     return elements;
   }
@@ -61,14 +66,22 @@
   }
 
   function setStatus(type, text) {
-    const statusBadge = getElement("statusBadge");
+    const statusBadge = getOptionalElement("statusBadge");
+
+    if (!statusBadge) {
+      return;
+    }
 
     statusBadge.className = `gc-status gc-status--${type}`;
     statusBadge.textContent = text;
   }
 
   function setOutput(data) {
-    const output = getElement("output");
+    const output = getOptionalElement("output");
+
+    if (!output) {
+      return;
+    }
 
     if (typeof data === "string") {
       output.textContent = data;
@@ -82,7 +95,7 @@
     const buttons = document.querySelectorAll("button");
 
     buttons.forEach((button) => {
-      button.disabled = isBusy;
+      button.disabled = Boolean(isBusy);
     });
   }
 
@@ -121,17 +134,15 @@
   }
 
   function readManualEventFromInputs() {
-    return {
-      title: getElement("eventTitle").value,
-      date: getElement("eventDate").value,
-      time: getElement("eventTime").value,
-      durationMinutes: getElement("eventDuration").value,
-      description: getElement("eventDescription").value
-    };
+    throw new Error("La creación manual de eventos está bloqueada en Google Calendar. Usa Agendador o Carga Masiva.");
   }
 
   function setupInitialInputs() {
-    getElement("eventDate").value = todayAsInputDate();
+    const eventDate = getOptionalElement("eventDate");
+
+    if (eventDate && !eventDate.value) {
+      eventDate.value = todayAsInputDate();
+    }
 
     if (!getElement("calendarId").value) {
       getElement("calendarId").value = CONFIG.DEFAULT_CALENDAR_ID;
@@ -140,6 +151,7 @@
 
   GC.UI = {
     getElements,
+    getOptionalElement,
     todayAsInputDate,
     setStatus,
     setOutput,
