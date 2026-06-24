@@ -1,12 +1,11 @@
 /*
   Nombre completo: tl-storage.js
   Ruta: telegram/js/tl-storage.js
+
   Función:
     - Guardar y leer la conexión de Telegram desde localStorage.
+    - Sincronizar Bot Token y Chat ID con Electron para uso en segundo plano.
     - Evitar que la pantalla principal maneje directamente localStorage.
-  Se conecta con:
-    - tl-config.js
-    - tl-app.js
 */
 
 (function initTlStorage(global) {
@@ -19,67 +18,144 @@
     return String(value || "").trim();
   }
 
-  function readConnection() {
+  function nowIso() {
+    return new Date().toISOString();
+  }
+
+  function maskValue(value) {
+    const text = normalizeText(value);
+    if (!text) return "";
+    if (text.length <= 8) return "********";
+    return `${"*".repeat(Math.max(0, text.length - 8))}${text.slice(-8)}`;
+  }
+
+  function getElectronBridge() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        return {
-          botToken: "",
-          chatId: "",
-          savedAt: ""
-        };
-      }
-
-      const parsed = JSON.parse(raw);
-
-      return {
-        botToken: normalizeText(parsed.botToken),
-        chatId: normalizeText(parsed.chatId),
-        savedAt: normalizeText(parsed.savedAt)
-      };
-    } catch (error) {
-      return {
-        botToken: "",
-        chatId: "",
-        savedAt: "",
-        error: "No se pudo leer la conexión guardada."
-      };
+      return global.AgendaJeffElectron || global.parent?.AgendaJeffElectron || global.top?.AgendaJeffElectron || null;
+    } catch (_error) {
+      return global.AgendaJeffElectron || null;
     }
   }
 
-  function saveConnection(connection) {
-    const safeConnection = {
-      botToken: normalizeText(connection.botToken),
-      chatId: normalizeText(connection.chatId),
-      savedAt: new Date().toISOString()
-    };
+  function normalizeConnection(rawConnection) {
+    const connection = rawConnection && typeof rawConnection === "object"
+      ? rawConnection
+      : {};
 
-    if (!safeConnection.botToken) {
+    const botToken = normalizeText(connection.botToken);
+    const chatId = normalizeText(connection.chatId);
+
+    return {
+      botToken,
+      chatId,
+      botUsername: normalizeText(connection.botUsername || connection.username),
+      enabled: Boolean(botToken && chatId),
+      configured: Boolean(botToken && chatId),
+      savedAt: normalizeText(connection.savedAt),
+      updatedAt: normalizeText(connection.updatedAt)
+    };
+  }
+
+  function readConnection() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return normalizeConnection(raw ? JSON.parse(raw) : {});
+    } catch (_error) {
+      return normalizeConnection({});
+    }
+  }
+
+  async function syncWithElectron(connection) {
+    const bridge = getElectronBridge();
+    const normalized = normalizeConnection(connection);
+
+    if (!bridge || !bridge.telegram || typeof bridge.telegram.sync !== "function") {
+      return {
+        ok: false,
+        mode: "web",
+        message: "Electron no está disponible para sincronizar Telegram."
+      };
+    }
+
+    return bridge.telegram.sync({
+      botToken: normalized.botToken,
+      chatId: normalized.chatId,
+      username: normalized.botUsername,
+      enabled: normalized.enabled,
+      configured: normalized.configured,
+      updatedAt: normalized.updatedAt || nowIso()
+    });
+  }
+
+  function saveConnection(connection) {
+    const current = readConnection();
+    const normalized = normalizeConnection({
+      ...current,
+      ...(connection || {}),
+      savedAt: current.savedAt || nowIso(),
+      updatedAt: nowIso()
+    });
+
+    if (!normalized.botToken) {
       throw new Error("Falta el Bot Token.");
     }
 
-    if (!safeConnection.chatId) {
+    if (!normalized.chatId) {
       throw new Error("Falta el Chat ID.");
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(safeConnection));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
 
-    return safeConnection;
+    syncWithElectron(normalized).catch(() => {
+      // No romper la pantalla si Electron no está disponible.
+    });
+
+    return normalized;
   }
 
   function clearConnection() {
     localStorage.removeItem(STORAGE_KEY);
 
+    const emptyConnection = normalizeConnection({});
+
+    syncWithElectron(emptyConnection).catch(() => {
+      // No romper la pantalla si Electron no está disponible.
+    });
+
+    return emptyConnection;
+  }
+
+  function hasConnection() {
+    const connection = readConnection();
+    return Boolean(connection.botToken && connection.chatId);
+  }
+
+  function getSafeConnection() {
+    const connection = readConnection();
+
     return {
-      botToken: "",
-      chatId: "",
-      savedAt: ""
+      enabled: connection.enabled,
+      configured: connection.configured,
+      hasBotToken: Boolean(connection.botToken),
+      botTokenMasked: maskValue(connection.botToken),
+      hasChatId: Boolean(connection.chatId),
+      chatIdMasked: maskValue(connection.chatId),
+      botUsername: connection.botUsername,
+      savedAt: connection.savedAt,
+      updatedAt: connection.updatedAt
     };
   }
 
   TL.Storage = {
+    normalizeText,
+    nowIso,
+    maskValue,
+    normalizeConnection,
     readConnection,
     saveConnection,
-    clearConnection
+    clearConnection,
+    hasConnection,
+    getSafeConnection,
+    syncWithElectron
   };
 })(window);
