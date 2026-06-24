@@ -1,19 +1,16 @@
 /*
   Nombre completo: tl-app.js
   Ruta: telegram/js/tl-app.js
+
   Función:
     - Controlador principal de la pantalla Telegram.
     - Conecta formularios, almacenamiento local, API de Telegram y Firebase.
-    - Permite guardar conexión, probar conexión y enviar un evento de prueba.
+    - Permite guardar conexión y probar conexión.
+    - No permite crear ni enviar eventos desde esta pantalla.
 
-  Se conecta con:
-    - tl-config.js
-    - tl-storage.js
-    - tl-telegram-api.js
-    - tl-event.service.js
-    - tl-firebase-config.js
-    - tl-firebase.service.js
-    - tl-index.html
+  Regla funcional:
+    - Los eventos se crean solo desde Agendador o Carga Masiva.
+    - Telegram solo funciona como canal de notificación.
 */
 
 (function initTlApp(global) {
@@ -31,32 +28,27 @@
     testConnectionBtn: document.getElementById("tlTestConnectionBtn"),
     clearConnectionBtn: document.getElementById("tlClearConnectionBtn"),
 
-    eventForm: document.getElementById("tlEventForm"),
-    eventTitle: document.getElementById("tlEventTitle"),
-    eventDate: document.getElementById("tlEventDate"),
-    eventTime: document.getElementById("tlEventTime"),
-    eventDescription: document.getElementById("tlEventDescription")
+    eventForm: document.getElementById("tlEventForm")
   };
-
-  function todayAsInputDate() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  }
 
   function normalizeText(value) {
     return String(value || "").trim();
   }
 
   function setStatus(type, text) {
+    if (!elements.statusBadge) {
+      return;
+    }
+
     elements.statusBadge.className = `tl-status tl-status--${type}`;
     elements.statusBadge.textContent = text;
   }
 
   function setOutput(data) {
+    if (!elements.output) {
+      return;
+    }
+
     if (typeof data === "string") {
       elements.output.textContent = data;
       return;
@@ -75,16 +67,21 @@
 
   function readConnectionFromInputs() {
     return {
-      botToken: elements.botToken.value,
-      chatId: elements.chatId.value
+      botToken: elements.botToken ? elements.botToken.value : "",
+      chatId: elements.chatId ? elements.chatId.value : ""
     };
   }
 
   async function loadSavedConnection() {
     const connection = TL.Storage.readConnection();
 
-    elements.botToken.value = connection.botToken || "";
-    elements.chatId.value = connection.chatId || "";
+    if (elements.botToken) {
+      elements.botToken.value = connection.botToken || "";
+    }
+
+    if (elements.chatId) {
+      elements.chatId.value = connection.chatId || "";
+    }
 
     try {
       await TL.FirebaseService.checkFirebaseConnection();
@@ -112,7 +109,7 @@
             savedAt: connection.savedAt || null
           },
           firebase: firebaseStatus,
-          note: "Aún puedes volver a probar Telegram para actualizar Firebase."
+          note: "Telegram queda como canal de notificación. Los eventos se crean desde Agendador o Carga Masiva."
         });
       } catch (error) {
         setStatus("idle", "Guardado local");
@@ -140,7 +137,9 @@
   }
 
   async function saveConnection(event) {
-    event.preventDefault();
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
 
     setBusy(true);
     setStatus("loading", "Guardando");
@@ -166,7 +165,7 @@
           chatId: connection.chatId
         },
         firebase: firebasePayload,
-        note: "La conexión ya quedó guardada. Usa Probar conexión solo para validar Telegram."
+        note: "Telegram solo enviará mensajes generados desde Agendador, Carga Masiva o el motor de recordatorios."
       });
     } catch (error) {
       setStatus("error", "Error");
@@ -197,6 +196,7 @@
         "✅ <b>AgendaJeff conectado con Telegram</b>",
         "",
         "La conexión básica funciona correctamente.",
+        "No se creó ningún evento desde la pantalla Telegram.",
         `Bot: @${botInfo.username || "sin_username"}`,
         `Fecha de prueba: ${new Date().toLocaleString()}`
       ].join("\n");
@@ -217,7 +217,7 @@
 
       setOutput({
         ok: true,
-        message: "Telegram funciona correctamente y Firebase fue actualizado.",
+        message: "Telegram funciona correctamente y Firebase fue actualizado. No se creó ningún evento.",
         firestorePath: "conexiones/telegram",
         bot: {
           id: botInfo.id,
@@ -227,13 +227,14 @@
         telegram: {
           sentMessageId: sentMessage.message_id
         },
-        firebase: firebasePayload
+        firebase: firebasePayload,
+        rule: "Los eventos solo se crean desde Agendador o Carga Masiva."
       });
     } catch (error) {
       try {
         await TL.FirebaseService.saveTelegramErrorStatus({
           message: error.message,
-          chatId: connection.chatId || normalizeText(elements.chatId.value)
+          chatId: connection.chatId || normalizeText(elements.chatId && elements.chatId.value)
         });
       } catch (firebaseError) {
         setStatus("error", "Error");
@@ -265,8 +266,13 @@
     try {
       TL.Storage.clearConnection();
 
-      elements.botToken.value = "";
-      elements.chatId.value = "";
+      if (elements.botToken) {
+        elements.botToken.value = "";
+      }
+
+      if (elements.chatId) {
+        elements.chatId.value = "";
+      }
 
       const firebasePayload = await TL.FirebaseService.saveTelegramDisconnectedStatus();
 
@@ -289,94 +295,52 @@
     }
   }
 
-  async function sendTestEvent(event) {
-    event.preventDefault();
-
-    setBusy(true);
-    setStatus("loading", "Enviando");
-
-    let connection = {
-      botToken: "",
-      chatId: ""
-    };
-
-    try {
-      connection = TL.Storage.saveConnection(readConnectionFromInputs());
-
-      const testEvent = TL.EventService.createTestEvent({
-        title: elements.eventTitle.value,
-        date: elements.eventDate.value,
-        time: elements.eventTime.value,
-        description: elements.eventDescription.value
-      });
-
-      const text = TL.EventService.formatEventForTelegram(testEvent);
-
-      const sentMessage = await TL.TelegramApi.sendMessage({
-        botToken: connection.botToken,
-        chatId: connection.chatId,
-        text
-      });
-
-      const firebasePayload = await TL.FirebaseService.saveTelegramEventTestStatus({
-        chatId: connection.chatId,
-        messageId: sentMessage.message_id,
-        event: testEvent
-      });
-
-      setStatus("ok", "Evento enviado");
-
-      setOutput({
-        ok: true,
-        message: "Evento de prueba enviado a Telegram y Firebase actualizado.",
-        firestorePath: "conexiones/telegram",
-        event: testEvent,
-        telegram: {
-          sentMessageId: sentMessage.message_id
-        },
-        firebase: firebasePayload
-      });
-    } catch (error) {
-      try {
-        await TL.FirebaseService.saveTelegramErrorStatus({
-          message: error.message,
-          chatId: connection.chatId || normalizeText(elements.chatId.value)
-        });
-      } catch (firebaseError) {
-        setStatus("error", "Error");
-        setOutput({
-          ok: false,
-          message: error.message,
-          firebaseError: firebaseError.message
-        });
-        return;
-      }
-
-      setStatus("error", "Error");
-
-      setOutput({
-        ok: false,
-        message: error.message,
-        firestorePath: "conexiones/telegram"
-      });
-    } finally {
-      setBusy(false);
+  async function blockEventCreationFromModule(event) {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
     }
+
+    setStatus("error", "Bloqueado");
+    setOutput({
+      ok: false,
+      blocked: true,
+      message: "La creación o envío de eventos desde Telegram está bloqueada.",
+      rule: "Crea eventos únicamente desde Agendador o Carga Masiva."
+    });
   }
 
   function bindEvents() {
-    elements.connectionForm.addEventListener("submit", saveConnection);
-    elements.testConnectionBtn.addEventListener("click", testConnection);
-    elements.clearConnectionBtn.addEventListener("click", clearConnection);
-    elements.eventForm.addEventListener("submit", sendTestEvent);
+    if (elements.connectionForm) {
+      elements.connectionForm.addEventListener("submit", saveConnection);
+    }
+
+    if (elements.testConnectionBtn) {
+      elements.testConnectionBtn.addEventListener("click", testConnection);
+    }
+
+    if (elements.clearConnectionBtn) {
+      elements.clearConnectionBtn.addEventListener("click", clearConnection);
+    }
+
+    if (elements.eventForm) {
+      elements.eventForm.addEventListener("submit", blockEventCreationFromModule);
+    }
   }
 
   function init() {
-    elements.eventDate.value = todayAsInputDate();
-
     bindEvents();
     loadSavedConnection();
   }
+
+  TL.App = {
+    init,
+    loadSavedConnection,
+    saveConnection,
+    testConnection,
+    clearConnection,
+    blockEventCreationFromModule,
+    sendTestEvent: blockEventCreationFromModule
+  };
 
   init();
 })(window);
