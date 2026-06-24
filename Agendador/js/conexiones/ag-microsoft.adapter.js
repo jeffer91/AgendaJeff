@@ -5,25 +5,14 @@
   Función:
     - Adaptador del Agendador para Microsoft Calendar.
     - Recibe un registro local del Agendador.
-    - Lo convierte al formato de Microsoft Graph.
+    - Lo convierte al formato Microsoft Graph Event.
     - Crea el evento en una o dos cuentas Microsoft conectadas.
-    - Usa el módulo Microsoft Calendar existente si está cargado.
-    - No depende del HTML de mc-index.html.
-    - No presiona botones de Microsoft Calendar.
+    - No depende del HTML de Microsoft Calendar.
+    - No presiona botones ni usa IDs de mc-index.html.
 
-  Se conecta con:
-    - ../ag-config.js
-    - ../ag-storage.js
-    - ../servicios/ag-reminder.service.js
-    - ../../microsoft-calendar/js/mc-config.js
-    - ../../microsoft-calendar/js/mc-storage.js
-    - ../../microsoft-calendar/js/mc-token.service.js
-    - ../../microsoft-calendar/js/mc-microsoft-api.js
-
-  Requisitos para funcionar:
-    - Cargar antes los scripts necesarios del módulo Microsoft Calendar.
-    - Tener Client ID / redirect configurado desde microsoft-calendar/mc-index.html.
-    - Tener cuenta Microsoft 1 y/o 2 conectada.
+  Regla funcional:
+    - Microsoft Calendar solo recibe eventos desde Agendador o Carga Masiva.
+    - La pantalla microsoft-calendar/mc-index.html no crea eventos.
 */
 
 (function initAgMicrosoftAdapter(global) {
@@ -36,6 +25,15 @@
 
   function normalizeText(value) {
     return String(value || "").trim();
+  }
+
+  function escapeHtml(value) {
+    return normalizeText(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
   function isMicrosoftModuleAvailable() {
@@ -61,52 +59,70 @@
   }
 
   function hasBasicMicrosoftConfig(connection) {
-    if (!connection || !connection.app) {
-      return false;
-    }
-
-    if (global.MC.Storage && typeof global.MC.Storage.hasBasicAppConfig === "function") {
-      return global.MC.Storage.hasBasicAppConfig();
-    }
-
-    return Boolean(connection.app.clientId);
+    return Boolean(
+      connection &&
+      connection.configured &&
+      connection.app &&
+      normalizeText(connection.app.clientId)
+    );
   }
 
-  function getCalendarIdFromAccount(account) {
-    const safeAccount = account || {};
+  function getAuthorizedSource(item) {
+    const safeItem = item || {};
 
-    if (global.MC.Utils && typeof global.MC.Utils.getAccountCalendarId === "function") {
-      return global.MC.Utils.getAccountCalendarId(safeAccount);
+    if (safeItem.origin === "cargaMasiva" || safeItem.source === "cargaMasiva") {
+      return "cargaMasiva";
     }
 
-    return normalizeText(safeAccount.calendarId);
+    return "agendador";
   }
 
   function getTargetAccounts(connection) {
     const safeConnection = connection || {};
     const accounts = safeConnection.accounts || {};
-    const slots = ["account1", "account2"];
+    const result = [];
 
-    return slots
-      .map((slot) => {
-        const account = accounts[slot] || null;
+    ["account1", "account2"].forEach((slot) => {
+      const account = accounts[slot] || {};
 
-        return {
-          slot,
-          account
-        };
-      })
-      .filter((entry) => {
-        if (!entry.account) {
-          return false;
-        }
+      if (account.connected && normalizeText(account.accountEmail)) {
+        result.push({ slot, account });
+      }
+    });
 
-        const enabled = entry.account.enabled !== false;
-        const connected = Boolean(entry.account.connected);
-        const hasEmail = Boolean(normalizeText(entry.account.accountEmail));
+    return result;
+  }
 
-        return enabled && (connected || hasEmail);
-      });
+  function getCalendarIdFromAccount(account) {
+    if (!account) {
+      return "";
+    }
+
+    if (account.calendarMode === "specific") {
+      return normalizeText(account.calendarId);
+    }
+
+    return "";
+  }
+
+  function pad2(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function formatMicrosoftDateTime(date) {
+    if (!(date instanceof Date)) {
+      return "";
+    }
+
+    return [
+      date.getFullYear(),
+      pad2(date.getMonth() + 1),
+      pad2(date.getDate())
+    ].join("-") + "T" + [
+      pad2(date.getHours()),
+      pad2(date.getMinutes()),
+      pad2(date.getSeconds())
+    ].join(":");
   }
 
   function getBrowserTimeZone() {
@@ -136,39 +152,10 @@
     return parsedDate;
   }
 
-  function pad2(value) {
-    return String(value).padStart(2, "0");
-  }
-
-  function formatMicrosoftDateTime(date) {
-    if (!(date instanceof Date)) {
-      return "";
-    }
-
-    return [
-      date.getFullYear(),
-      pad2(date.getMonth() + 1),
-      pad2(date.getDate())
-    ].join("-") + "T" + [
-      pad2(date.getHours()),
-      pad2(date.getMinutes()),
-      pad2(date.getSeconds())
-    ].join(":");
-  }
-
   function addMinutes(date, minutes) {
     const safeDate = new Date(date.getTime());
     safeDate.setMinutes(safeDate.getMinutes() + Number(minutes || 30));
     return safeDate;
-  }
-
-  function escapeHtml(value) {
-    return String(value || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
   }
 
   function getTypeLabel(itemType) {
@@ -185,7 +172,9 @@
     const lines = [
       escapeHtml(normalizeText(safeItem.description) || "Sin descripción."),
       "",
-      "<b>Creado desde AgendaJeff - Agendador.</b>",
+      safeItem.origin === "cargaMasiva" || safeItem.source === "cargaMasiva"
+        ? "<b>Creado desde AgendaJeff - Carga Masiva.</b>"
+        : "<b>Creado desde AgendaJeff - Agendador.</b>",
       `Tipo: ${escapeHtml(getTypeLabel(safeItem.type))}`,
       `Responsable: ${escapeHtml(responsible.name || "Yo")}`,
       responsible.email ? `Correo responsable: ${escapeHtml(responsible.email)}` : "",
@@ -240,7 +229,9 @@
     const createdEvent = await global.MC.MicrosoftApi.insertEvent({
       accessToken: tokenInfo.accessToken,
       calendarId,
-      event: microsoftEvent
+      event: microsoftEvent,
+      source: getAuthorizedSource(item),
+      sourceItemId: item && item.id ? item.id : ""
     });
 
     if (global.MC.Storage && typeof global.MC.Storage.saveCreatedEvent === "function") {
@@ -357,6 +348,7 @@
   AG.Adapters.MicrosoftAdapter = {
     isMicrosoftModuleAvailable,
     readMicrosoftConnection,
+    getAuthorizedSource,
     toMicrosoftEvent,
     syncItem,
     testAvailability
