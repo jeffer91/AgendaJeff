@@ -9,13 +9,6 @@
     - Evitar encabezados dobles mediante reglas de visualización.
     - Mantener rutas externas sin modificar las carpetas funcionales existentes.
     - Centralizar IDs del DOM, claves de memoria y parámetros del menú.
-
-  Se conecta con:
-    - index.html
-    - menu/js/menu-storage.js
-    - menu/js/menu-router.js
-    - menu/js/menu-renderer.js
-    - menu/js/menu-app.js
 */
 
 (function initMenuConfig(global) {
@@ -26,7 +19,7 @@
   const CONFIG = {
     APP: {
       name: "AgendaJeff",
-      version: "1.0.0",
+      version: "1.1.0",
       defaultRoute: "inicio",
       fallbackRoute: "inicio",
       iframeTarget: "menuScreenFrame",
@@ -134,6 +127,25 @@
         showInSubmenu: false,
         avoidExternalHeader: true,
         src: "./carga-masiva/cm-index.html"
+      },
+
+      {
+        id: "herramientas",
+        type: "iframe",
+        label: "Herramientas",
+        shortLabel: "Herramientas",
+        icon: "🧰",
+        description: "Backup, restauración, reportes, prueba completa y deshacer carga.",
+        group: "principal",
+        parent: null,
+        order: 35,
+        visible: true,
+        enabled: true,
+        remember: true,
+        showInMainMenu: true,
+        showInSubmenu: false,
+        avoidExternalHeader: true,
+        src: "./herramientas/herramientas-index.html"
       },
 
       {
@@ -259,7 +271,6 @@
 
   function getRouteById(routeId) {
     const found = CONFIG.ROUTES.find((route) => route.id === routeId);
-
     return found ? cloneRoute(found) : null;
   }
 
@@ -297,13 +308,11 @@
     }
 
     const children = getChildren(parentId).filter((child) => child.enabled !== false);
-
     return children.length ? children[0] : null;
   }
 
   function isValidRoute(routeId) {
     const route = getRouteById(routeId);
-
     return Boolean(route && route.enabled !== false);
   }
 
