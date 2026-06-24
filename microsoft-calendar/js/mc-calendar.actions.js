@@ -1,21 +1,16 @@
 /*
   Nombre completo: mc-calendar.actions.js
   Ruta: microsoft-calendar/js/mc-calendar.actions.js
+
   Función:
-    - Manejar acciones reales de Microsoft Calendar.
+    - Manejar acciones permitidas de Microsoft Calendar.
     - Leer calendarios disponibles.
-    - Crear evento automático de prueba para cuenta 1 y cuenta 2.
+    - Probar conexión de cuenta 1 y cuenta 2 sin crear eventos.
     - Leer próximos eventos de cuenta 1 y cuenta 2.
-    - Crear evento manual en la cuenta seleccionada.
-  Se conecta con:
-    - mc-config.js
-    - mc-storage.js
-    - mc-microsoft-api.js
-    - mc-event.service.js
-    - mc-firebase.service.js
-    - mc-token.service.js
-    - mc-ui.js
-    - mc-bindings.js
+    - Bloquear cualquier creación de eventos desde esta pantalla.
+
+  Regla funcional:
+    - Los eventos solo se crean desde Agendador o Carga Masiva.
 */
 
 (function initMcCalendarActions(global) {
@@ -108,7 +103,7 @@
 
       MC.UI.setOutput({
         ok: true,
-        message: `Calendarios leídos correctamente desde ${Utils.getAccountLabel(slot)}.`,
+        message: `Calendarios leídos correctamente desde ${Utils.getAccountLabel(slot)}. No se creó ningún evento.`,
         firestorePath: CONFIG.FIRESTORE_PATH,
         accountSlot: slot,
         count: calendars.length,
@@ -142,7 +137,7 @@
     const slot = Utils.normalizeAccountSlot(accountSlot);
 
     MC.UI.setBusy(true);
-    MC.UI.setStatus("loading", "Creando prueba");
+    MC.UI.setStatus("loading", "Probando");
     MC.UI.setAccountStatus(slot, "loading", "Probando");
 
     let connection = MC.ConnectionActions.createConnectionDraft();
@@ -150,52 +145,44 @@
     try {
       connection = await prepareConnectionForCalendarAction(slot);
 
-      const account = connection.accounts[slot];
       const tokenInfo = await MC.TokenService.ensureToken(slot, connection);
+      const profile = await MC.MicrosoftApi.getMe(tokenInfo.accessToken);
 
-      const automaticTestEvent =
-        MC.EventService.createAutomaticTestEventPayload(slot, account);
-
-      const calendarId = getCalendarIdFromAccount(account);
-
-      const createdEvent = await MC.MicrosoftApi.insertEvent({
-        accessToken: tokenInfo.accessToken,
-        calendarId,
-        event: automaticTestEvent.microsoftEvent
+      const updatedConnection = MC.Storage.markAccountConnected(slot, {
+        accountEmail: profile.email || connection.accounts[slot].accountEmail,
+        microsoftAccountId: profile.id,
+        microsoftUsername: profile.displayName || profile.userPrincipalName
       });
 
-      const normalizedEvent =
-        MC.EventService.normalizeMicrosoftEvent(createdEvent);
-
-      const updatedConnection = MC.Storage.saveCreatedEvent(slot, normalizedEvent);
       const updatedAccount = updatedConnection.accounts[slot];
 
       const firebasePayload =
-        await MC.FirebaseService.saveMicrosoftCalendarEventCreatedStatus({
+        await MC.FirebaseService.saveMicrosoftCalendarConnectedStatus({
           accountSlot: slot,
-          account: updatedAccount,
-          event: normalizedEvent
+          account: updatedAccount
         });
 
       MC.UI.writeConnectionToInputs(updatedConnection);
-      MC.UI.setStatus("ok", "Prueba creada");
+      MC.UI.setStatus("ok", "Conectado");
       MC.UI.setAccountStatus(slot, "ok", "Conectada");
 
       MC.UI.setOutput({
         ok: true,
-        message: `Prueba correcta. Se creó un evento real en Microsoft Calendar para ${Utils.getAccountLabel(slot)}.`,
+        message: `Conexión correcta con ${Utils.getAccountLabel(slot)}. No se creó ningún evento desde esta pantalla.`,
         firestorePath: CONFIG.FIRESTORE_PATH,
         accountSlot: slot,
         accountEmail: updatedAccount.accountEmail,
-        calendarId: calendarId || "default",
+        microsoftProfile: {
+          id: profile.id,
+          displayName: profile.displayName,
+          email: profile.email
+        },
         token: MC.TokenService.getPublicTokenInfo(slot),
-        testEventLocal: automaticTestEvent.local,
-        microsoftCalendar: normalizedEvent,
         firebase: firebasePayload,
-        note: "El evento automático se crea en el siguiente minuto."
+        rule: "Los eventos solo se crean desde Agendador o Carga Masiva."
       });
 
-      return normalizedEvent;
+      return profile;
     } catch (error) {
       await saveCalendarError(slot, error);
 
@@ -269,7 +256,7 @@
 
       MC.UI.setOutput({
         ok: true,
-        message: `Próximos eventos leídos correctamente desde ${Utils.getAccountLabel(slot)}.`,
+        message: `Próximos eventos leídos correctamente desde ${Utils.getAccountLabel(slot)}. No se creó ningún evento.`,
         firestorePath: CONFIG.FIRESTORE_PATH,
         accountSlot: slot,
         accountEmail: updatedAccount.accountEmail,
@@ -308,85 +295,18 @@
     return readUpcomingEvents("account2");
   }
 
-  async function createManualEvent(event) {
+  async function blockEventCreationFromModule(event) {
     if (event && typeof event.preventDefault === "function") {
       event.preventDefault();
     }
 
-    const manualInput = MC.UI.readManualEventFromInputs();
-    const slot = Utils.normalizeAccountSlot(manualInput.accountSlot);
-
-    MC.UI.setBusy(true);
-    MC.UI.setStatus("loading", "Creando evento");
-    MC.UI.setAccountStatus(slot, "loading", "Creando");
-
-    let connection = MC.ConnectionActions.createConnectionDraft();
-
-    try {
-      connection = await prepareConnectionForCalendarAction(slot);
-
-      const account = connection.accounts[slot];
-      const tokenInfo = await MC.TokenService.ensureToken(slot, connection);
-
-      const localEvent = MC.EventService.createTestEvent(manualInput);
-      const microsoftEvent = MC.EventService.toMicrosoftCalendarEvent(localEvent);
-
-      const calendarId = getCalendarIdFromAccount(account);
-
-      const createdEvent = await MC.MicrosoftApi.insertEvent({
-        accessToken: tokenInfo.accessToken,
-        calendarId,
-        event: microsoftEvent
-      });
-
-      const normalizedEvent =
-        MC.EventService.normalizeMicrosoftEvent(createdEvent);
-
-      const updatedConnection = MC.Storage.saveCreatedEvent(slot, normalizedEvent);
-      const updatedAccount = updatedConnection.accounts[slot];
-
-      const firebasePayload =
-        await MC.FirebaseService.saveMicrosoftCalendarEventCreatedStatus({
-          accountSlot: slot,
-          account: updatedAccount,
-          event: normalizedEvent
-        });
-
-      MC.UI.writeConnectionToInputs(updatedConnection);
-      MC.UI.setStatus("ok", "Evento creado");
-      MC.UI.setAccountStatus(slot, "ok", "Conectada");
-
-      MC.UI.setOutput({
-        ok: true,
-        message: `Evento manual creado correctamente en ${Utils.getAccountLabel(slot)}.`,
-        firestorePath: CONFIG.FIRESTORE_PATH,
-        accountSlot: slot,
-        accountEmail: updatedAccount.accountEmail,
-        calendarId: calendarId || "default",
-        localEvent,
-        microsoftCalendar: normalizedEvent,
-        token: MC.TokenService.getPublicTokenInfo(slot),
-        firebase: firebasePayload
-      });
-
-      return normalizedEvent;
-    } catch (error) {
-      await saveCalendarError(slot, error);
-
-      MC.UI.setStatus("error", "Error");
-      MC.UI.setAccountStatus(slot, "error", "Error");
-
-      MC.UI.setOutput({
-        ok: false,
-        message: error.message,
-        accountSlot: slot,
-        firestorePath: CONFIG.FIRESTORE_PATH
-      });
-
-      throw error;
-    } finally {
-      MC.UI.setBusy(false);
-    }
+    MC.UI.setStatus("error", "Bloqueado");
+    MC.UI.setOutput({
+      ok: false,
+      blocked: true,
+      message: "La creación de eventos desde Microsoft Calendar está bloqueada.",
+      rule: "Crea eventos únicamente desde Agendador o Carga Masiva."
+    });
   }
 
   MC.CalendarActions = {
@@ -400,6 +320,7 @@
     readEventsAccount1,
     readEventsAccount2,
 
-    createManualEvent
+    blockEventCreationFromModule,
+    createManualEvent: blockEventCreationFromModule
   };
 })(window);
