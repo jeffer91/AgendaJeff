@@ -1,24 +1,26 @@
 /*
   Nombre completo: gc-google-api.js
   Ruta: google-calendar/js/gc-google-api.js
+
   Función:
     - Comunicarse con Google Identity Services.
     - Pedir access token temporal para Google Calendar.
     - Comunicarse con Google Calendar API por REST.
     - Leer calendario principal o calendario configurado.
     - Leer próximos eventos.
-    - Crear evento de prueba.
+    - Crear eventos solo cuando el origen autorizado sea Agendador o Carga Masiva.
+
   Se conecta con:
     - gc-config.js
     - gc-storage.js
     - gc-event.service.js
-    - gc-app.js
+    - ag-google.adapter.js
 
   Importante:
     - Este archivo NO guarda accessToken en localStorage.
     - Este archivo NO guarda accessToken en Firebase.
     - El token vive solo en memoria mientras la página está abierta.
-    - Este archivo NO usa Telegram ni window.TL.
+    - Este archivo NO crea eventos desde gc-index.html.
 */
 
 (function initGcGoogleApi(global) {
@@ -26,6 +28,8 @@
 
   const GC = global.GC;
   const CONFIG = GC.CONFIG;
+
+  const ALLOWED_CREATE_SOURCES = ["agendador", "cargaMasiva", "agendador-sync", "carga-masiva"];
 
   function normalizeText(value) {
     return String(value || "").trim();
@@ -53,7 +57,6 @@
       : `/${String(path || "")}`;
 
     const url = new URL(`${CONFIG.GOOGLE_CALENDAR_API_BASE_URL}${safePath}`);
-
     const safeQuery = query && typeof query === "object" ? query : {};
 
     Object.keys(safeQuery).forEach((key) => {
@@ -81,6 +84,18 @@
     }
 
     return safeAccessToken;
+  }
+
+  function assertAuthorizedCreateSource(source) {
+    const cleanSource = normalizeText(source);
+
+    if (!ALLOWED_CREATE_SOURCES.includes(cleanSource)) {
+      throw new Error(
+        "Creación bloqueada: Google Calendar solo puede crear eventos enviados desde Agendador o Carga Masiva."
+      );
+    }
+
+    return cleanSource;
   }
 
   async function waitForGoogleIdentityServices() {
@@ -155,18 +170,15 @@
             });
           },
           error_callback: (error) => {
-            const message =
-              error && error.message
-                ? error.message
-                : "No se pudo abrir o completar la ventana de autorización de Google.";
+            const message = error && error.message
+              ? error.message
+              : "No se pudo abrir o completar la ventana de autorización de Google.";
 
             reject(new Error(message));
           }
         });
 
-        tokenClient.requestAccessToken({
-          prompt
-        });
+        tokenClient.requestAccessToken({ prompt });
       } catch (error) {
         reject(error);
       }
@@ -199,16 +211,14 @@
     }
 
     if (!response.ok) {
-      const apiMessage =
-        payload &&
+      const apiMessage = payload &&
         payload.error &&
         typeof payload.error === "object" &&
         payload.error.message
-          ? payload.error.message
-          : "";
+        ? payload.error.message
+        : "";
 
       const fallbackMessage = `Google Calendar rechazó la solicitud. HTTP ${response.status}.`;
-
       throw new Error(apiMessage || fallbackMessage);
     }
 
@@ -242,7 +252,6 @@
     }
 
     const response = await fetch(url, requestOptions);
-
     return parseGoogleApiResponse(response);
   }
 
@@ -282,6 +291,8 @@
     const calendarId = normalizeCalendarId(safeParams.calendarId);
     const event = safeParams.event;
 
+    assertAuthorizedCreateSource(safeParams.source);
+
     if (!event || typeof event !== "object") {
       throw new Error("Falta el evento para crear en Google Calendar.");
     }
@@ -295,6 +306,7 @@
   }
 
   GC.GoogleApi = {
+    ALLOWED_CREATE_SOURCES,
     waitForGoogleIdentityServices,
     requestAccessToken,
     revokeAccessToken,
