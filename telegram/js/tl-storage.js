@@ -56,10 +56,22 @@
     };
   }
 
+  function syncInBackground(connection) {
+    if (!connection || !connection.botToken || !connection.chatId) {
+      return;
+    }
+
+    syncWithElectron(connection).catch(() => {
+      // No romper lecturas locales si Electron no está disponible.
+    });
+  }
+
   function readConnection() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return normalizeConnection(raw ? JSON.parse(raw) : {});
+      const connection = normalizeConnection(raw ? JSON.parse(raw) : {});
+      syncInBackground(connection);
+      return connection;
     } catch (_error) {
       return normalizeConnection({});
     }
