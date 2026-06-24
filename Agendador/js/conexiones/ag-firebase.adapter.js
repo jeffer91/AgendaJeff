@@ -7,18 +7,9 @@
     - Guarda eventos, pendientes y recordatorios en Firestore.
     - Usa Firebase compat si está cargado.
     - Inicializa Firebase si todavía no existe una app inicializada.
-    - Reutiliza configuración pública Firebase desde GC, MC, TL o NT.
+    - Reutiliza configuración pública Firebase desde AG, GC, MC, TL o NT.
     - Guarda solo datos funcionales del Agendador.
     - No guarda tokens de Google, Microsoft ni Telegram.
-    - No depende del HTML de otros módulos.
-
-  Se conecta con:
-    - ../ag-config.js
-    - ../ag-storage.js
-    - ../../google-calendar/js/gc-firebase-config.js
-    - ../../microsoft-calendar/js/mc-firebase-config.js
-    - ../../telegram/js/tl-firebase-config.js
-    - ../../notificaciones-desktop/js/nt-firebase-config.js
 
   Firestore:
     - Colección: conexiones
@@ -46,6 +37,32 @@
     return String(value || "").trim();
   }
 
+  function sanitizeForFirestore(value) {
+    if (value === undefined || typeof value === "function") {
+      return null;
+    }
+
+    if (value === null) {
+      return null;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(sanitizeForFirestore);
+    }
+
+    if (value && typeof value === "object") {
+      const output = {};
+      Object.entries(value).forEach(([key, entryValue]) => {
+        if (entryValue !== undefined && typeof entryValue !== "function") {
+          output[key] = sanitizeForFirestore(entryValue);
+        }
+      });
+      return output;
+    }
+
+    return value;
+  }
+
   function isFirebaseCompatAvailable() {
     return Boolean(
       global.firebase &&
@@ -63,16 +80,11 @@
   }
 
   function getExistingNamedApp() {
-    const apps = getFirebaseApps();
-
-    return apps.find((app) => {
-      return app && app.name === FIREBASE_APP_NAME;
-    }) || null;
+    return getFirebaseApps().find((app) => app && app.name === FIREBASE_APP_NAME) || null;
   }
 
   function getAnyExistingApp() {
     const apps = getFirebaseApps();
-
     return apps.length ? apps[0] : null;
   }
 
@@ -86,16 +98,11 @@
     ].filter(Boolean);
 
     const config = candidates.find((candidate) => {
-      return candidate &&
-        candidate.apiKey &&
-        candidate.projectId &&
-        candidate.appId;
+      return candidate && candidate.apiKey && candidate.projectId && candidate.appId;
     });
 
     if (!config) {
-      throw new Error(
-        "No encontré configuración Firebase. Carga gc-firebase-config.js, mc-firebase-config.js, tl-firebase-config.js o nt-firebase-config.js."
-      );
+      throw new Error("No encontré configuración Firebase. Carga gc-firebase-config.js, mc-firebase-config.js, tl-firebase-config.js o nt-firebase-config.js.");
     }
 
     return config;
@@ -117,7 +124,7 @@
 
     if (existingNamedApp) {
       firebaseApp = existingNamedApp;
-      firestoreDb = firebaseApp.firestore();
+      firestoreDb = global.firebase.firestore(firebaseApp);
       return {
         app: firebaseApp,
         db: firestoreDb
@@ -135,11 +142,7 @@
       };
     }
 
-    firebaseApp = global.firebase.initializeApp(
-      getFirebaseConfig(),
-      FIREBASE_APP_NAME
-    );
-
+    firebaseApp = global.firebase.initializeApp(getFirebaseConfig(), FIREBASE_APP_NAME);
     firestoreDb = global.firebase.firestore(firebaseApp);
 
     return {
@@ -162,14 +165,20 @@
     const safeItem = item || {};
     const responsible = safeItem.responsible || {};
 
-    return {
+    return sanitizeForFirestore({
       id: normalizeText(safeItem.id),
       type: normalizeText(safeItem.type),
+      tipo: normalizeText(safeItem.type),
       title: normalizeText(safeItem.title),
+      titulo: normalizeText(safeItem.title),
       date: normalizeText(safeItem.date),
+      fecha: normalizeText(safeItem.date),
       time: normalizeText(safeItem.time),
+      hora: normalizeText(safeItem.time),
       durationMinutes: Number(safeItem.durationMinutes || CONFIG.DEFAULT_DURATION_MINUTES),
+      duracionMinutos: Number(safeItem.durationMinutes || CONFIG.DEFAULT_DURATION_MINUTES),
       priority: normalizeText(safeItem.priority),
+      prioridad: normalizeText(safeItem.priority),
 
       responsible: {
         id: normalizeText(responsible.id),
@@ -178,37 +187,75 @@
         phone: normalizeText(responsible.phone),
         type: normalizeText(responsible.type)
       },
+      responsable: {
+        id: normalizeText(responsible.id),
+        nombre: normalizeText(responsible.name),
+        correo: normalizeText(responsible.email),
+        telefono: normalizeText(responsible.phone),
+        tipo: normalizeText(responsible.type)
+      },
 
       description: normalizeText(safeItem.description),
+      descripcion: normalizeText(safeItem.description),
       reminders: Array.isArray(safeItem.reminders) ? safeItem.reminders : [],
+      recordatorios: Array.isArray(safeItem.reminders) ? safeItem.reminders : [],
       channels: Array.isArray(safeItem.channels) ? safeItem.channels : [],
+      canales: Array.isArray(safeItem.channels) ? safeItem.channels : [],
       status: normalizeText(safeItem.status),
+      estado: normalizeText(safeItem.status),
       syncStatus: safeItem.syncStatus || {},
+      estadoSincronizacion: safeItem.syncStatus || {},
 
       startAt: normalizeText(safeItem.startAt),
+      inicioEn: normalizeText(safeItem.startAt),
       endAt: normalizeText(safeItem.endAt),
+      finEn: normalizeText(safeItem.endAt),
 
       source: CONFIG.SOURCE,
+      origen: CONFIG.SOURCE,
       createdAt: normalizeText(safeItem.createdAt),
+      creadoEn: normalizeText(safeItem.createdAt),
       updatedAt: normalizeText(safeItem.updatedAt),
-      lastSyncedAt: normalizeText(safeItem.lastSyncedAt)
-    };
+      actualizadoEn: normalizeText(safeItem.updatedAt),
+      lastSyncedAt: normalizeText(safeItem.lastSyncedAt),
+      ultimoSincronizadoEn: normalizeText(safeItem.lastSyncedAt),
+      cm: safeItem.cm || null
+    });
   }
 
   async function saveMainStatus(extraData) {
     const ref = getMainDocumentRef();
+    const now = new Date().toISOString();
+    const localItemsCount = AG.Storage && typeof AG.Storage.readItems === "function"
+      ? AG.Storage.readItems().length
+      : 0;
+    const responsiblesCount = AG.Storage && typeof AG.Storage.readResponsibles === "function"
+      ? AG.Storage.readResponsibles().length
+      : 0;
 
-    const payload = {
+    const payload = sanitizeForFirestore({
       provider: "agendador",
+      proveedor: "agendador",
       moduleName: CONFIG.MODULE_NAME,
+      modulo: CONFIG.MODULE_NAME,
       source: CONFIG.SOURCE,
+      origen: CONFIG.SOURCE,
       configured: true,
-      localItemsCount: AG.Storage.readItems().length,
-      responsiblesCount: AG.Storage.readResponsibles().length,
+      configurado: true,
+      status: "connected",
+      estado: "connected",
+      localItemsCount,
+      totalItemsLocales: localItemsCount,
+      responsiblesCount,
+      totalResponsables: responsiblesCount,
       lastAction: "sync",
-      lastSyncAt: new Date().toISOString(),
+      ultimaAccion: "sincronizacion",
+      lastSyncAt: now,
+      ultimoSincronizadoEn: now,
+      updatedAt: now,
+      actualizadoEn: now,
       ...(extraData || {})
-    };
+    });
 
     await ref.set(payload, { merge: true });
 
@@ -231,17 +278,22 @@
       .collection(FIRESTORE_ITEMS_SUBCOLLECTION)
       .doc(itemId);
 
-    const payload = {
+    const now = new Date().toISOString();
+    const payload = sanitizeForFirestore({
       ...publicItem,
-      firebaseSavedAt: new Date().toISOString()
-    };
+      firebaseSavedAt: now,
+      firebaseGuardadoEn: now
+    });
 
     await ref.set(payload, { merge: true });
 
     await saveMainStatus({
       lastItemId: itemId,
+      ultimoItemId: itemId,
       lastItemTitle: publicItem.title,
-      lastItemType: publicItem.type
+      ultimoItemTitulo: publicItem.title,
+      lastItemType: publicItem.type,
+      ultimoItemTipo: publicItem.type
     });
 
     return {
@@ -271,23 +323,34 @@
   }
 
   async function saveError(error, item) {
-    const message = error && error.message
-      ? error.message
-      : String(error || "Error desconocido.");
-
+    const message = error && error.message ? error.message : String(error || "Error desconocido.");
     const ref = getMainDocumentRef();
+    const now = new Date().toISOString();
 
-    const payload = {
+    const payload = sanitizeForFirestore({
       provider: "agendador",
+      proveedor: "agendador",
       moduleName: CONFIG.MODULE_NAME,
+      modulo: CONFIG.MODULE_NAME,
       source: CONFIG.SOURCE,
+      origen: CONFIG.SOURCE,
+      status: "error",
+      estado: "error",
       lastAction: "error",
+      ultimaAccion: "error",
       lastError: {
         message,
+        mensaje: message,
         itemId: item && item.id ? item.id : "",
-        at: new Date().toISOString()
-      }
-    };
+        at: now,
+        en: now
+      },
+      ultimoError: message,
+      lastErrorAt: now,
+      ultimoErrorEn: now,
+      updatedAt: now,
+      actualizadoEn: now
+    });
 
     await ref.set(payload, { merge: true });
 
@@ -311,7 +374,8 @@
       initFirebase();
 
       await saveMainStatus({
-        lastAction: "availability-check"
+        lastAction: "availability-check",
+        ultimaAccion: "revisionDisponibilidad"
       });
 
       return {
