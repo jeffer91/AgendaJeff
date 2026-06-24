@@ -6,25 +6,8 @@
     - Conectar Carga Masiva con el Agendador.
     - Convertir eventos confirmados de CM al formato compatible con AG.
     - Guardar primero en local mediante AG.Storage.saveItem.
-    - Luego sincronizar con AG.SyncService.syncItem.
-    - Respetar el orden:
-      Local → Firebase → Google/Microsoft/Telegram/Notificaciones.
-    - Mantener metadata de carga masiva: batchId, origen, tipo real, defensa, rango, fuente y recordatorios CM.
-    - No procesa texto, archivos ni validaciones visuales.
-
-  Se conecta con:
-    - cm-config.js
-    - cm-storage.js
-    - servicios/cm-import.service.js
-    - servicios/cm-validator.service.js
-    - Agendador/js/ag-config.js
-    - Agendador/js/ag-storage.js
-    - Agendador/js/servicios/ag-event.service.js
-    - Agendador/js/servicios/ag-sync.service.js
-
-  Importante:
-    - Este archivo necesita que el namespace window.AG esté disponible.
-    - En la fase final se actualizará cm-index.html o la pantalla puente para cargar las dependencias mínimas del Agendador.
+    - Sincronizar canales externos sin enviar Telegram uno por uno en cargas masivas.
+    - Enviar un solo resumen de lote por Telegram al finalizar la carga.
 */
 
 (function initCmAgendadorAdapter(global) {
@@ -49,9 +32,7 @@
 
   function ensureAgendadorAvailable() {
     if (!isAgendadorAvailable()) {
-      throw new Error(
-        "El Agendador no está cargado. En la actualización final se deben cargar las dependencias mínimas de Agendador en Carga Masiva."
-      );
+      throw new Error("El Agendador no está cargado. Revisa las dependencias mínimas de Agendador en Carga Masiva.");
     }
 
     return getAG();
@@ -64,13 +45,8 @@
   function toAGType(cmType) {
     const type = normalizeText(cmType);
 
-    if (type === "pending") {
-      return "pending";
-    }
-
-    if (type === "reminder") {
-      return "reminder";
-    }
+    if (type === "pending") return "pending";
+    if (type === "reminder") return "reminder";
 
     return "event";
   }
@@ -97,6 +73,11 @@
 
         return safeChannels[channel] !== false;
       });
+  }
+
+  function removeTelegramChannel(channels) {
+    return (Array.isArray(channels) ? channels : [])
+      .filter((channel) => channel !== CONFIG.CHANNELS.TELEGRAM);
   }
 
   function calculateDurationMinutes(event) {
@@ -149,8 +130,18 @@
   function mapReminderKeys(event) {
     const safeEvent = event || {};
 
+    if (Array.isArray(safeEvent.reminders) && safeEvent.reminders.length) {
+      const valid = safeEvent.reminders
+        .map((reminder) => normalizeText(reminder.key || reminder.code || reminder))
+        .filter((key) => ["5d", "3d", "2d", "1d", "0d", "30m"].includes(key));
+
+      if (valid.length) {
+        return Array.from(new Set(valid));
+      }
+    }
+
     if (safeEvent.type === CONFIG.EVENT_TYPES.DEFENSE) {
-      return ["1d", "0d"];
+      return ["2d", "1d", "0d"];
     }
 
     if (safeEvent.allDay) {
@@ -193,20 +184,12 @@
       return null;
     }
 
-    if (
-      AG.ResponsibleService &&
-      typeof AG.ResponsibleService.findByName === "function"
-    ) {
+    if (AG.ResponsibleService && typeof AG.ResponsibleService.findByName === "function") {
       const found = AG.ResponsibleService.findByName(safeName);
-      if (found) {
-        return found;
-      }
+      if (found) return found;
     }
 
-    if (
-      AG.Storage &&
-      typeof AG.Storage.readResponsibles === "function"
-    ) {
+    if (AG.Storage && typeof AG.Storage.readResponsibles === "function") {
       const responsibles = AG.Storage.readResponsibles();
       const normalized = safeName.toLowerCase();
 
@@ -229,39 +212,20 @@
     if (!safeName) {
       return AG.CONFIG && AG.CONFIG.DEFAULT_RESPONSIBLE
         ? AG.CONFIG.DEFAULT_RESPONSIBLE
-        : {
-            id: "default",
-            name: "Titulación",
-            email: "",
-            phone: "",
-            type: "internal"
-          };
+        : { id: "default", name: "Titulación", email: "", phone: "", type: "internal" };
     }
 
     const existing = findResponsibleByName(safeName);
+    if (existing) return existing;
 
-    if (existing) {
-      return existing;
-    }
-
-    const input = {
-      name: safeName,
-      email: "",
-      phone: ""
-    };
+    const input = { name: safeName, email: "", phone: "" };
 
     try {
-      if (
-        AG.ResponsibleService &&
-        typeof AG.ResponsibleService.createResponsible === "function"
-      ) {
+      if (AG.ResponsibleService && typeof AG.ResponsibleService.createResponsible === "function") {
         return AG.ResponsibleService.createResponsible(input);
       }
 
-      if (
-        AG.Storage &&
-        typeof AG.Storage.createResponsible === "function"
-      ) {
+      if (AG.Storage && typeof AG.Storage.createResponsible === "function") {
         return AG.Storage.createResponsible(input);
       }
     } catch (error) {
@@ -281,39 +245,18 @@
     const safeEvent = event || {};
     const parts = [];
 
-    if (safeEvent.description) {
-      parts.push(safeEvent.description);
-    }
+    if (safeEvent.description) parts.push(safeEvent.description);
 
     if (safeEvent.type === CONFIG.EVENT_TYPES.DEFENSE) {
-      if (safeEvent.studentName) {
-        parts.push(`Estudiante: ${safeEvent.studentName}`);
-      }
-
-      if (safeEvent.idNumber) {
-        parts.push(`Cédula: ${safeEvent.idNumber}`);
-      }
-
-      if (safeEvent.career) {
-        parts.push(`Carrera: ${safeEvent.career}`);
-      }
-
-      if (safeEvent.tribunal1) {
-        parts.push(`Tribunal 1: ${safeEvent.tribunal1}`);
-      }
-
-      if (safeEvent.tribunal2) {
-        parts.push(`Tribunal 2: ${safeEvent.tribunal2}`);
-      }
+      if (safeEvent.studentName) parts.push(`Estudiante: ${safeEvent.studentName}`);
+      if (safeEvent.idNumber) parts.push(`Cédula: ${safeEvent.idNumber}`);
+      if (safeEvent.career) parts.push(`Carrera: ${safeEvent.career}`);
+      if (safeEvent.tribunal1) parts.push(`Tribunal 1: ${safeEvent.tribunal1}`);
+      if (safeEvent.tribunal2) parts.push(`Tribunal 2: ${safeEvent.tribunal2}`);
     }
 
-    if (safeEvent.phase) {
-      parts.push(`Fase: ${safeEvent.phase}`);
-    }
-
-    if (safeEvent.period) {
-      parts.push(`Periodo: ${safeEvent.period}`);
-    }
+    if (safeEvent.phase) parts.push(`Fase: ${safeEvent.phase}`);
+    if (safeEvent.period) parts.push(`Periodo: ${safeEvent.period}`);
 
     if (safeEvent.endDate && safeEvent.endDate !== safeEvent.startDate) {
       parts.push(`Rango de fechas: ${safeEvent.startDate} a ${safeEvent.endDate}`);
@@ -323,12 +266,10 @@
       parts.push("Evento de todo el día. Avisos sugeridos: 06:00, 09:00, 13:00 y 17:00.");
     }
 
-    parts.push(`Origen: Carga masiva`);
+    parts.push("Origen: Carga masiva");
     parts.push(`Lote: ${safeEvent.batchId || "sin lote"}`);
 
-    return parts
-      .filter(Boolean)
-      .join("\n");
+    return parts.filter(Boolean).join("\n");
   }
 
   function createAGFormData(event) {
@@ -372,9 +313,7 @@
       description: formData.description,
       reminders: formData.reminders,
       channels,
-      status: AG.CONFIG && AG.CONFIG.STATUS
-        ? AG.CONFIG.STATUS.ACTIVE
-        : "active",
+      status: AG.CONFIG && AG.CONFIG.STATUS ? AG.CONFIG.STATUS.ACTIVE : "active",
       syncStatus: createSyncStatus(channels),
       startAt: `${formData.date}T${formData.time}:00`,
       endAt: "",
@@ -382,7 +321,6 @@
       origin: "cargaMasiva",
       createdAt: now,
       updatedAt: now,
-
       cm: {
         batchId: event.batchId || "",
         cmEventId: event.id || "",
@@ -399,7 +337,8 @@
         idNumber: event.idNumber || "",
         career: event.career || "",
         tribunal1: event.tribunal1 || "",
-        tribunal2: event.tribunal2 || ""
+        tribunal2: event.tribunal2 || "",
+        suppressIndividualTelegram: true
       }
     };
   }
@@ -411,10 +350,7 @@
 
     let agItem = null;
 
-    if (
-      AG.EventService &&
-      typeof AG.EventService.createItem === "function"
-    ) {
+    if (AG.EventService && typeof AG.EventService.createItem === "function") {
       try {
         agItem = AG.EventService.createItem(formData, responsible);
       } catch (error) {
@@ -448,7 +384,8 @@
         idNumber: event.idNumber || "",
         career: event.career || "",
         tribunal1: event.tribunal1 || "",
-        tribunal2: event.tribunal2 || ""
+        tribunal2: event.tribunal2 || "",
+        suppressIndividualTelegram: true
       }
     };
   }
@@ -463,13 +400,11 @@
     return AG.Storage.saveItem(agItem);
   }
 
-  async function syncItem(savedItem) {
+  async function syncItem(savedItem, options) {
     const AG = ensureAgendadorAvailable();
+    const safeOptions = options || {};
 
-    if (
-      !AG.SyncService ||
-      typeof AG.SyncService.syncItem !== "function"
-    ) {
+    if (!AG.SyncService || typeof AG.SyncService.syncItem !== "function") {
       return {
         ok: false,
         skipped: true,
@@ -479,7 +414,14 @@
     }
 
     try {
-      return await AG.SyncService.syncItem(savedItem);
+      const itemForSync = safeOptions.suppressIndividualTelegram
+        ? {
+            ...savedItem,
+            channels: removeTelegramChannel(savedItem.channels)
+          }
+        : savedItem;
+
+      return await AG.SyncService.syncItem(itemForSync);
     } catch (error) {
       return {
         ok: false,
@@ -490,10 +432,10 @@
     }
   }
 
-  async function importOneEvent(event) {
+  async function importOneEvent(event, options) {
     const agItem = createAGItem(event);
     const savedItem = saveLocalItem(agItem);
-    const syncResult = await syncItem(savedItem);
+    const syncResult = await syncItem(savedItem, options);
 
     return {
       ok: true,
@@ -506,6 +448,60 @@
       },
       sync: syncResult,
       savedItem
+    };
+  }
+
+  async function sendBulkTelegramSummary(batch, events, results) {
+    const AG = ensureAgendadorAvailable();
+    const success = results.filter((result) => result.ok);
+    const savedItems = success.map((result) => result.savedItem).filter(Boolean);
+    const failed = results.filter((result) => !result.ok);
+
+    if (!AG.Adapters || !AG.Adapters.TelegramAdapter || typeof AG.Adapters.TelegramAdapter.syncBulkImportSummary !== "function") {
+      return {
+        ok: false,
+        skipped: true,
+        message: "TelegramAdapter no tiene resumen de carga masiva disponible."
+      };
+    }
+
+    try {
+      return await AG.Adapters.TelegramAdapter.syncBulkImportSummary({
+        batch,
+        events,
+        results,
+        savedItems,
+        total: events.length,
+        saved: savedItems.length,
+        failed: failed.length
+      });
+    } catch (error) {
+      return {
+        ok: false,
+        skipped: false,
+        message: error.message
+      };
+    }
+  }
+
+  async function syncBackgroundReminders() {
+    const AG = ensureAgendadorAvailable();
+
+    if (AG.Storage && typeof AG.Storage.syncBackgroundNow === "function") {
+      try {
+        return await AG.Storage.syncBackgroundNow();
+      } catch (error) {
+        return {
+          ok: false,
+          message: error.message
+        };
+      }
+    }
+
+    return {
+      ok: false,
+      skipped: true,
+      message: "AG.Storage.syncBackgroundNow no está disponible."
     };
   }
 
@@ -531,6 +527,8 @@
         const result = await importOneEvent({
           ...event,
           batchId: event.batchId || batch.id
+        }, {
+          suppressIndividualTelegram: true
         });
 
         results.push(result);
@@ -546,6 +544,8 @@
 
     const success = results.filter((result) => result.ok);
     const failed = results.filter((result) => !result.ok);
+    const telegramSummary = await sendBulkTelegramSummary(batch, events, results);
+    const backgroundSync = await syncBackgroundReminders();
 
     return {
       ok: failed.length === 0,
@@ -555,6 +555,8 @@
       failed: failed.length,
       results,
       savedItems: success.map((result) => result.savedItem).filter(Boolean),
+      telegramSummary,
+      backgroundSync,
       importedAt: CM.nowISO()
     };
   }
@@ -582,6 +584,8 @@
 
     saveLocalItem,
     syncItem,
+    sendBulkTelegramSummary,
+    syncBackgroundReminders,
     importOneEvent,
     importEvents
   };
