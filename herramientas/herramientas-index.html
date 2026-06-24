@@ -1,0 +1,105 @@
+<!--
+  Nombre completo: herramientas-index.html
+  Ruta: herramientas/herramientas-index.html
+
+  Función:
+    - Pantalla de herramientas finales de AgendaJeff.
+    - Permite deshacer la última carga masiva importada.
+    - Permite exportar backup JSON.
+    - Permite restaurar backup JSON.
+    - Permite generar reporte Excel CSV y reporte imprimible/PDF.
+    - Permite ejecutar una prueba completa sin crear eventos externos.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Herramientas - AgendaJeff</title>
+  <link rel="stylesheet" href="./css/herramientas-styles.css" />
+</head>
+<body>
+  <main class="ht-page">
+    <section class="ht-card ht-hero">
+      <div>
+        <p class="ht-kicker">AgendaJeff / Control final</p>
+        <h1>Herramientas</h1>
+        <p>
+          Usa esta pantalla para respaldar datos, restaurar, generar reportes,
+          deshacer cargas masivas y probar que la app esté funcionando.
+        </p>
+      </div>
+      <div id="htStatusBadge" class="ht-status ht-status--idle">Listo</div>
+    </section>
+
+    <section class="ht-grid">
+      <article class="ht-card">
+        <h2>5. Deshacer última carga masiva</h2>
+        <p>
+          Elimina del Agendador los eventos locales creados por la última carga masiva importada.
+        </p>
+        <div class="ht-actions">
+          <button id="htPreviewUndoBtn" class="ht-btn" type="button">Revisar última carga</button>
+          <button id="htUndoLastBatchBtn" class="ht-btn ht-btn--danger" type="button">Deshacer última carga</button>
+        </div>
+        <small>
+          Nota: elimina registros locales. No borra automáticamente eventos ya creados en Google/Microsoft.
+        </small>
+      </article>
+
+      <article class="ht-card">
+        <h2>6. Backup y restauración</h2>
+        <p>
+          Exporta un respaldo JSON de AgendaJeff o restaura un respaldo previo.
+        </p>
+        <div class="ht-actions">
+          <button id="htExportBackupBtn" class="ht-btn ht-btn--primary" type="button">Exportar backup JSON</button>
+          <label class="ht-file-label" for="htRestoreFileInput">Seleccionar backup</label>
+          <input id="htRestoreFileInput" class="ht-file-input" type="file" accept=".json,application/json" />
+          <button id="htRestoreBackupBtn" class="ht-btn" type="button">Restaurar backup</button>
+        </div>
+        <label class="ht-check">
+          <input id="htReplaceOnRestore" type="checkbox" />
+          Reemplazar claves conocidas antes de restaurar
+        </label>
+      </article>
+
+      <article class="ht-card">
+        <h2>7. Reportes</h2>
+        <p>
+          Genera un reporte compatible con Excel y un reporte imprimible para guardar como PDF.
+        </p>
+        <div class="ht-actions">
+          <button id="htExportExcelBtn" class="ht-btn ht-btn--primary" type="button">Exportar Excel CSV</button>
+          <button id="htPrintReportBtn" class="ht-btn" type="button">Reporte PDF / Imprimir</button>
+        </div>
+      </article>
+
+      <article class="ht-card">
+        <h2>8. Modo prueba completo</h2>
+        <p>
+          Revisa localStorage, Agendador, Carga Masiva, Telegram, segundo plano y reportes.
+        </p>
+        <div class="ht-actions">
+          <button id="htRunFullTestBtn" class="ht-btn ht-btn--primary" type="button">Probar AgendaJeff completa</button>
+        </div>
+        <small>
+          Esta prueba no crea eventos en Google ni Microsoft. Solo valida estructura local y puente Electron.
+        </small>
+      </article>
+    </section>
+
+    <section class="ht-card ht-output-card">
+      <div class="ht-section-title">
+        <h2>Resultado</h2>
+        <button id="htRefreshSummaryBtn" class="ht-mini-btn" type="button">Actualizar resumen</button>
+      </div>
+      <pre id="htOutput" class="ht-output">Esperando acción...</pre>
+    </section>
+  </main>
+
+  <script src="./js/herramientas-service.js"></script>
+  <script src="./js/herramientas-app.js"></script>
+</body>
+</html>
