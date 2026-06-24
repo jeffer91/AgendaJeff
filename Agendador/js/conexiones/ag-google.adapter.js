@@ -19,10 +19,9 @@
     - ../../google-calendar/js/gc-token.service.js
     - ../../google-calendar/js/gc-google-api.js
 
-  Requisitos para funcionar:
-    - Cargar antes los scripts necesarios del módulo Google Calendar.
-    - Tener credenciales Google guardadas desde google-calendar/gc-index.html.
-    - Tener una autorización/token válido o permitir que Google pida autorización.
+  Regla funcional:
+    - Google Calendar solo recibe eventos desde Agendador o Carga Masiva.
+    - La pantalla google-calendar/gc-index.html no crea eventos.
 */
 
 (function initAgGoogleAdapter(global) {
@@ -64,6 +63,16 @@
       normalizeText(connection.clientId) &&
       normalizeText(connection.calendarId)
     );
+  }
+
+  function getAuthorizedSource(item) {
+    const safeItem = item || {};
+
+    if (safeItem.origin === "cargaMasiva" || safeItem.source === "cargaMasiva") {
+      return "cargaMasiva";
+    }
+
+    return "agendador";
   }
 
   function pad2(value) {
@@ -133,7 +142,9 @@
     return [
       normalizeText(safeItem.description) || "Sin descripción.",
       "",
-      "Creado desde AgendaJeff - Agendador.",
+      safeItem.origin === "cargaMasiva" || safeItem.source === "cargaMasiva"
+        ? "Creado desde AgendaJeff - Carga Masiva."
+        : "Creado desde AgendaJeff - Agendador.",
       `Tipo: ${getTypeLabel(safeItem.type)}`,
       `Responsable: ${responsible.name || "Yo"}`,
       responsible.email ? `Correo responsable: ${responsible.email}` : "",
@@ -237,7 +248,9 @@
     const createdEvent = await global.GC.GoogleApi.insertEvent({
       accessToken: token.accessToken,
       calendarId: connection.calendarId,
-      event: googleEvent
+      event: googleEvent,
+      source: getAuthorizedSource(item),
+      sourceItemId: item && item.id ? item.id : ""
     });
 
     const normalizedEvent = global.GC.EventService &&
@@ -290,6 +303,7 @@
   AG.Adapters.GoogleAdapter = {
     isGoogleModuleAvailable,
     readGoogleConnection,
+    getAuthorizedSource,
     toGoogleEvent,
     syncItem,
     testAvailability
