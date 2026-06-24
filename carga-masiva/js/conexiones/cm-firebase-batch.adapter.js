@@ -5,19 +5,10 @@
   Función:
     - Guardar el resumen compacto del lote de Carga Masiva en Firebase.
     - Guardar una copia compacta de los eventos del lote en subcolección.
+    - Inicializar Firebase aunque ningún otro módulo lo haya hecho antes.
     - Evitar subir texto completo pesado o basura OCR.
-    - Guardar solo lo importante:
-      lote, totales, estado, origen, canales, fecha, títulos y metadata compacta.
+    - Guardar solo lote, totales, estado, origen, canales, fecha, títulos y metadata compacta.
     - Si Firebase no está disponible, guardar respaldo local y no romper la importación.
-    - No crea eventos en Google, Microsoft, Telegram ni Notificaciones.
-
-  Se conecta con:
-    - cm-config.js
-    - cm-storage.js
-    - servicios/cm-import.service.js
-    - conexiones/cm-agendador.adapter.js
-    - Firebase SDK compat
-    - Opcionalmente con una configuración Firebase global ya inicializada.
 */
 
 (function initCmFirebaseBatchAdapter(global) {
@@ -26,37 +17,150 @@
   const CM = global.CM = global.CM || {};
   const CONFIG = CM.CONFIG;
 
+  const FIREBASE_APP_NAME = "AgendaJeffCargaMasivaLocal";
+
   const COLLECTIONS = {
     BATCHES: "cargasMasivas",
     EVENTS: "eventos"
   };
 
+  let firebaseApp = null;
+  let firestoreDb = null;
+
   function normalizeText(value) {
     return String(value || "").trim();
   }
 
-  function isFirebaseSdkAvailable() {
-    return Boolean(global.firebase && typeof global.firebase.firestore === "function");
+  function isPlainObject(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
   }
 
-  function hasFirebaseApp() {
+  function sanitizeForFirestore(value) {
+    if (value === undefined || typeof value === "function") {
+      return null;
+    }
+
+    if (value === null) {
+      return null;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(sanitizeForFirestore);
+    }
+
+    if (value && typeof value === "object") {
+      const output = {};
+      Object.entries(value).forEach(([key, entryValue]) => {
+        if (entryValue !== undefined && typeof entryValue !== "function") {
+          output[key] = sanitizeForFirestore(entryValue);
+        }
+      });
+      return output;
+    }
+
+    return value;
+  }
+
+  function isFirebaseSdkAvailable() {
     return Boolean(
-      isFirebaseSdkAvailable() &&
-      global.firebase.apps &&
-      global.firebase.apps.length
+      global.firebase &&
+      typeof global.firebase.initializeApp === "function" &&
+      typeof global.firebase.firestore === "function"
     );
   }
 
-  function getFirestore() {
+  function getFirebaseApps() {
+    if (!global.firebase || !Array.isArray(global.firebase.apps)) {
+      return [];
+    }
+
+    return global.firebase.apps;
+  }
+
+  function getExistingNamedApp() {
+    return getFirebaseApps().find((app) => app && app.name === FIREBASE_APP_NAME) || null;
+  }
+
+  function getAnyExistingApp() {
+    const apps = getFirebaseApps();
+    return apps.length ? apps[0] : null;
+  }
+
+  function getFirebaseConfig() {
+    const candidates = [
+      global.CM && global.CM.FirebaseConfig,
+      global.AG && global.AG.FirebaseConfig,
+      global.GC && global.GC.FirebaseConfig,
+      global.MC && global.MC.FirebaseConfig,
+      global.TL && global.TL.FirebaseConfig,
+      global.NT && global.NT.FirebaseConfig
+    ].filter(Boolean);
+
+    const config = candidates.find((candidate) => {
+      return candidate && candidate.apiKey && candidate.projectId && candidate.appId;
+    });
+
+    if (!config) {
+      throw new Error("No se encontró configuración Firebase para Carga Masiva.");
+    }
+
+    return config;
+  }
+
+  function initFirebase() {
     if (!isFirebaseSdkAvailable()) {
-      return null;
+      throw new Error("Firebase SDK compat no está cargado en Carga Masiva.");
     }
 
-    if (!hasFirebaseApp()) {
-      return null;
+    if (firebaseApp && firestoreDb) {
+      return {
+        app: firebaseApp,
+        db: firestoreDb
+      };
     }
 
-    return global.firebase.firestore();
+    const existingNamedApp = getExistingNamedApp();
+
+    if (existingNamedApp) {
+      firebaseApp = existingNamedApp;
+      firestoreDb = global.firebase.firestore(firebaseApp);
+      return {
+        app: firebaseApp,
+        db: firestoreDb
+      };
+    }
+
+    const existingAnyApp = getAnyExistingApp();
+
+    if (existingAnyApp) {
+      firebaseApp = existingAnyApp;
+      firestoreDb = global.firebase.firestore(firebaseApp);
+      return {
+        app: firebaseApp,
+        db: firestoreDb
+      };
+    }
+
+    firebaseApp = global.firebase.initializeApp(getFirebaseConfig(), FIREBASE_APP_NAME);
+    firestoreDb = global.firebase.firestore(firebaseApp);
+
+    return {
+      app: firebaseApp,
+      db: firestoreDb
+    };
+  }
+
+  function hasFirebaseApp() {
+    return Boolean(isFirebaseSdkAvailable() && getFirebaseApps().length);
+  }
+
+  function getFirestore() {
+    try {
+      return initFirebase().db;
+    } catch (error) {
+      console.warn("[CM FirebaseBatchAdapter] Firebase no disponible:", error.message);
+      return null;
+    }
   }
 
   function isAvailable() {
@@ -103,7 +207,7 @@
   function compactEvent(event, index) {
     const safeEvent = event || {};
 
-    return {
+    return sanitizeForFirestore({
       id: safeEvent.id || CM.createId("cm-event"),
       order: index + 1,
       batchId: safeEvent.batchId || "",
@@ -141,7 +245,7 @@
       agItemId: safeEvent.agItemId || "",
       createdAt: safeEvent.createdAt || CM.nowISO(),
       updatedAt: CM.nowISO()
-    };
+    });
   }
 
   function createBatchSummary(payload) {
@@ -151,7 +255,7 @@
     const agendadorResult = safePayload.agendadorResult || {};
     const counts = countByStatus(events);
 
-    return {
+    return sanitizeForFirestore({
       id: batch.id || CM.createId("cm-batch"),
       name: batch.name || "Carga masiva",
       origin: "cargaMasiva",
@@ -178,15 +282,12 @@
         importedAt: agendadorResult.importedAt || CM.nowISO()
       },
 
-      sampleTitles: events
-        .slice(0, 5)
-        .map((event) => event.title)
-        .filter(Boolean),
+      sampleTitles: events.slice(0, 5).map((event) => event.title).filter(Boolean),
 
       createdAt: batch.createdAt || CM.nowISO(),
       updatedAt: CM.nowISO(),
       importedAt: CM.nowISO()
-    };
+    });
   }
 
   function saveLocalFallback(summary, events, reason) {
@@ -226,15 +327,11 @@
     }
 
     const batchWriter = db.batch();
-    const baseRef = db
-      .collection(COLLECTIONS.BATCHES)
-      .doc(batchId)
-      .collection(COLLECTIONS.EVENTS);
+    const baseRef = db.collection(COLLECTIONS.BATCHES).doc(batchId).collection(COLLECTIONS.EVENTS);
 
     safeEvents.forEach((event, index) => {
       const compact = compactEvent(event, index);
-      const docRef = baseRef.doc(compact.id);
-      batchWriter.set(docRef, compact, { merge: true });
+      batchWriter.set(baseRef.doc(compact.id), compact, { merge: true });
     });
 
     await batchWriter.commit();
@@ -264,9 +361,7 @@
 
     try {
       const batchRef = db.collection(COLLECTIONS.BATCHES).doc(batch.id);
-
       await batchRef.set(summary, { merge: true });
-
       const compactEventsResult = await saveCompactEvents(db, batch.id, events);
 
       return {
@@ -293,12 +388,12 @@
       };
     }
 
-    const patch = {
+    const patch = sanitizeForFirestore({
       status: CONFIG.BATCH_STATUS.IMPORTED,
       importedAt: CM.nowISO(),
       updatedAt: CM.nowISO(),
       ...(extra || {})
-    };
+    });
 
     await db.collection(COLLECTIONS.BATCHES).doc(batchId).set(patch, { merge: true });
 
@@ -309,11 +404,42 @@
     };
   }
 
+  async function checkFirebaseConnection() {
+    const db = getFirestore();
+
+    if (!db) {
+      return {
+        ok: false,
+        message: "Firebase no está disponible para Carga Masiva."
+      };
+    }
+
+    const checkId = "_conexion_carga_masiva";
+    const checkedAt = CM.nowISO();
+
+    await db.collection(COLLECTIONS.BATCHES).doc(checkId).set({
+      ok: true,
+      moduleName: CONFIG.MODULE_NAME,
+      checkedAt,
+      updatedAt: checkedAt
+    }, { merge: true });
+
+    return {
+      ok: true,
+      message: "Firebase conectado correctamente para Carga Masiva.",
+      firestorePath: `${COLLECTIONS.BATCHES}/${checkId}`,
+      checkedAt
+    };
+  }
+
   CM.FirebaseBatchAdapter = {
     COLLECTIONS,
+    FIREBASE_APP_NAME,
 
     isFirebaseSdkAvailable,
     hasFirebaseApp,
+    getFirebaseConfig,
+    initFirebase,
     getFirestore,
     isAvailable,
 
@@ -326,6 +452,7 @@
     saveLocalFallback,
     saveCompactEvents,
     saveBatchSummary,
-    markBatchAsImported
+    markBatchAsImported,
+    checkFirebaseConnection
   };
 })(window);
