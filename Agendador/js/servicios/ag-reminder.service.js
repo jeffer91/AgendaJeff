@@ -5,16 +5,10 @@
   Función:
     - Convertir recordatorios seleccionados en recordatorios reales.
     - Calcular fecha y hora de activación de cada recordatorio.
-    - Preparar recordatorios para notificaciones desktop, Telegram y Firebase.
+    - Preparar recordatorios para notificaciones desktop, Telegram, Firebase y segundo plano Electron.
     - Evitar recordatorios inválidos o duplicados.
     - No pinta interfaz.
     - No guarda directamente en localStorage.
-
-  Se conecta con:
-    - ../ag-config.js
-    - ../ag-storage.js
-    - ag-event.service.js
-    - ag-sync.service.js
 */
 
 (function initAgReminderService(global) {
@@ -29,6 +23,12 @@
 
   function pad2(value) {
     return String(value).padStart(2, "0");
+  }
+
+  function nowIso() {
+    return AG.Storage && typeof AG.Storage.nowIso === "function"
+      ? AG.Storage.nowIso()
+      : new Date().toISOString();
   }
 
   function getBaseDate(item) {
@@ -52,9 +52,7 @@
 
   function setTime(date, hour, minute) {
     const safeDate = cloneDate(date);
-
     safeDate.setHours(hour, minute, 0, 0);
-
     return safeDate;
   }
 
@@ -62,41 +60,12 @@
     const value = normalizeText(code);
 
     const map = {
-      "5d": {
-        code: "5d",
-        label: "5 días antes",
-        type: "daysBefore",
-        amount: 5,
-        unit: "day"
-      },
-      "3d": {
-        code: "3d",
-        label: "3 días antes",
-        type: "daysBefore",
-        amount: 3,
-        unit: "day"
-      },
-      "1d": {
-        code: "1d",
-        label: "1 día antes",
-        type: "daysBefore",
-        amount: 1,
-        unit: "day"
-      },
-      "0d": {
-        code: "0d",
-        label: "Mismo día",
-        type: "sameDay",
-        amount: 0,
-        unit: "day"
-      },
-      "30m": {
-        code: "30m",
-        label: "30 minutos antes",
-        type: "minutesBefore",
-        amount: 30,
-        unit: "minute"
-      }
+      "5d": { code: "5d", label: "5 días antes", type: "daysBefore", amount: 5, unit: "day" },
+      "3d": { code: "3d", label: "3 días antes", type: "daysBefore", amount: 3, unit: "day" },
+      "2d": { code: "2d", label: "2 días antes", type: "daysBefore", amount: 2, unit: "day" },
+      "1d": { code: "1d", label: "1 día antes", type: "daysBefore", amount: 1, unit: "day" },
+      "0d": { code: "0d", label: "Mismo día", type: "sameDay", amount: 0, unit: "day" },
+      "30m": { code: "30m", label: "30 minutos antes", type: "minutesBefore", amount: 30, unit: "minute" }
     };
 
     return map[value] || null;
@@ -150,6 +119,21 @@
     ].join(":");
   }
 
+  function createReminderMessage(item, reminder) {
+    const safeItem = item || {};
+    const safeReminder = reminder || {};
+
+    return [
+      `Recordatorio: ${safeItem.title || "Sin título"}`,
+      `Fecha del evento: ${safeItem.date || "sin fecha"} ${safeItem.time || ""}`.trim(),
+      `Aviso: ${safeReminder.label || "recordatorio"}`,
+      safeItem.description ? `Detalle: ${safeItem.description}` : "",
+      safeItem.responsible && safeItem.responsible.name
+        ? `Responsable: ${safeItem.responsible.name}`
+        : ""
+    ].filter(Boolean).join("\n");
+  }
+
   function buildReminderSchedule(item) {
     const safeItem = item || {};
     const baseDate = getBaseDate(safeItem);
@@ -171,26 +155,36 @@
           return null;
         }
 
-        return {
+        const reminder = {
           id: `${safeItem.id || "item"}-${definition.code}`,
           itemId: safeItem.id || "",
           itemTitle: safeItem.title || "",
+          title: safeItem.title || "Recordatorio AgendaJeff",
+          body: "",
+          description: safeItem.description || "",
+          type: safeItem.type || CONFIG.TYPES.EVENT,
+          priority: safeItem.priority || CONFIG.PRIORITIES.NORMAL,
           code: definition.code,
           label: definition.label,
           triggerAt: triggerDate.toISOString(),
+          reminderAt: triggerDate.toISOString(),
           triggerLocal: formatLocalDateTime(triggerDate),
           eventAt: baseDate.toISOString(),
           eventLocal: formatLocalDateTime(baseDate),
+          date: safeItem.date || "",
+          time: safeItem.time || "",
           status: triggerDate.getTime() < Date.now() ? "expired" : "scheduled",
           channels: Array.isArray(safeItem.channels) ? safeItem.channels : CONFIG.DEFAULT_CHANNELS,
           responsible: safeItem.responsible || CONFIG.DEFAULT_RESPONSIBLE,
-          createdAt: AG.Storage.nowIso()
+          createdAt: nowIso()
         };
+
+        reminder.body = createReminderMessage(safeItem, reminder);
+        return reminder;
       })
       .filter(Boolean);
 
     const uniqueByCode = {};
-
     reminders.forEach((reminder) => {
       uniqueByCode[reminder.code] = reminder;
     });
@@ -200,16 +194,39 @@
     });
   }
 
+  function buildBackgroundReminders(items) {
+    const safeItems = Array.isArray(items) ? items : [];
+
+    return safeItems
+      .flatMap(buildReminderSchedule)
+      .filter((reminder) => reminder.status === "scheduled")
+      .map((reminder) => ({
+        ...reminder,
+        source: CONFIG.SOURCE || "agendador-local",
+        backgroundReady: true
+      }));
+  }
+
+  async function syncWithElectron(items) {
+    const bridge = global.AgendaJeffElectron || global.parent?.AgendaJeffElectron || global.top?.AgendaJeffElectron;
+
+    if (!bridge || !bridge.background || typeof bridge.background.syncReminders !== "function") {
+      return {
+        ok: false,
+        mode: "web",
+        message: "Electron no está disponible para sincronizar recordatorios."
+      };
+    }
+
+    return bridge.background.syncReminders(buildBackgroundReminders(items));
+  }
+
   function getFutureReminders(item) {
-    return buildReminderSchedule(item).filter((reminder) => {
-      return reminder.status === "scheduled";
-    });
+    return buildReminderSchedule(item).filter((reminder) => reminder.status === "scheduled");
   }
 
   function getExpiredReminders(item) {
-    return buildReminderSchedule(item).filter((reminder) => {
-      return reminder.status === "expired";
-    });
+    return buildReminderSchedule(item).filter((reminder) => reminder.status === "expired");
   }
 
   function summarizeReminders(items) {
@@ -226,25 +243,12 @@
     };
   }
 
-  function createReminderMessage(item, reminder) {
-    const safeItem = item || {};
-    const safeReminder = reminder || {};
-
-    return [
-      `Recordatorio: ${safeItem.title || "Sin título"}`,
-      `Fecha del evento: ${safeItem.date || "sin fecha"} ${safeItem.time || ""}`.trim(),
-      `Aviso: ${safeReminder.label || "recordatorio"}`,
-      safeItem.description ? `Detalle: ${safeItem.description}` : "",
-      safeItem.responsible && safeItem.responsible.name
-        ? `Responsable: ${safeItem.responsible.name}`
-        : ""
-    ].filter(Boolean).join("\n");
-  }
-
   AG.ReminderService = {
     parseReminderCode,
     calculateReminderDate,
     buildReminderSchedule,
+    buildBackgroundReminders,
+    syncWithElectron,
     getFutureReminders,
     getExpiredReminders,
     summarizeReminders,
