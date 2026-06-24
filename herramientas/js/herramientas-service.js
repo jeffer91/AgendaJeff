@@ -34,14 +34,7 @@
       MC_CONNECTION: "mc_microsoft_calendar_connection_v1",
       NT_SETTINGS: "nt_desktop_notifications_settings_v1"
     },
-    BACKUP_PREFIXES: [
-      "ag_",
-      "agendajeff_",
-      "tl_",
-      "gc_",
-      "mc_",
-      "nt_"
-    ]
+    BACKUP_PREFIXES: ["ag_", "agendajeff_", "tl_", "gc_", "mc_", "nt_"]
   };
 
   function nowIso() {
@@ -68,6 +61,22 @@
   function writeJSON(key, value) {
     global.localStorage.setItem(key, JSON.stringify(value));
     return value;
+  }
+
+  function getElectronBridge() {
+    try {
+      if (global.AgendaJeffElectron) return global.AgendaJeffElectron;
+    } catch (_error) {}
+
+    try {
+      if (global.parent && global.parent.AgendaJeffElectron) return global.parent.AgendaJeffElectron;
+    } catch (_error) {}
+
+    try {
+      if (global.top && global.top.AgendaJeffElectron) return global.top.AgendaJeffElectron;
+    } catch (_error) {}
+
+    return null;
   }
 
   function downloadText(filename, text, mimeType) {
@@ -115,18 +124,14 @@
     const cm = safeItem.cm || {};
     const cleanBatchId = normalizeText(batchId);
 
-    return normalizeText(cm.batchId) === cleanBatchId ||
-      normalizeText(safeItem.batchId) === cleanBatchId;
+    return normalizeText(cm.batchId) === cleanBatchId || normalizeText(safeItem.batchId) === cleanBatchId;
   }
 
   function previewUndoLastBatch() {
     const batch = findLastBatch();
 
     if (!batch) {
-      return {
-        ok: false,
-        message: "No existe una última carga masiva para revisar."
-      };
+      return { ok: false, message: "No existe una última carga masiva para revisar." };
     }
 
     const items = readItems();
@@ -149,14 +154,10 @@
   }
 
   async function syncElectronBackground() {
-    const bridge = global.AgendaJeffElectron || global.parent?.AgendaJeffElectron || global.top?.AgendaJeffElectron;
+    const bridge = getElectronBridge();
 
     if (!bridge || !bridge.background || typeof bridge.background.syncReminders !== "function") {
-      return {
-        ok: false,
-        skipped: true,
-        message: "Electron no está disponible para sincronizar recordatorios."
-      };
+      return { ok: false, skipped: true, message: "Electron no está disponible para sincronizar recordatorios." };
     }
 
     const reminders = readItems()
@@ -178,13 +179,8 @@
   async function undoLastBatch() {
     const batch = findLastBatch();
 
-    if (!batch) {
-      throw new Error("No existe una última carga masiva para deshacer.");
-    }
-
-    if (batch.status === "undone") {
-      throw new Error("La última carga ya fue deshecha anteriormente.");
-    }
+    if (!batch) throw new Error("No existe una última carga masiva para deshacer.");
+    if (batch.status === "undone") throw new Error("La última carga ya fue deshecha anteriormente.");
 
     const items = readItems();
     const removedItems = items.filter((item) => belongsToBatch(item, batch.id));
@@ -258,23 +254,15 @@
     const backup = createBackupObject();
     const filename = `AgendaJeff_backup_${new Date().toISOString().slice(0, 10)}.json`;
     downloadText(filename, JSON.stringify(backup, null, 2), "application/json;charset=utf-8");
-    return {
-      ok: true,
-      message: "Backup JSON exportado correctamente.",
-      filename,
-      totalKeys: backup.totalKeys,
-      exportedAt: backup.exportedAt
-    };
+    return { ok: true, message: "Backup JSON exportado correctamente.", filename, totalKeys: backup.totalKeys, exportedAt: backup.exportedAt };
   }
 
   function clearKnownKeys() {
     const keysToRemove = [];
-
     for (let index = 0; index < global.localStorage.length; index += 1) {
       const key = global.localStorage.key(index);
       if (key && shouldBackupKey(key)) keysToRemove.push(key);
     }
-
     keysToRemove.forEach((key) => global.localStorage.removeItem(key));
     return keysToRemove.length;
   }
@@ -289,28 +277,18 @@
     }
 
     let removedBeforeRestore = 0;
-    if (options && options.replace === true) {
-      removedBeforeRestore = clearKnownKeys();
-    }
+    if (options && options.replace === true) removedBeforeRestore = clearKnownKeys();
 
     keys.forEach((key) => {
-      if (shouldBackupKey(key)) {
-        global.localStorage.setItem(key, String(entries[key]));
-      }
+      if (shouldBackupKey(key)) global.localStorage.setItem(key, String(entries[key]));
     });
 
-    return {
-      ok: true,
-      message: "Backup restaurado correctamente. Recarga la app para ver todos los cambios.",
-      restoredKeys: keys.length,
-      removedBeforeRestore,
-      importedAt: nowIso()
-    };
+    return { ok: true, message: "Backup restaurado correctamente. Recarga la app para ver todos los cambios.", restoredKeys: keys.length, removedBeforeRestore, importedAt: nowIso() };
   }
 
   function csvEscape(value) {
     const text = String(value ?? "");
-    return `"${text.replace(/"/g, """")}"`;
+    return `"${text.replace(/"/g, "" + "\"\"")}"`;
   }
 
   function createReportRows() {
@@ -338,12 +316,7 @@
       .join("\n");
     const filename = `AgendaJeff_reporte_${new Date().toISOString().slice(0, 10)}.csv`;
     downloadText(filename, `\ufeff${csv}`, "text/csv;charset=utf-8");
-    return {
-      ok: true,
-      message: "Reporte CSV compatible con Excel exportado correctamente.",
-      filename,
-      totalRows: rows.length
-    };
+    return { ok: true, message: "Reporte CSV compatible con Excel exportado correctamente.", filename, totalRows: rows.length };
   }
 
   function summarizeData() {
@@ -379,63 +352,18 @@
     const summary = summarizeData();
     const rows = createReportRows();
     const tableRows = rows.slice(0, 300).map((row) => `
-      <tr>
-        <td>${row.tipo}</td>
-        <td>${row.titulo}</td>
-        <td>${row.fecha}</td>
-        <td>${row.hora}</td>
-        <td>${row.estado}</td>
-        <td>${row.origen}</td>
-      </tr>`).join("");
+      <tr><td>${row.tipo}</td><td>${row.titulo}</td><td>${row.fecha}</td><td>${row.hora}</td><td>${row.estado}</td><td>${row.origen}</td></tr>`).join("");
 
-    return `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8" />
-<title>Reporte AgendaJeff</title>
-<style>
-body{font-family:Arial,sans-serif;color:#111827;margin:28px}h1{margin:0 0 6px}small{color:#64748b}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}.card{border:1px solid #dbe3ef;border-radius:12px;padding:12px}strong{font-size:22px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #dbe3ef;padding:8px;text-align:left;font-size:12px}th{background:#eff6ff}@media print{button{display:none}}
-</style>
-</head>
-<body>
-<button onclick="window.print()">Guardar como PDF / Imprimir</button>
-<h1>Reporte AgendaJeff</h1>
-<small>Generado: ${summary.generatedAt}</small>
-<div class="grid">
-<div class="card"><span>Total registros</span><br><strong>${summary.items.total}</strong></div>
-<div class="card"><span>Activos</span><br><strong>${summary.items.active}</strong></div>
-<div class="card"><span>Hoy</span><br><strong>${summary.items.today}</strong></div>
-<div class="card"><span>Cargas importadas</span><br><strong>${summary.batches.imported}</strong></div>
-</div>
-<h2>Conexiones</h2>
-<ul>
-<li>Telegram: ${summary.connections.telegramSaved ? "Configurado" : "Pendiente"}</li>
-<li>Google: ${summary.connections.googleSaved ? "Configurado" : "Pendiente"}</li>
-<li>Microsoft: ${summary.connections.microsoftSaved ? "Configurado" : "Pendiente"}</li>
-<li>Notificaciones: ${summary.connections.notificationsSaved ? "Configurado" : "Pendiente"}</li>
-</ul>
-<h2>Registros</h2>
-<table>
-<thead><tr><th>Tipo</th><th>Título</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Origen</th></tr></thead>
-<tbody>${tableRows || "<tr><td colspan='6'>Sin registros.</td></tr>"}</tbody>
-</table>
-</body>
-</html>`;
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8" /><title>Reporte AgendaJeff</title><style>body{font-family:Arial,sans-serif;color:#111827;margin:28px}h1{margin:0 0 6px}small{color:#64748b}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}.card{border:1px solid #dbe3ef;border-radius:12px;padding:12px}strong{font-size:22px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #dbe3ef;padding:8px;text-align:left;font-size:12px}th{background:#eff6ff}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Guardar como PDF / Imprimir</button><h1>Reporte AgendaJeff</h1><small>Generado: ${summary.generatedAt}</small><div class="grid"><div class="card"><span>Total registros</span><br><strong>${summary.items.total}</strong></div><div class="card"><span>Activos</span><br><strong>${summary.items.active}</strong></div><div class="card"><span>Hoy</span><br><strong>${summary.items.today}</strong></div><div class="card"><span>Cargas importadas</span><br><strong>${summary.batches.imported}</strong></div></div><h2>Conexiones</h2><ul><li>Telegram: ${summary.connections.telegramSaved ? "Configurado" : "Pendiente"}</li><li>Google: ${summary.connections.googleSaved ? "Configurado" : "Pendiente"}</li><li>Microsoft: ${summary.connections.microsoftSaved ? "Configurado" : "Pendiente"}</li><li>Notificaciones: ${summary.connections.notificationsSaved ? "Configurado" : "Pendiente"}</li></ul><h2>Registros</h2><table><thead><tr><th>Tipo</th><th>Título</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Origen</th></tr></thead><tbody>${tableRows || "<tr><td colspan='6'>Sin registros.</td></tr>"}</tbody></table></body></html>`;
   }
 
   function openPrintableReport() {
     const reportWindow = global.open("", "_blank");
-    if (!reportWindow) {
-      throw new Error("El navegador bloqueó la ventana del reporte. Permite ventanas emergentes.");
-    }
+    if (!reportWindow) throw new Error("El navegador bloqueó la ventana del reporte. Permite ventanas emergentes.");
     reportWindow.document.open();
     reportWindow.document.write(createPrintableReportHtml());
     reportWindow.document.close();
-    return {
-      ok: true,
-      message: "Reporte imprimible abierto. Usa el botón Guardar como PDF / Imprimir.",
-      openedAt: nowIso()
-    };
+    return { ok: true, message: "Reporte imprimible abierto. Usa el botón Guardar como PDF / Imprimir.", openedAt: nowIso() };
   }
 
   function testLocalStorage() {
@@ -450,79 +378,29 @@ body{font-family:Arial,sans-serif;color:#111827;margin:28px}h1{margin:0 0 6px}sm
     const summary = summarizeData();
     const results = [];
 
-    results.push({
-      name: "localStorage",
-      ok: testLocalStorage(),
-      message: "Lectura y escritura local."
-    });
+    results.push({ name: "localStorage", ok: testLocalStorage(), message: "Lectura y escritura local." });
+    results.push({ name: "Agendador", ok: Array.isArray(readItems()), total: summary.items.total, message: `Registros locales encontrados: ${summary.items.total}` });
+    results.push({ name: "Carga Masiva", ok: Array.isArray(readBatches()), total: summary.batches.total, message: `Lotes encontrados: ${summary.batches.total}` });
+    results.push({ name: "Telegram", ok: summary.connections.telegramSaved, message: summary.connections.telegramSaved ? "Configuración local detectada." : "Sin configuración local." });
+    results.push({ name: "Google Calendar", ok: summary.connections.googleSaved, message: summary.connections.googleSaved ? "Configuración local detectada." : "Sin configuración local." });
+    results.push({ name: "Microsoft Calendar", ok: summary.connections.microsoftSaved, message: summary.connections.microsoftSaved ? "Configuración local detectada." : "Sin configuración local." });
 
-    results.push({
-      name: "Agendador",
-      ok: Array.isArray(readItems()),
-      total: summary.items.total,
-      message: `Registros locales encontrados: ${summary.items.total}`
-    });
-
-    results.push({
-      name: "Carga Masiva",
-      ok: Array.isArray(readBatches()),
-      total: summary.batches.total,
-      message: `Lotes encontrados: ${summary.batches.total}`
-    });
-
-    results.push({
-      name: "Telegram",
-      ok: summary.connections.telegramSaved,
-      message: summary.connections.telegramSaved ? "Configuración local detectada." : "Sin configuración local."
-    });
-
-    results.push({
-      name: "Google Calendar",
-      ok: summary.connections.googleSaved,
-      message: summary.connections.googleSaved ? "Configuración local detectada." : "Sin configuración local."
-    });
-
-    results.push({
-      name: "Microsoft Calendar",
-      ok: summary.connections.microsoftSaved,
-      message: summary.connections.microsoftSaved ? "Configuración local detectada." : "Sin configuración local."
-    });
-
-    let electronStatus = {
-      ok: false,
-      skipped: true,
-      message: "No se detectó puente Electron."
-    };
-
+    let electronStatus = { ok: false, skipped: true, message: "No se detectó puente Electron." };
     try {
-      const bridge = global.AgendaJeffElectron || global.parent?.AgendaJeffElectron || global.top?.AgendaJeffElectron;
-      if (bridge && bridge.background && typeof bridge.background.getStatus === "function") {
-        electronStatus = await bridge.background.getStatus();
-      }
+      const bridge = getElectronBridge();
+      if (bridge && bridge.background && typeof bridge.background.getStatus === "function") electronStatus = await bridge.background.getStatus();
     } catch (error) {
       electronStatus = { ok: false, message: error.message };
     }
 
-    results.push({
-      name: "Segundo plano Electron",
-      ok: Boolean(electronStatus && electronStatus.ok),
-      message: electronStatus && electronStatus.message ? electronStatus.message : "Estado consultado.",
-      data: electronStatus
-    });
-
-    results.push({
-      name: "Reporte",
-      ok: createReportRows().length === summary.items.total,
-      message: "Reporte generado en memoria correctamente."
-    });
+    results.push({ name: "Segundo plano Electron", ok: Boolean(electronStatus && electronStatus.ok), message: electronStatus && electronStatus.message ? electronStatus.message : "Estado consultado.", data: electronStatus });
+    results.push({ name: "Reporte", ok: createReportRows().length === summary.items.total, message: "Reporte generado en memoria correctamente." });
 
     const criticalOk = results.filter((item) => ["localStorage", "Agendador", "Carga Masiva", "Reporte"].includes(item.name)).every((item) => item.ok);
 
     return {
       ok: criticalOk,
-      message: criticalOk
-        ? "Prueba completa finalizada. La base local está funcional."
-        : "La prueba completa detectó problemas en funciones críticas.",
+      message: criticalOk ? "Prueba completa finalizada. La base local está funcional." : "La prueba completa detectó problemas en funciones críticas.",
       results,
       summary,
       testedAt: nowIso()
