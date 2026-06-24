@@ -5,27 +5,25 @@
   Función:
     - Centralizar la configuración de Electron para AgendaJeff.
     - Definir archivo inicial, tamaño de ventana, título y preferencias seguras.
-    - Evitar que la configuración quede mezclada dentro de main.js.
-    - Mantener Electron por fuera de las pantallas funcionales existentes.
-
-  Se conecta con:
-    - electron/main.js
-    - electron/window-state.service.js
-    - electron/preload.js
-    - index.html
+    - Agregar configuración real para segundo plano, bandeja y notificaciones.
+    - Mantener Electron separado de los módulos visuales de la app.
 */
 
 "use strict";
 
 const path = require("path");
 
-const ROOT_DIR = path.join(__dirname, "..");
+const ELECTRON_DIR = __dirname;
+const ROOT_DIR = path.resolve(ELECTRON_DIR, "..");
 
 const ELECTRON_CONFIG = {
   app: {
     name: "AgendaJeff",
     title: "AgendaJeff",
+    productName: "AgendaJeff",
+    appUserModelId: "com.jeffersonvillarreal.agendajeff",
     rootDir: ROOT_DIR,
+    electronDir: ELECTRON_DIR,
     startFile: path.join(ROOT_DIR, "index.html")
   },
 
@@ -50,11 +48,47 @@ const ELECTRON_CONFIG = {
   },
 
   preload: {
-    file: path.join(__dirname, "preload.js")
+    file: path.join(ELECTRON_DIR, "preload.js")
   },
 
   memory: {
-    windowStateFile: "window-state.json"
+    windowStateFile: "window-state.json",
+    backgroundStoreFile: "background-store.json"
+  },
+
+  background: {
+    enabledByDefault: true,
+    keepAliveOnClose: true,
+    hideOnClose: true,
+    startMinimized: false,
+    checkIntervalMs: 60000,
+    minimumCheckIntervalMs: 15000,
+    maxNotificationItemsPerCycle: 10,
+    showTrayBalloonOnFirstHide: true
+  },
+
+  tray: {
+    enabled: true,
+    tooltip: "AgendaJeff activo en segundo plano",
+    title: "AgendaJeff",
+    menu: {
+      open: "Abrir AgendaJeff",
+      hide: "Ocultar ventana",
+      testNotification: "Probar notificación",
+      status: "Estado del segundo plano",
+      quit: "Salir completamente"
+    }
+  },
+
+  notifications: {
+    enabled: true,
+    defaultTitle: "AgendaJeff",
+    silent: false,
+    timeoutType: "default"
+  },
+
+  ipc: {
+    namespace: "agendaJeff"
   },
 
   development: {
