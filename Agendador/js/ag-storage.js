@@ -7,13 +7,8 @@
     - Guardar, leer, actualizar y eliminar eventos/pendientes/recordatorios.
     - Guardar responsables externos.
     - Guardar estados visuales de conexiones.
+    - Sincronizar recordatorios livianos con Electron para segundo plano.
     - No pinta interfaz directamente.
-
-  Se conecta con:
-    - ag-config.js
-    - servicios/ag-event.service.js
-    - ag-app.js
-    - ag-ui.js
 */
 
 (function initAgStorage(global) {
@@ -21,6 +16,8 @@
 
   const AG = global.AG = global.AG || {};
   const CONFIG = AG.CONFIG;
+
+  let backgroundSyncTimer = null;
 
   function nowIso() {
     return new Date().toISOString();
@@ -33,7 +30,7 @@
       }
 
       return JSON.parse(rawValue);
-    } catch (error) {
+    } catch (_error) {
       return fallbackValue;
     }
   }
@@ -57,6 +54,82 @@
     return `${safePrefix}-${Date.now()}-${random}`;
   }
 
+  function getElectronBridge() {
+    try {
+      return global.AgendaJeffElectron || global.parent?.AgendaJeffElectron || global.top?.AgendaJeffElectron || null;
+    } catch (_error) {
+      return global.AgendaJeffElectron || null;
+    }
+  }
+
+  function isElectronBackgroundAvailable() {
+    const bridge = getElectronBridge();
+    return Boolean(
+      bridge &&
+      bridge.background &&
+      typeof bridge.background.syncReminders === "function"
+    );
+  }
+
+  function buildBackgroundRemindersSafely() {
+    if (AG.ReminderService && typeof AG.ReminderService.buildBackgroundReminders === "function") {
+      return AG.ReminderService.buildBackgroundReminders(readItems());
+    }
+
+    return [];
+  }
+
+  async function syncBackgroundNow() {
+    const bridge = getElectronBridge();
+
+    if (!bridge || !bridge.background || typeof bridge.background.syncReminders !== "function") {
+      return {
+        ok: false,
+        mode: "web",
+        message: "Electron no está disponible para sincronizar recordatorios."
+      };
+    }
+
+    const reminders = buildBackgroundRemindersSafely();
+    const result = await bridge.background.syncReminders(reminders);
+
+    setConnectionStatus(
+      CONFIG.CONNECTIONS.DESKTOP,
+      result && result.ok ? CONFIG.CONNECTION_STATUS.OK : CONFIG.CONNECTION_STATUS.WARNING,
+      result && result.message ? result.message : `Recordatorios sincronizados: ${reminders.length}`
+    );
+
+    return {
+      ...(result || {}),
+      totalReminders: reminders.length
+    };
+  }
+
+  function scheduleBackgroundSync() {
+    if (!isElectronBackgroundAvailable()) {
+      return;
+    }
+
+    if (backgroundSyncTimer) {
+      clearTimeout(backgroundSyncTimer);
+    }
+
+    backgroundSyncTimer = setTimeout(() => {
+      backgroundSyncTimer = null;
+      syncBackgroundNow().catch((error) => {
+        try {
+          setConnectionStatus(
+            CONFIG.CONNECTIONS.DESKTOP,
+            CONFIG.CONNECTION_STATUS.WARNING,
+            `No se pudo sincronizar segundo plano: ${error.message}`
+          );
+        } catch (_statusError) {
+          // No romper el guardado local por error de UI.
+        }
+      });
+    }, 400);
+  }
+
   function readItems() {
     const items = readKey(CONFIG.STORAGE_KEYS.ITEMS, []);
 
@@ -69,7 +142,9 @@
 
   function saveItems(items) {
     const safeItems = Array.isArray(items) ? items : [];
-    return writeKey(CONFIG.STORAGE_KEYS.ITEMS, safeItems);
+    const saved = writeKey(CONFIG.STORAGE_KEYS.ITEMS, safeItems);
+    scheduleBackgroundSync();
+    return saved;
   }
 
   function saveItem(item) {
@@ -320,6 +395,7 @@
     global.localStorage.removeItem(CONFIG.STORAGE_KEYS.RESPONSIBLES);
     global.localStorage.removeItem(CONFIG.STORAGE_KEYS.CONNECTION_STATUS);
     global.localStorage.removeItem(CONFIG.STORAGE_KEYS.ACTIVE_FILTER);
+    scheduleBackgroundSync();
 
     return {
       ok: true,
@@ -352,6 +428,12 @@
 
     readActiveFilter,
     saveActiveFilter,
+
+    getElectronBridge,
+    isElectronBackgroundAvailable,
+    buildBackgroundRemindersSafely,
+    syncBackgroundNow,
+    scheduleBackgroundSync,
 
     clearAllLocalData
   };
