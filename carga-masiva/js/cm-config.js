@@ -8,15 +8,6 @@
     - Definir claves de localStorage, estados, tipos, canales, reglas y campos.
     - Centralizar IDs del DOM usados por UI, componentes y bindings.
     - No procesa archivos ni eventos; solo configura.
-
-  Se conecta con:
-    - cm-index.html
-    - cm-storage.js
-    - cm-ui.js
-    - servicios/cm-reminder.service.js
-    - servicios/cm-normalizer.service.js
-    - servicios/cm-validator.service.js
-    - futuros servicios, parsers, componentes y adaptadores.
 */
 
 (function initCmConfig(global) {
@@ -27,7 +18,7 @@
   const CONFIG = {
     MODULE_NAME: "Carga Masiva",
     MODULE_CODE: "CM",
-    VERSION: "1.0.0",
+    VERSION: "1.1.0",
 
     NAMESPACE: "CM",
 
@@ -36,7 +27,8 @@
       BATCHES: "agendajeff_cm_batches_v1",
       DRAFT_EVENTS: "agendajeff_cm_draft_events_v1",
       LAST_BATCH_ID: "agendajeff_cm_last_batch_id_v1",
-      CURRENT_PAGE: "agendajeff_cm_current_page_v1"
+      CURRENT_PAGE: "agendajeff_cm_current_page_v1",
+      UNDO_HISTORY: "agendajeff_cm_undo_history_v1"
     },
 
     DOM_IDS: {
@@ -54,6 +46,7 @@
       processBtn: "cmProcessBtn",
       clearBtn: "cmClearBtn",
       openLastBatchBtn: "cmOpenLastBatchBtn",
+      undoLastBatchBtn: "cmUndoLastBatchBtn",
 
       detectedCount: "cmDetectedCount",
       okCount: "cmOkCount",
@@ -148,6 +141,7 @@
       READY: "ready",
       IMPORTING: "importing",
       IMPORTED: "imported",
+      UNDONE: "undone",
       ERROR: "error",
       CANCELLED: "cancelled"
     },
@@ -238,97 +232,46 @@
     },
 
     FILES: {
-      MAX_SIZE_MB: 25,
-      ACCEPTED_EXTENSIONS: [
-        "xlsx",
-        "xls",
-        "pdf",
-        "docx",
-        "png",
-        "jpg",
-        "jpeg",
-        "webp"
-      ],
-
-      EXTENSION_TO_SOURCE: {
-        xlsx: "excel",
-        xls: "excel",
-        pdf: "pdf",
-        docx: "word",
-        png: "image",
-        jpg: "image",
-        jpeg: "image",
-        webp: "image"
-      }
+      MAX_SIZE_MB: 30,
+      ACCEPTED_EXTENSIONS: ["xlsx", "xls", "pdf", "docx", "png", "jpg", "jpeg", "webp"],
+      IMAGE_EXTENSIONS: ["png", "jpg", "jpeg", "webp"],
+      EXCEL_EXTENSIONS: ["xlsx", "xls"],
+      PDF_EXTENSIONS: ["pdf"],
+      WORD_EXTENSIONS: ["docx"]
     },
 
     PAGINATION: {
-      DEFAULT_PAGE: 1,
-      DEFAULT_PAGE_SIZE: 20
-    },
-
-    DATE: {
-      DISPLAY_LOCALE: "es-EC",
-      DEFAULT_ALL_DAY_START: "00:00",
-      DEFAULT_ALL_DAY_END: "23:59"
-    },
-
-    FLAGS: {
-      SHOULD_OPEN_MODAL_AFTER_PROCESS: true,
-      SHOULD_SELECT_ALL_BY_DEFAULT: true,
-      SHOULD_BLOCK_WITH_WARNINGS: true,
-      SHOULD_SAVE_BATCH_SUMMARY: true
+      DEFAULT_PAGE_SIZE: 20,
+      PAGE_SIZE_OPTIONS: [10, 20, 30]
     },
 
     MESSAGES: {
       WAITING: "Esperando carga masiva...",
-      PROCESSING: "Procesando carga masiva...",
-      EMPTY_INPUT: "Pega información o selecciona un archivo para procesar.",
+      PROCESSING: "Procesando información...",
       REVIEW_REQUIRED: "Revisa los eventos detectados antes de agregarlos.",
-      READY_TO_IMPORT: "Todos los eventos seleccionados están listos para agregar.",
-      BLOCKED_BY_REVIEW: "Hay eventos seleccionados con revisión pendiente.",
-      BLOCKED_BY_ERROR: "Hay eventos seleccionados con errores.",
-      IMPORT_SUCCESS: "Eventos agregados correctamente.",
-      IMPORT_ERROR: "No se pudo completar la importación."
+      EMPTY_INPUT: "Pega texto o selecciona un archivo antes de procesar.",
+      IMPORT_OK: "Eventos agregados correctamente.",
+      UNDO_OK: "Última carga masiva deshecha correctamente."
     }
   };
 
-  function createId(prefix) {
-    const safePrefix = String(prefix || "cm").replace(/[^a-zA-Z0-9_-]/g, "");
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).slice(2, 8);
-
-    return `${safePrefix}_${timestamp}_${random}`;
-  }
-
-  function nowISO() {
-    return new Date().toISOString();
-  }
-
-  function toArray(value) {
-    return Array.isArray(value) ? value : [];
-  }
-
-  function safeString(value) {
-    if (value === null || value === undefined) {
-      return "";
-    }
-
-    return String(value).trim();
-  }
-
-  function clone(value) {
-    try {
-      return JSON.parse(JSON.stringify(value));
-    } catch (error) {
-      return value;
-    }
-  }
-
   CM.CONFIG = CONFIG;
-  CM.createId = CM.createId || createId;
-  CM.nowISO = CM.nowISO || nowISO;
-  CM.toArray = CM.toArray || toArray;
-  CM.safeString = CM.safeString || safeString;
-  CM.clone = CM.clone || clone;
+
+  CM.safeString = function safeString(value) {
+    return String(value || "").trim();
+  };
+
+  CM.nowISO = function nowISO() {
+    return new Date().toISOString();
+  };
+
+  CM.createId = function createId(prefix) {
+    const safePrefix = CM.safeString(prefix) || "cm";
+    const random = Math.random().toString(36).slice(2, 9);
+    return `${safePrefix}_${Date.now()}_${random}`;
+  };
+
+  CM.clone = function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  };
 })(window);
