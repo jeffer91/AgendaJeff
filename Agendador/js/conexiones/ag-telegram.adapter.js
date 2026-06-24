@@ -5,19 +5,9 @@
   Función:
     - Adaptador del Agendador para Telegram.
     - Recibe un evento, pendiente o recordatorio local.
-    - Construye un mensaje HTML.
-    - Usa el módulo Telegram existente si está cargado.
-    - Envía mensaje al chat configurado.
-    - No depende del HTML de tl-index.html.
-    - No presiona botones de Telegram.
-
-  Se conecta con:
-    - ../ag-config.js
-    - ../ag-storage.js
-    - ../servicios/ag-reminder.service.js
-    - ../../telegram/js/tl-config.js
-    - ../../telegram/js/tl-storage.js
-    - ../../telegram/js/tl-telegram-api.js
+    - Construye mensajes HTML.
+    - Envía avisos individuales solo para registros normales o recordatorios.
+    - Envía un solo resumen cuando la carga es masiva.
 */
 
 (function initAgTelegramAdapter(global) {
@@ -39,6 +29,14 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function getElectronBridge() {
+    try {
+      return global.AgendaJeffElectron || global.parent?.AgendaJeffElectron || global.top?.AgendaJeffElectron || null;
+    } catch (_error) {
+      return global.AgendaJeffElectron || null;
+    }
   }
 
   function isTelegramModuleAvailable() {
@@ -71,14 +69,8 @@
   }
 
   function getTypeIcon(itemType) {
-    if (itemType === CONFIG.TYPES.PENDING) {
-      return "🟡";
-    }
-
-    if (itemType === CONFIG.TYPES.REMINDER) {
-      return "🟣";
-    }
-
+    if (itemType === CONFIG.TYPES.PENDING) return "🟡";
+    if (itemType === CONFIG.TYPES.REMINDER) return "🟣";
     return "🔵";
   }
 
@@ -129,6 +121,89 @@
     return lines.filter(Boolean).join("\n");
   }
 
+  function createBulkImportSummaryMessage(payload) {
+    const safePayload = payload || {};
+    const batch = safePayload.batch || {};
+    const savedItems = Array.isArray(safePayload.savedItems) ? safePayload.savedItems : [];
+    const failed = Number(safePayload.failed || 0);
+    const total = Number(safePayload.total || savedItems.length || 0);
+    const saved = Number(safePayload.saved || savedItems.length || 0);
+
+    const typeCounter = savedItems.reduce((acc, item) => {
+      const type = item && item.type ? item.type : "event";
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    const firstDates = savedItems
+      .map((item) => item && item.date ? item.date : "")
+      .filter(Boolean)
+      .sort();
+
+    const firstDate = firstDates[0] || "sin fecha";
+    const lastDate = firstDates[firstDates.length - 1] || firstDate;
+
+    const lines = [
+      "<b>✅ Carga masiva agregada a AgendaJeff</b>",
+      "",
+      `<b>Lote:</b> ${escapeHtml(batch.name || batch.id || "Carga masiva")}`,
+      `<b>Agregados:</b> ${saved} de ${total}`,
+      failed ? `<b>No agregados:</b> ${failed}` : "",
+      `<b>Rango:</b> ${escapeHtml(firstDate)}${lastDate !== firstDate ? ` a ${escapeHtml(lastDate)}` : ""}`,
+      "",
+      `<b>Eventos:</b> ${typeCounter.event || 0}`,
+      typeCounter.pending ? `<b>Pendientes:</b> ${typeCounter.pending}` : "",
+      typeCounter.reminder ? `<b>Recordatorios:</b> ${typeCounter.reminder}` : "",
+      "",
+      "<i>Los avisos individuales se enviarán cuando se acerque cada fecha o recordatorio.</i>"
+    ];
+
+    return lines.filter(Boolean).join("\n");
+  }
+
+  async function sendTelegramText(text) {
+    if (isTelegramModuleAvailable()) {
+      const connection = readTelegramConnection();
+
+      if (!hasValidConnection(connection)) {
+        return {
+          ok: false,
+          status: "notConfigured",
+          message: "Telegram no tiene Bot Token y Chat ID guardados."
+        };
+      }
+
+      const telegramResult = await global.TL.TelegramApi.sendMessage({
+        botToken: connection.botToken,
+        chatId: connection.chatId,
+        text
+      });
+
+      return {
+        ok: true,
+        status: "sent",
+        message: "Mensaje enviado por Telegram.",
+        data: {
+          chatId: connection.chatId,
+          telegramMessageId: telegramResult && telegramResult.message_id ? telegramResult.message_id : null,
+          telegram: telegramResult
+        }
+      };
+    }
+
+    const bridge = getElectronBridge();
+
+    if (bridge && bridge.telegram && typeof bridge.telegram.send === "function") {
+      return bridge.telegram.send({ text, parseMode: "HTML" });
+    }
+
+    return {
+      ok: false,
+      status: "missingAdapterDependency",
+      message: "Telegram no está cargado y Electron no expone envío de Telegram."
+    };
+  }
+
   async function syncItem(item) {
     if (!Array.isArray(item.channels) || !item.channels.includes(CONFIG.CONNECTIONS.TELEGRAM)) {
       return {
@@ -138,48 +213,67 @@
       };
     }
 
-    if (!isTelegramModuleAvailable()) {
+    if (item && item.cm && item.cm.suppressIndividualTelegram === true) {
       return {
-        ok: false,
-        status: "missingAdapterDependency",
-        message: "El módulo Telegram no está cargado en esta pantalla."
+        ok: true,
+        status: "skippedBulk",
+        message: "Telegram individual omitido porque este registro pertenece a una carga masiva."
       };
     }
 
-    const connection = readTelegramConnection();
+    const result = await sendTelegramText(createTelegramMessage(item));
 
-    if (!hasValidConnection(connection)) {
-      return {
-        ok: false,
-        status: "notConfigured",
-        message: "Telegram no tiene Bot Token y Chat ID guardados."
-      };
+    if (!result.ok) {
+      return result;
     }
-
-    const message = createTelegramMessage(item);
-
-    const telegramResult = await global.TL.TelegramApi.sendMessage({
-      botToken: connection.botToken,
-      chatId: connection.chatId,
-      text: message
-    });
 
     return {
-      ok: true,
-      status: "sent",
-      message: "Aviso enviado por Telegram.",
-      data: {
-        chatId: connection.chatId,
-        telegramMessageId: telegramResult && telegramResult.message_id
-          ? telegramResult.message_id
-          : null,
-        telegram: telegramResult
-      }
+      ...result,
+      message: "Aviso enviado por Telegram."
+    };
+  }
+
+  async function syncBulkImportSummary(payload) {
+    const safePayload = payload || {};
+    const savedItems = Array.isArray(safePayload.savedItems) ? safePayload.savedItems : [];
+    const shouldSend = savedItems.some((item) => {
+      return Array.isArray(item.channels) && item.channels.includes(CONFIG.CONNECTIONS.TELEGRAM);
+    });
+
+    if (!shouldSend) {
+      return {
+        ok: true,
+        skipped: true,
+        status: "skipped",
+        message: "Telegram no está seleccionado para este lote."
+      };
+    }
+
+    const result = await sendTelegramText(createBulkImportSummaryMessage(safePayload));
+
+    if (!result.ok) {
+      return result;
+    }
+
+    return {
+      ...result,
+      status: "bulkSummarySent",
+      message: `Resumen enviado por Telegram: ${savedItems.length} eventos agregados.`
     };
   }
 
   async function testAvailability() {
     if (!isTelegramModuleAvailable()) {
+      const bridge = getElectronBridge();
+
+      if (bridge && bridge.telegram && typeof bridge.telegram.send === "function") {
+        return {
+          ok: true,
+          status: "readyViaElectron",
+          message: "Telegram está disponible mediante Electron."
+        };
+      }
+
       return {
         ok: false,
         status: "missing",
@@ -212,7 +306,10 @@
     isTelegramModuleAvailable,
     readTelegramConnection,
     createTelegramMessage,
+    createBulkImportSummaryMessage,
+    sendTelegramText,
     syncItem,
+    syncBulkImportSummary,
     testAvailability
   };
 })(window);
