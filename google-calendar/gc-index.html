@@ -1,40 +1,19 @@
 <!--
   Nombre completo: gc-index.html
   Ruta: google-calendar/gc-index.html
+
   Función:
-    - Pantalla principal independiente para probar Google Calendar.
+    - Pantalla independiente para configurar Google Calendar.
     - Permite guardar credenciales Google OAuth Web y Escritorio por separado.
-    - Permite guardar Calendar ID en localStorage.
+    - Permite guardar Calendar ID en localStorage y Firebase.
     - Permite conectar Google Calendar usando Google Identity Services.
-    - Permite probar Google Calendar creando un evento automático en el siguiente minuto.
-    - Permite leer próximos eventos de Google Calendar.
-    - Permite crear un evento manual de prueba en Google Calendar.
-    - Carga Firebase por CDN para guardar estado y credenciales activas en Firestore.
+    - Permite probar conexión sin crear eventos.
+    - Permite leer próximos eventos.
+    - No permite crear eventos desde esta pantalla.
 
-  Se conecta con:
-    - css/gc-styles.css
-    - js/gc-config.js
-    - js/gc-storage.js
-    - js/gc-google-api.js
-    - js/gc-event.service.js
-    - js/gc-firebase-config.js
-    - js/gc-firebase.service.js
-    - js/gc-ui.js
-    - js/gc-token.service.js
-    - js/gc-connection.actions.js
-    - js/gc-calendar.actions.js
-    - js/gc-bindings.js
-
-  Firestore:
-    - Colección: conexiones
-    - Documento: googleCalendar
-
-  Importante:
-    - Este módulo NO se conecta con Telegram.
-    - Este módulo NO usa window.TL.
-    - Este módulo usa su propio namespace window.GC.
-    - Este módulo NO guarda access tokens en Firebase.
-    - Este módulo SÍ guarda Client Secret en Firebase porque es una versión de prueba solicitada.
+  Regla funcional:
+    - Los eventos solo se crean desde Agendador o Carga Masiva.
+    - Este módulo solo configura y valida la conexión.
 -->
 
 <!DOCTYPE html>
@@ -47,16 +26,15 @@
 
   <link rel="stylesheet" href="./css/gc-styles.css" />
 </head>
-
 <body>
   <main class="gc-page">
     <section class="gc-card gc-hero">
       <div>
-        <p class="gc-kicker">AgendaJeff / Módulo independiente</p>
+        <p class="gc-kicker">AgendaJeff / Módulo de conexión</p>
         <h1>Conexión Google Calendar</h1>
         <p>
-          Esta pantalla conecta Google Calendar, prueba la conexión creando un evento real
-          y guarda la configuración.
+          Esta pantalla sirve para configurar, conectar y validar Google Calendar.
+          La creación de eventos se realiza únicamente desde Agendador o Carga Masiva.
         </p>
       </div>
 
@@ -130,7 +108,7 @@
           </button>
 
           <button type="button" id="gcTestConnectionBtn" class="gc-btn">
-            Probar
+            Probar conexión
           </button>
 
           <button type="button" id="gcReadEventsBtn" class="gc-btn">
@@ -144,9 +122,8 @@
 
         <p class="gc-help">
           Primero guarda las credenciales Web y/o Escritorio junto con el Calendar ID.
-          Luego usa Conectar una sola vez para autorizar Google.
-          Después usa Probar para crear un evento automático real en Google Calendar
-          en el siguiente minuto.
+          Luego usa Conectar para autorizar Google. Probar conexión valida el acceso,
+          pero no crea eventos.
         </p>
 
         <div class="gc-note">
@@ -156,55 +133,17 @@
         </div>
       </form>
 
-      <form id="gcEventForm" class="gc-card gc-form">
-        <h2>2. Evento manual de prueba</h2>
-
-        <label class="gc-field">
-          <span>Título del evento</span>
-          <input
-            id="gcEventTitle"
-            type="text"
-            value="Reunión de prueba Google Calendar"
-            autocomplete="off"
-          />
-        </label>
-
-        <div class="gc-two">
-          <label class="gc-field">
-            <span>Fecha</span>
-            <input id="gcEventDate" type="date" />
-          </label>
-
-          <label class="gc-field">
-            <span>Hora</span>
-            <input id="gcEventTime" type="time" value="08:00" />
-          </label>
+      <section class="gc-card gc-form">
+        <h2>2. Regla de creación de eventos</h2>
+        <p class="gc-help">
+          Google Calendar queda como canal de sincronización. Para crear un evento,
+          usa el módulo <strong>Agendador</strong> o <strong>Carga Masiva</strong>.
+        </p>
+        <div class="gc-note">
+          <strong>Bloqueado:</strong>
+          esta pantalla ya no crea eventos manuales ni eventos automáticos de prueba.
         </div>
-
-        <label class="gc-field">
-          <span>Duración en minutos</span>
-          <input
-            id="gcEventDuration"
-            type="number"
-            value="30"
-            min="5"
-            step="5"
-          />
-        </label>
-
-        <label class="gc-field">
-          <span>Descripción</span>
-          <textarea
-            id="gcEventDescription"
-            rows="5"
-            placeholder="Descripción del evento"
-          >Este es un evento de prueba creado desde el módulo Google Calendar de AgendaJeff.</textarea>
-        </label>
-
-        <button type="submit" class="gc-btn gc-btn--primary gc-btn--full">
-          Crear evento manual en Google Calendar
-        </button>
-      </form>
+      </section>
     </section>
 
     <section class="gc-card">
@@ -213,14 +152,11 @@
     </section>
   </main>
 
-  <!-- Google Identity Services. Permite pedir autorización OAuth en navegador. -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Firebase SDK por CDN. Esto permite funcionar sin npm y sin Electron. -->
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 
-  <!-- Módulo Google Calendar independiente -->
   <script src="./js/gc-config.js"></script>
   <script src="./js/gc-storage.js"></script>
   <script src="./js/gc-google-api.js"></script>
