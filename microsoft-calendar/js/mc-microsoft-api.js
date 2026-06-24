@@ -1,17 +1,14 @@
 /*
   Nombre completo: mc-microsoft-api.js
   Ruta: microsoft-calendar/js/mc-microsoft-api.js
+
   Función:
     - Centralizar llamadas reales a Microsoft Graph.
     - Obtener perfil de la cuenta Microsoft conectada.
     - Leer calendarios disponibles.
     - Leer próximos eventos.
-    - Crear eventos en Microsoft Calendar.
+    - Crear eventos solo cuando el origen autorizado sea Agendador o Carga Masiva.
     - Normalizar errores de Microsoft Graph.
-  Se conecta con:
-    - mc-config.js
-    - mc-token.service.js
-    - mc-calendar.actions.js
 */
 
 (function initMcMicrosoftApi(global) {
@@ -21,8 +18,22 @@
   const CONFIG = MC.CONFIG;
   const Utils = MC.Utils;
 
+  const ALLOWED_CREATE_SOURCES = ["agendador", "cargaMasiva", "agendador-sync", "carga-masiva"];
+
   function encodePathSegment(value) {
     return encodeURIComponent(Utils.cleanString(value));
+  }
+
+  function assertAuthorizedCreateSource(source) {
+    const cleanSource = Utils.cleanString(source);
+
+    if (!ALLOWED_CREATE_SOURCES.includes(cleanSource)) {
+      throw new Error(
+        "Creación bloqueada: Microsoft Calendar solo puede crear eventos enviados desde Agendador o Carga Masiva."
+      );
+    }
+
+    return cleanSource;
   }
 
   function createGraphUrl(path, query) {
@@ -212,7 +223,6 @@
     const accessToken = safeOptions.accessToken;
     const calendarId = Utils.cleanString(safeOptions.calendarId);
     const maxResults = Number(safeOptions.maxResults || CONFIG.MAX_EVENTS_TO_READ);
-
     const now = new Date();
 
     const payload = await graphRequest({
@@ -228,7 +238,6 @@
     });
 
     const events = Array.isArray(payload.value) ? payload.value : [];
-
     return events.map(normalizeMicrosoftEvent);
   }
 
@@ -266,6 +275,8 @@
     const calendarId = Utils.cleanString(safeOptions.calendarId);
     const event = safeOptions.event;
 
+    assertAuthorizedCreateSource(safeOptions.source);
+
     if (!event || typeof event !== "object") {
       throw new Error("Falta el evento que se enviará a Microsoft Calendar.");
     }
@@ -302,6 +313,7 @@
   }
 
   MC.MicrosoftApi = {
+    ALLOWED_CREATE_SOURCES,
     graphRequest,
     getMe,
     listCalendars,
