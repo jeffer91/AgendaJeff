@@ -1,0 +1,465 @@
+<!--
+  Nombre completo: index.html
+  Ruta: index.html
+
+  Función:
+    - Servir como shell raíz mínimo de AgendaJeff.
+    - Verificar que Electron, main.js y preload.js funcionen correctamente.
+    - Dejar preparada un área estable para cargar módulos futuros.
+    - No incluir lógica interna de Telegram ni de otros módulos.
+
+  Se conecta con:
+    - electron/main.js
+    - electron/preload.js
+    - módulos futuros dentro de modulos/
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgendaJeff</title>
+
+  <style>
+    :root {
+      --aj-bg: #f4f7fb;
+      --aj-card: #ffffff;
+      --aj-text: #172033;
+      --aj-muted: #667085;
+      --aj-border: #d9e2ec;
+      --aj-primary: #2563eb;
+      --aj-primary-soft: #dbeafe;
+      --aj-success: #15803d;
+      --aj-warning: #b45309;
+      --aj-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--aj-bg);
+      color: var(--aj-text);
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    .aj-shell {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      width: 100%;
+      min-height: 100vh;
+    }
+
+    .aj-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      background: var(--aj-card);
+      border-bottom: 1px solid var(--aj-border);
+      box-shadow: var(--aj-shadow);
+      z-index: 2;
+    }
+
+    .aj-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .aj-brand-mark {
+      display: inline-flex;
+      width: 42px;
+      height: 42px;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      border-radius: 14px;
+      background: var(--aj-primary);
+      color: #ffffff;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+    }
+
+    .aj-brand-text {
+      min-width: 0;
+    }
+
+    .aj-brand-text strong {
+      display: block;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .aj-brand-text span {
+      display: block;
+      color: var(--aj-muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .aj-runtime-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--aj-border);
+      background: #ffffff;
+      color: var(--aj-muted);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .aj-runtime-badge.is-ok {
+      border-color: rgba(21, 128, 61, 0.25);
+      background: rgba(21, 128, 61, 0.08);
+      color: var(--aj-success);
+    }
+
+    .aj-layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 18px;
+      min-height: 0;
+      padding: 18px;
+    }
+
+    .aj-sidebar,
+    .aj-content-card {
+      background: var(--aj-card);
+      border: 1px solid var(--aj-border);
+      border-radius: 18px;
+      box-shadow: var(--aj-shadow);
+    }
+
+    .aj-sidebar {
+      padding: 16px;
+    }
+
+    .aj-sidebar h2,
+    .aj-content-card h1,
+    .aj-content-card h2,
+    .aj-content-card p {
+      margin-top: 0;
+    }
+
+    .aj-sidebar h2 {
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+
+    .aj-module-button {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 10px;
+      padding: 12px;
+      border: 1px solid var(--aj-border);
+      border-radius: 14px;
+      background: #ffffff;
+      color: var(--aj-text);
+      cursor: not-allowed;
+      opacity: 0.72;
+      text-align: left;
+    }
+
+    .aj-module-button strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .aj-module-button span {
+      display: block;
+      color: var(--aj-muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .aj-content-card {
+      min-width: 0;
+      min-height: 0;
+      padding: 22px;
+    }
+
+    .aj-welcome {
+      max-width: 980px;
+    }
+
+    .aj-welcome h1 {
+      margin-bottom: 8px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .aj-welcome p {
+      color: var(--aj-muted);
+      line-height: 1.6;
+    }
+
+    .aj-status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .aj-status-card {
+      padding: 14px;
+      border: 1px solid var(--aj-border);
+      border-radius: 16px;
+      background: #ffffff;
+    }
+
+    .aj-status-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .aj-status-card span {
+      color: var(--aj-muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .aj-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 18px 0;
+    }
+
+    .aj-button-primary {
+      border: 0;
+      border-radius: 14px;
+      padding: 11px 14px;
+      background: var(--aj-primary);
+      color: #ffffff;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .aj-button-secondary {
+      border: 1px solid var(--aj-border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      background: #ffffff;
+      color: var(--aj-text);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .aj-result {
+      width: 100%;
+      min-height: 160px;
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      border: 1px solid var(--aj-border);
+      border-radius: 16px;
+      background: #0f172a;
+      color: #dbeafe;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .aj-module-frame {
+      display: none;
+      width: 100%;
+      height: 100%;
+      min-height: 640px;
+      border: 0;
+      border-radius: 14px;
+      background: #ffffff;
+    }
+
+    .aj-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--aj-card);
+      border-top: 1px solid var(--aj-border);
+      color: var(--aj-muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 860px) {
+      .aj-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .aj-status-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .aj-topbar,
+      .aj-footer {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="aj-shell">
+    <header class="aj-topbar">
+      <div class="aj-brand">
+        <span class="aj-brand-mark">AJ</span>
+        <div class="aj-brand-text">
+          <strong>AgendaJeff</strong>
+          <span>Base limpia para reconstrucción modular</span>
+        </div>
+      </div>
+
+      <span id="runtimeBadge" class="aj-runtime-badge">Verificando entorno</span>
+    </header>
+
+    <main class="aj-layout">
+      <aside class="aj-sidebar" aria-label="Módulos de AgendaJeff">
+        <h2>Módulos</h2>
+
+        <button class="aj-module-button" type="button" disabled>
+          <span>
+            <strong>Telegram</strong>
+            <span>Se agregará en los siguientes bloques.</span>
+          </span>
+          <span>pendiente</span>
+        </button>
+      </aside>
+
+      <section class="aj-content-card">
+        <div id="welcomeView" class="aj-welcome">
+          <h1>Bloque 0 listo</h1>
+          <p>
+            Esta pantalla solo confirma que la base de Electron abre correctamente.
+            Todavía no contiene lógica de Telegram, Firebase ni módulos internos.
+          </p>
+
+          <div class="aj-status-grid">
+            <article class="aj-status-card">
+              <strong>Electron</strong>
+              <span id="electronStatusText">Pendiente de verificación.</span>
+            </article>
+
+            <article class="aj-status-card">
+              <strong>Preload</strong>
+              <span id="preloadStatusText">Esperando puente seguro.</span>
+            </article>
+
+            <article class="aj-status-card">
+              <strong>Módulos</strong>
+              <span>Preparado para cargar módulos dentro de modulos/.</span>
+            </article>
+          </div>
+
+          <div class="aj-actions">
+            <button id="checkElectronBtn" class="aj-button-primary" type="button">
+              Verificar Electron
+            </button>
+
+            <button id="clearOutputBtn" class="aj-button-secondary" type="button">
+              Limpiar resultado
+            </button>
+          </div>
+
+          <pre id="environmentOutput" class="aj-result">Esperando verificación...</pre>
+        </div>
+
+        <iframe
+          id="moduleFrame"
+          class="aj-module-frame"
+          title="Módulo AgendaJeff"
+        ></iframe>
+      </section>
+    </main>
+
+    <footer class="aj-footer">
+      <span>AgendaJeff · Reconstrucción modular</span>
+      <span id="footerStatus">Bloque 0</span>
+    </footer>
+  </div>
+
+  <script>
+    (function initAgendaJeffShell() {
+      "use strict";
+
+      const runtimeBadge = document.getElementById("runtimeBadge");
+      const electronStatusText = document.getElementById("electronStatusText");
+      const preloadStatusText = document.getElementById("preloadStatusText");
+      const environmentOutput = document.getElementById("environmentOutput");
+      const checkElectronBtn = document.getElementById("checkElectronBtn");
+      const clearOutputBtn = document.getElementById("clearOutputBtn");
+      const footerStatus = document.getElementById("footerStatus");
+
+      function renderJson(data) {
+        environmentOutput.textContent = JSON.stringify(data, null, 2);
+      }
+
+      function renderWebMode() {
+        runtimeBadge.textContent = "Modo navegador";
+        runtimeBadge.classList.remove("is-ok");
+        electronStatusText.textContent = "Abierto fuera de Electron.";
+        preloadStatusText.textContent = "window.AgendaJeffElectron no está disponible.";
+        footerStatus.textContent = "Modo navegador";
+
+        renderJson({
+          ok: true,
+          mode: "browser",
+          message: "La interfaz cargó, pero no está dentro de Electron.",
+          checkedAt: new Date().toISOString()
+        });
+      }
+
+      async function verifyElectron() {
+        if (!window.AgendaJeffElectron) {
+          renderWebMode();
+          return;
+        }
+
+        runtimeBadge.textContent = "Electron activo";
+        runtimeBadge.classList.add("is-ok");
+        electronStatusText.textContent = "Electron detectado correctamente.";
+        preloadStatusText.textContent = "Puente seguro disponible.";
+        footerStatus.textContent = "Electron listo";
+
+        const environment = await window.AgendaJeffElectron.getEnvironment();
+        renderJson(environment);
+      }
+
+      function clearOutput() {
+        environmentOutput.textContent = "Resultado limpio.";
+      }
+
+      checkElectronBtn.addEventListener("click", verifyElectron);
+      clearOutputBtn.addEventListener("click", clearOutput);
+
+      verifyElectron();
+    })();
+  </script>
+</body>
+</html>
