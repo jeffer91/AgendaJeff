@@ -6,6 +6,7 @@
     - Guardar en Firestore la conexión del módulo Telegram.
     - Normalizar los datos antes de enviarlos a Firebase.
     - Usar merge para no destruir campos futuros del documento.
+    - Respetar estados especiales como ready, partial, error y cleared.
     - No usar localStorage ni Telegram API; este archivo solo guarda Firebase.
 
   Se conecta con:
@@ -14,6 +15,8 @@
     - modulos/telegram/utils/tl-time.js
     - modulos/telegram/firebase/tl-firebase-init.js
     - modulos/telegram/connection/tl-connection-save.js
+    - modulos/telegram/connection/tl-connection-clear.js
+    - modulos/telegram/connection/tl-connection-test.js
     - modulos/telegram/diagnostic/tl-diagnostic-firebase.js
 */
 
@@ -54,20 +57,59 @@
     };
   }
 
+  function pickStatus(connection, options) {
+    const config = getConfig();
+    const data = connection && typeof connection === "object" ? connection : {};
+    const opts = options && typeof options === "object" ? options : {};
+
+    return opts.status || data.status || data.estado || (config.status ? config.status.READY : "ready");
+  }
+
+  function pickAction(connection, options) {
+    const config = getConfig();
+    const data = connection && typeof connection === "object" ? connection : {};
+    const opts = options && typeof options === "object" ? options : {};
+
+    return opts.action || data.lastAction || data.ultimaAccion || (config.action ? config.action.SAVE : "save");
+  }
+
+  function pickFirebaseOk(connection, status) {
+    const config = getConfig();
+    const data = connection && typeof connection === "object" ? connection : {};
+    const errorStatus = config.status ? config.status.ERROR : "error";
+    const clearedStatus = config.status ? config.status.CLEARED : "cleared";
+
+    if (typeof data.firebaseConnectionOk === "boolean") {
+      return data.firebaseConnectionOk;
+    }
+
+    if (typeof data.firebaseConexionOk === "boolean") {
+      return data.firebaseConexionOk;
+    }
+
+    return status !== errorStatus && status !== clearedStatus;
+  }
+
   function prepareFirebasePayload(connection, options) {
     const config = getConfig();
     const utils = getUtils();
     const normalize = utils.Normalize || {};
     const time = utils.Time || {};
+    const data = connection && typeof connection === "object" ? connection : {};
     const opts = options && typeof options === "object" ? options : {};
     const now = typeof time.nowIso === "function" ? time.nowIso() : new Date().toISOString();
-    const source = config.source ? config.source.FIREBASE : "firebase";
-    const status = opts.status || (config.status ? config.status.READY : "ready");
-    const action = opts.action || (config.action ? config.action.SAVE : "save");
+    const fallbackSource = config.source ? config.source.FIREBASE : "firebase";
+    const status = pickStatus(data, opts);
+    const action = pickAction(data, opts);
+    const errorStatus = config.status ? config.status.ERROR : "error";
+    const shouldClearError = opts.clearError !== false && status !== errorStatus;
+    const lastError = shouldClearError ? "" : (data.lastError || data.lastErrorMessage || "");
+    const lastErrorFile = shouldClearError ? "" : (data.lastErrorFile || "");
+    const firebaseOk = pickFirebaseOk(data, status);
 
     const base = {
-      ...(connection && typeof connection === "object" ? connection : {}),
-      enabled: connection && typeof connection.enabled === "boolean" ? connection.enabled : true,
+      ...data,
+      enabled: typeof data.enabled === "boolean" ? data.enabled : true,
       provider: config.firebase ? config.firebase.provider : "telegram",
       appName: config.firebase ? config.firebase.appName : "AgendaJeff",
       aplicacion: config.firebase ? config.firebase.appName : "AgendaJeff",
@@ -75,22 +117,30 @@
       coleccion: config.firebase ? config.firebase.collection : "conexiones",
       document: config.firebase ? config.firebase.document : "telegram",
       documento: config.firebase ? config.firebase.document : "telegram",
-      source: opts.source || source,
+      source: opts.source || data.source || fallbackSource,
       status,
       estado: status,
-      firebaseConnectionOk: true,
-      firebaseConexionOk: true,
+      firebaseConnectionOk: firebaseOk,
+      firebaseConexionOk: firebaseOk,
       lastAction: action,
       ultimaAccion: action,
-      lastError: "",
-      lastErrorMessage: "",
-      lastErrorFile: "",
+      lastError,
+      lastErrorMessage: lastError,
+      lastErrorFile,
       lastCheckedAt: now,
       firebaseLastCheck: now,
       updatedAt: now,
       actualizadoEn: now,
-      savedAt: now
+      savedAt: data.savedAt || now
     };
+
+    if (status === (config.status ? config.status.CLEARED : "cleared")) {
+      base.clearedAt = data.clearedAt || now;
+    }
+
+    if (status === errorStatus) {
+      base.lastErrorAt = data.lastErrorAt || now;
+    }
 
     if (typeof normalize.normalizeConnection === "function") {
       return normalize.normalizeConnection(base, {
@@ -101,12 +151,31 @@
     return base;
   }
 
+  function getSuccessMessage(status) {
+    const config = getConfig();
+
+    if (status === (config.status ? config.status.CLEARED : "cleared")) {
+      return "Conexión Telegram marcada como limpiada en Firebase.";
+    }
+
+    if (status === (config.status ? config.status.ERROR : "error")) {
+      return "Error Telegram registrado correctamente en Firebase.";
+    }
+
+    if (status === (config.status ? config.status.PARTIAL : "partial")) {
+      return "Conexión Telegram parcial guardada correctamente en Firebase.";
+    }
+
+    return "Conexión Telegram guardada correctamente en Firebase.";
+  }
+
   async function saveFirebaseConnection(connection, options) {
     const config = getConfig();
     const createResult = getCreateResult();
+    const opts = options && typeof options === "object" ? options : {};
     const file = config.fileHints ? config.fileHints.FIREBASE_SAVE : "modulos/telegram/firebase/tl-firebase-save.js";
-    const action = config.action ? config.action.SAVE : "save";
-    const source = config.source ? config.source.FIREBASE : "firebase";
+    const action = pickAction(connection, opts);
+    const source = opts.source || (config.source ? config.source.FIREBASE : "firebase");
     const checkedAt = new Date().toISOString();
 
     if (!firebaseLayer.getTelegramDocRef || typeof firebaseLayer.getTelegramDocRef !== "function") {
@@ -146,6 +215,7 @@
     }
 
     const payload = prepareFirebasePayload(connection, {
+      ...opts,
       action,
       source
     });
@@ -155,11 +225,11 @@
 
       return createResult({
         ok: true,
-        status: config.status ? config.status.READY : "ready",
+        status: payload.status || (config.status ? config.status.READY : "ready"),
         action,
         source,
         file,
-        message: "Conexión Telegram guardada correctamente en Firebase.",
+        message: getSuccessMessage(payload.status),
         data: {
           collection: refResult.collection,
           document: refResult.document,
@@ -194,11 +264,15 @@
     const file = config.fileHints ? config.fileHints.FIREBASE_SAVE : "modulos/telegram/firebase/tl-firebase-save.js";
     const time = getUtils().Time || {};
     const now = typeof time.nowIso === "function" ? time.nowIso() : new Date().toISOString();
+    const message = errorInfo && errorInfo.message ? errorInfo.message : "Error desconocido.";
     const payload = {
+      enabled: true,
       status: config.status ? config.status.ERROR : "error",
       estado: config.status ? config.status.ERROR : "error",
-      lastError: errorInfo && errorInfo.message ? errorInfo.message : "Error desconocido.",
-      lastErrorMessage: errorInfo && errorInfo.message ? errorInfo.message : "Error desconocido.",
+      firebaseConnectionOk: false,
+      firebaseConexionOk: false,
+      lastError: message,
+      lastErrorMessage: message,
       lastErrorFile: errorInfo && errorInfo.file ? errorInfo.file : file,
       lastErrorAt: now,
       updatedAt: now,
@@ -208,7 +282,8 @@
     return saveFirebaseConnection(payload, {
       action: config.action ? config.action.SAVE : "save",
       source: config.source ? config.source.FIREBASE : "firebase",
-      status: config.status ? config.status.ERROR : "error"
+      status: config.status ? config.status.ERROR : "error",
+      clearError: false
     });
   }
 
