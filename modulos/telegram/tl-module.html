@@ -1,0 +1,226 @@
+<!--
+  Nombre completo: tl-module.html
+  Ruta: modulos/telegram/tl-module.html
+
+  Función:
+    - Mostrar la pantalla independiente del módulo Telegram.
+    - Cargar Firebase SDK, configuración, utilidades, storage, Firebase, API, conexión, diagnóstico, conector, DOM, render, eventos y startup.
+    - Permitir guardar, cargar, limpiar, probar Firebase, probar Telegram, enviar mensaje de prueba y ejecutar diagnóstico.
+    - Servir como vista modular reutilizable para integrarse luego en index.html.
+
+  Se conecta con:
+    - modulos/telegram/tl-module.css
+    - modulos/telegram/config/*
+    - modulos/telegram/utils/*
+    - modulos/telegram/storage/*
+    - modulos/telegram/firebase/*
+    - modulos/telegram/api/*
+    - modulos/telegram/connection/*
+    - modulos/telegram/diagnostic/*
+    - modulos/telegram/connector/*
+    - modulos/telegram/ui/dom/*
+    - modulos/telegram/ui/render/*
+    - modulos/telegram/ui/events/*
+    - modulos/telegram/startup/tl-start.js
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgendaJeff · Telegram</title>
+  <link rel="stylesheet" href="./tl-module.css" />
+</head>
+<body>
+  <main class="tl-page" aria-labelledby="tlPageTitle">
+    <section class="tl-hero">
+      <div>
+        <p class="tl-eyebrow">AgendaJeff · Conexiones</p>
+        <h1 id="tlPageTitle">Conexión Telegram</h1>
+        <p class="tl-hero-text">
+          Guarda el Bot Token y Chat ID, prueba Firebase, verifica Telegram y ejecuta diagnóstico técnico del módulo.
+        </p>
+      </div>
+
+      <div class="tl-status-card" aria-live="polite">
+        <span id="tlStatusBadge" class="tl-badge is-idle">Sin configurar</span>
+        <h2 id="tlStatusTitle">Sin configurar</h2>
+        <p id="tlStatusDescription">El módulo Telegram está iniciando.</p>
+        <div class="tl-status-meta">
+          <span>Origen: <strong id="tlStatusSource">sin origen</strong></span>
+          <span>Actualizado: <strong id="tlStatusUpdatedAt">sin fecha</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="tl-grid">
+      <article class="tl-panel">
+        <div class="tl-panel-header">
+          <div>
+            <h2>Datos de conexión</h2>
+            <p>Estos datos se guardan en Firebase y en respaldo local.</p>
+          </div>
+          <label class="tl-switch" for="tlEnabled">
+            <input id="tlEnabled" type="checkbox" checked />
+            <span>Activo</span>
+          </label>
+        </div>
+
+        <form id="tlConnectionForm" class="tl-form" autocomplete="off">
+          <label class="tl-field" for="tlBotToken">
+            <span>Bot Token</span>
+            <input id="tlBotToken" type="password" placeholder="Ejemplo: 123456789:ABC..." autocomplete="off" />
+          </label>
+
+          <label class="tl-field" for="tlChatId">
+            <span>Chat ID</span>
+            <input id="tlChatId" type="text" placeholder="Ejemplo: 1525041761" autocomplete="off" />
+          </label>
+
+          <label class="tl-field" for="tlMessageText">
+            <span>Mensaje manual de prueba</span>
+            <textarea id="tlMessageText" rows="4" placeholder="Texto opcional para futuras pruebas manuales."></textarea>
+          </label>
+
+          <div class="tl-actions">
+            <button id="tlBtnSave" type="button" class="tl-btn tl-btn-primary">Guardar</button>
+            <button id="tlBtnLoad" type="button" class="tl-btn">Cargar</button>
+            <button id="tlBtnClear" type="button" class="tl-btn tl-btn-danger">Limpiar</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="tl-panel">
+        <div class="tl-panel-header">
+          <div>
+            <h2>Pruebas y diagnóstico</h2>
+            <p>Ejecuta pruebas separadas para ubicar errores rápido.</p>
+          </div>
+        </div>
+
+        <div class="tl-mini-grid">
+          <div class="tl-mini-card">
+            <span>Firebase</span>
+            <strong id="tlFirebaseStatus" class="is-idle">Pendiente</strong>
+          </div>
+          <div class="tl-mini-card">
+            <span>Local</span>
+            <strong id="tlLocalStatus" class="is-idle">Pendiente</strong>
+          </div>
+          <div class="tl-mini-card">
+            <span>Telegram API</span>
+            <strong id="tlTelegramStatus" class="is-idle">Pendiente</strong>
+          </div>
+          <div class="tl-mini-card">
+            <span>Entorno</span>
+            <strong id="tlElectronStatus" class="is-idle">Pendiente</strong>
+          </div>
+        </div>
+
+        <div class="tl-actions tl-actions-stack">
+          <button id="tlBtnTestFirebase" type="button" class="tl-btn">Probar Firebase</button>
+          <button id="tlBtnTestTelegram" type="button" class="tl-btn">Probar Telegram</button>
+          <button id="tlBtnSendTest" type="button" class="tl-btn">Enviar mensaje de prueba</button>
+          <button id="tlBtnDiagnostic" type="button" class="tl-btn tl-btn-primary">Diagnóstico completo</button>
+          <button id="tlBtnPing" type="button" class="tl-btn">Ping conector</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="tl-grid tl-grid-results">
+      <article class="tl-panel">
+        <div class="tl-panel-header">
+          <div>
+            <h2>Resultado</h2>
+            <p>Resumen de la última acción ejecutada.</p>
+          </div>
+        </div>
+        <pre id="tlResultBox" class="tl-output">Iniciando módulo Telegram...</pre>
+        <pre id="tlErrorBox" class="tl-output tl-error" hidden></pre>
+      </article>
+
+      <article class="tl-panel">
+        <div class="tl-panel-header">
+          <div>
+            <h2>Diagnóstico</h2>
+            <p>Resumen técnico por capas.</p>
+          </div>
+        </div>
+        <pre id="tlDiagnosticBox" class="tl-output">Sin diagnóstico ejecutado.</pre>
+      </article>
+    </section>
+
+    <section class="tl-panel">
+      <div class="tl-panel-header">
+        <div>
+          <h2>JSON técnico</h2>
+          <p>Información completa para depuración.</p>
+        </div>
+      </div>
+      <pre id="tlJsonBox" class="tl-output tl-json">{}</pre>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+  <script src="./config/tl-config.js"></script>
+  <script src="./config/tl-firebase-config.js"></script>
+
+  <script src="./utils/tl-time.js"></script>
+  <script src="./utils/tl-mask.js"></script>
+  <script src="./utils/tl-normalize.js"></script>
+  <script src="./utils/tl-validate.js"></script>
+
+  <script src="./storage/tl-local-read.js"></script>
+  <script src="./storage/tl-local-save.js"></script>
+  <script src="./storage/tl-local-clear.js"></script>
+  <script src="./storage/tl-local-test.js"></script>
+
+  <script src="./firebase/tl-firebase-init.js"></script>
+  <script src="./firebase/tl-firebase-read.js"></script>
+  <script src="./firebase/tl-firebase-save.js"></script>
+  <script src="./firebase/tl-firebase-test.js"></script>
+
+  <script src="./api/tl-api-url.js"></script>
+  <script src="./api/tl-api-getme.js"></script>
+  <script src="./api/tl-api-send.js"></script>
+  <script src="./api/tl-api-test.js"></script>
+
+  <script src="./connection/tl-connection-status.js"></script>
+  <script src="./connection/tl-connection-read.js"></script>
+  <script src="./connection/tl-connection-save.js"></script>
+  <script src="./connection/tl-connection-clear.js"></script>
+  <script src="./connection/tl-connection-test.js"></script>
+
+  <script src="./diagnostic/tl-diagnostic-state.js"></script>
+  <script src="./diagnostic/tl-diagnostic-local.js"></script>
+  <script src="./diagnostic/tl-diagnostic-firebase.js"></script>
+  <script src="./diagnostic/tl-diagnostic-telegram.js"></script>
+  <script src="./diagnostic/tl-diagnostic-report.js"></script>
+
+  <script src="./connector/tl-connector-status.js"></script>
+  <script src="./connector/tl-connector-send.js"></script>
+  <script src="./connector/tl-connector-test.js"></script>
+
+  <script src="./ui/dom/tl-dom-form.js"></script>
+  <script src="./ui/dom/tl-dom-buttons.js"></script>
+  <script src="./ui/dom/tl-dom-status.js"></script>
+  <script src="./ui/dom/tl-dom-result.js"></script>
+
+  <script src="./ui/render/tl-render-status.js"></script>
+  <script src="./ui/render/tl-render-result.js"></script>
+  <script src="./ui/render/tl-render-error.js"></script>
+  <script src="./ui/render/tl-render-diagnostic.js"></script>
+
+  <script src="./ui/events/tl-event-save.js"></script>
+  <script src="./ui/events/tl-event-load.js"></script>
+  <script src="./ui/events/tl-event-clear.js"></script>
+  <script src="./ui/events/tl-event-test-firebase.js"></script>
+  <script src="./ui/events/tl-event-test-telegram.js"></script>
+  <script src="./ui/events/tl-event-diagnostic.js"></script>
+
+  <script src="./startup/tl-start.js"></script>
+</body>
+</html>
