@@ -6,13 +6,13 @@
     - Servir como shell raíz de AgendaJeff.
     - Verificar que Electron, main.js y preload.js funcionen correctamente.
     - Cargar módulos internos de forma modular mediante iframe.
-    - Integrar el módulo Telegram sin mezclar su lógica interna con el shell principal.
+    - Integrar únicamente el módulo Telegram en esta etapa.
+    - No incluir lógica interna de Telegram ni adelantar módulos futuros.
 
   Se conecta con:
     - electron/main.js
     - electron/preload.js
     - modulos/telegram/tl-module.html
-    - futuros módulos dentro de modulos/
 -->
 
 <!DOCTYPE html>
@@ -37,7 +37,6 @@
       --aj-success-soft: #ecfdf3;
       --aj-warning: #b45309;
       --aj-warning-soft: #fff7ed;
-      --aj-danger: #dc2626;
       --aj-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
       --aj-radius: 18px;
       --aj-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -220,17 +219,6 @@
       background: var(--aj-primary-soft);
     }
 
-    .aj-module-button.is-disabled {
-      cursor: not-allowed;
-      opacity: 0.62;
-    }
-
-    .aj-module-button.is-disabled:hover {
-      border-color: var(--aj-border);
-      box-shadow: none;
-      transform: none;
-    }
-
     .aj-module-button strong {
       display: block;
       font-size: 14px;
@@ -247,17 +235,11 @@
       flex: 0 0 auto;
       padding: 4px 8px;
       border-radius: 999px;
-      background: #f1f5f9;
-      color: var(--aj-muted);
+      background: var(--aj-success-soft);
+      color: var(--aj-success);
       font-size: 11px;
       font-weight: 900;
       text-transform: uppercase;
-    }
-
-    .aj-module-button.is-active .aj-module-state,
-    .aj-module-state.is-ready {
-      background: var(--aj-success-soft);
-      color: var(--aj-success);
     }
 
     .aj-sidebar-note {
@@ -446,7 +428,7 @@
         <span class="aj-brand-mark">AJ</span>
         <div class="aj-brand-text">
           <strong>AgendaJeff</strong>
-          <span>Reconstrucción modular · Conexiones</span>
+          <span>Reconstrucción modular · Telegram</span>
         </div>
       </div>
 
@@ -466,48 +448,12 @@
               <strong>Telegram</strong>
               <span>Bot, Chat ID, Firebase, respaldo local y diagnóstico.</span>
             </span>
-            <span id="telegramModuleState" class="aj-module-state is-ready">listo</span>
-          </button>
-
-          <button class="aj-module-button is-disabled" type="button" disabled>
-            <span>
-              <strong>Google Calendar</strong>
-              <span>Se agregará como módulo independiente.</span>
-            </span>
-            <span class="aj-module-state">pendiente</span>
-          </button>
-
-          <button class="aj-module-button is-disabled" type="button" disabled>
-            <span>
-              <strong>Microsoft Calendar</strong>
-              <span>Se agregará como módulo independiente.</span>
-            </span>
-            <span class="aj-module-state">pendiente</span>
-          </button>
-        </section>
-
-        <section class="aj-sidebar-section">
-          <h2>AgendaJeff</h2>
-
-          <button class="aj-module-button is-disabled" type="button" disabled>
-            <span>
-              <strong>Agenda</strong>
-              <span>Próximo módulo principal.</span>
-            </span>
-            <span class="aj-module-state">pendiente</span>
-          </button>
-
-          <button class="aj-module-button is-disabled" type="button" disabled>
-            <span>
-              <strong>Pendientes</strong>
-              <span>Próximo módulo principal.</span>
-            </span>
-            <span class="aj-module-state">pendiente</span>
+            <span id="telegramModuleState" class="aj-module-state">listo</span>
           </button>
         </section>
 
         <p class="aj-sidebar-note">
-          Cada módulo vive dentro de su propia carpeta. El shell solo abre vistas; no contiene lógica interna de Telegram.
+          Etapa actual: solo Telegram. Los demás módulos se agregarán después, cuando Telegram quede probado.
         </p>
       </aside>
 
@@ -515,7 +461,7 @@
         <div id="welcomeView" class="aj-welcome">
           <h1>AgendaJeff modular</h1>
           <p>
-            Base lista para cargar módulos independientes. Telegram ya está integrado como primer módulo funcional.
+            Base lista para probar el módulo Telegram. Primero se valida Telegram completo; después se agregan otros módulos.
           </p>
 
           <div class="aj-status-grid">
@@ -562,7 +508,7 @@
 
     <footer class="aj-footer">
       <span>AgendaJeff · Reconstrucción modular</span>
-      <span id="footerStatus">Bloque 12 · Shell integrado</span>
+      <span id="footerStatus">Telegram integrado</span>
     </footer>
   </div>
 
@@ -672,7 +618,7 @@
         welcomeView.style.display = "block";
         moduleFrame.classList.remove("is-visible");
         setActiveModule("");
-        setFooter("Inicio · Shell integrado");
+        setFooter("Inicio · Telegram integrado");
       }
 
       function openModule(moduleKey) {
@@ -722,7 +668,6 @@
           if (activeModule) {
             setFooter(`${activeModule.title} · Módulo cargado`);
             telegramModuleState.textContent = "abierto";
-            telegramModuleState.classList.add("is-ready");
           }
         });
       }
@@ -730,7 +675,7 @@
       function init() {
         wireEvents();
         checkElectron();
-        setFooter("Bloque 12 · Shell integrado");
+        setFooter("Telegram integrado");
       }
 
       init();
