@@ -4,8 +4,8 @@
 
   Función:
     - Mostrar la pantalla independiente del módulo Google Calendar.
-    - Cargar base visual, configuración, utilidades, almacenamiento local y Firebase.
-    - Preparar la estructura para autenticación, eventos, diagnóstico y conector.
+    - Cargar base visual, configuración, utilidades, almacenamiento local, Firebase y autenticación.
+    - Preparar la estructura para API Calendar, diagnóstico final y conector.
     - No mezclar lógica de Telegram ni lógica del shell principal.
 
   Se conecta con:
@@ -14,6 +14,7 @@
     - modulos/googlecalendar/utils/*
     - modulos/googlecalendar/storage/*
     - modulos/googlecalendar/firebase/*
+    - modulos/googlecalendar/auth/*
 -->
 
 <!DOCTYPE html>
@@ -36,9 +37,9 @@
       </div>
 
       <article class="gc-status-card" aria-live="polite">
-        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 2</span>
-        <h2 id="gcStatusTitle">Local + Firebase</h2>
-        <p id="gcStatusDescription">La base local y las capas Firebase del módulo ya están cargadas.</p>
+        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 3</span>
+        <h2 id="gcStatusTitle">Autenticación sin popup</h2>
+        <p id="gcStatusDescription">La capa OAuth ya prepara autorización desktop sin abrir popup interno.</p>
         <div class="gc-status-meta">
           <span>Origen: <strong id="gcStatusSource">sistema</strong></span>
           <span>Actualizado: <strong id="gcStatusUpdatedAt">pendiente</strong></span>
@@ -51,7 +52,7 @@
         <div class="gc-panel-header">
           <div>
             <h2>Datos de conexión</h2>
-            <p>Este bloque ya puede leer, guardar y limpiar datos locales; Firebase queda preparado para conexión real.</p>
+            <p>El módulo ya tiene base local, Firebase y autorización preparada. Los botones se activarán en la capa UI.</p>
           </div>
           <label class="gc-switch" for="gcEnabled">
             <input id="gcEnabled" type="checkbox" checked />
@@ -89,7 +90,7 @@
         <div class="gc-panel-header">
           <div>
             <h2>Capas del módulo</h2>
-            <p>OAuth y eventos se activarán en los siguientes bloques.</p>
+            <p>API Calendar, conexión completa y conector se agregarán en los siguientes bloques.</p>
           </div>
         </div>
 
@@ -100,7 +101,7 @@
           </div>
           <div class="gc-mini-card">
             <span>OAuth Desktop</span>
-            <strong id="gcAuthStatus" class="is-idle">Pendiente</strong>
+            <strong id="gcAuthStatus" class="is-ready">Preparado</strong>
           </div>
           <div class="gc-mini-card">
             <span>Calendar API</span>
@@ -129,7 +130,7 @@
             <p>Resumen de la última acción del módulo.</p>
           </div>
         </div>
-        <pre id="gcResultBox" class="gc-output">Bloque 2 creado. Local + Firebase cargados.</pre>
+        <pre id="gcResultBox" class="gc-output">Bloque 3 creado. Autenticación Google Calendar cargada sin popup.</pre>
         <pre id="gcErrorBox" class="gc-output gc-error" hidden></pre>
       </article>
 
@@ -140,7 +141,7 @@
             <p>Resumen técnico por capas.</p>
           </div>
         </div>
-        <pre id="gcDiagnosticBox" class="gc-output">Firebase se probará desde la capa gc-firebase-test.js.</pre>
+        <pre id="gcDiagnosticBox" class="gc-output">OAuth prepara URL, sesión pendiente, intercambio de código y renovación.</pre>
       </article>
     </section>
 
@@ -176,8 +177,13 @@
   <script src="./firebase/gc-firebase-save.js"></script>
   <script src="./firebase/gc-firebase-test.js"></script>
 
+  <script src="./auth/gc-auth-url.js"></script>
+  <script src="./auth/gc-auth-desktop.js"></script>
+  <script src="./auth/gc-auth-token.js"></script>
+  <script src="./auth/gc-auth-refresh.js"></script>
+
   <script>
-    (function showGoogleCalendarBlockTwo(global) {
+    (function showGoogleCalendarBlockThree(global) {
       "use strict";
 
       const root = global.AgendaJeffModules || {};
@@ -207,8 +213,8 @@
         jsonBox.textContent = JSON.stringify({
           ok: true,
           module: config.module || { id: "googleCalendar" },
-          block: "Bloque 2",
-          message: "Storage local y capas Firebase de Google Calendar cargadas.",
+          block: "Bloque 3",
+          message: "Autenticación Google Calendar cargada sin flujo popup.",
           firebase: {
             sdkLoaded: Boolean(firebaseLayer.hasFirebaseSdk && firebaseLayer.hasFirebaseSdk()),
             configValid: Boolean(validation.ok),
@@ -216,7 +222,14 @@
           },
           loadedLayers: {
             storage: Boolean(googleCalendar.Storage),
-            firebase: Boolean(googleCalendar.Firebase)
+            firebase: Boolean(googleCalendar.Firebase),
+            auth: Boolean(googleCalendar.Auth)
+          },
+          authFunctions: {
+            buildAuthorizationUrl: Boolean(googleCalendar.Auth && googleCalendar.Auth.buildAuthorizationUrl),
+            startDesktopAuth: Boolean(googleCalendar.Auth && googleCalendar.Auth.startDesktopAuth),
+            exchangeAuthorizationCode: Boolean(googleCalendar.Auth && googleCalendar.Auth.exchangeAuthorizationCode),
+            ensureAccess: Boolean(googleCalendar.Auth && googleCalendar.Auth.ensureAccess)
           },
           checkedAt: now
         }, null, 2);
