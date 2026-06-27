@@ -7,12 +7,14 @@
     - Crear la ventana principal.
     - Cargar index.html desde la raíz del proyecto.
     - Registrar IPC mínimo para que la interfaz detecte el entorno Electron.
+    - Permitir apertura segura de URLs externas para OAuth de Google Calendar.
     - Mantener Electron simple para que la lógica de módulos no viva aquí.
 
   Se conecta con:
     - electron/electron-config.js
     - electron/preload.js
     - index.html
+    - modulos/googlecalendar/auth/gc-auth-desktop.js
 */
 
 "use strict";
@@ -25,6 +27,25 @@ let ipcRegistered = false;
 
 function isHttpUrl(url) {
   return typeof url === "string" && /^https?:\/\//i.test(url);
+}
+
+async function openExternalUrl(url) {
+  if (!isHttpUrl(url)) {
+    return {
+      ok: false,
+      message: "Solo se permite abrir URLs http/https externas.",
+      checkedAt: new Date().toISOString()
+    };
+  }
+
+  await shell.openExternal(url);
+
+  return {
+    ok: true,
+    opened: true,
+    message: "URL externa abierta correctamente.",
+    checkedAt: new Date().toISOString()
+  };
 }
 
 function registerIpcHandlers() {
@@ -56,6 +77,10 @@ function registerIpcHandlers() {
       },
       checkedAt: new Date().toISOString()
     };
+  });
+
+  ipcMain.handle("aj:openExternal", async function handleOpenExternal(event, url) {
+    return openExternalUrl(url);
   });
 }
 
