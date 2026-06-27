@@ -4,11 +4,12 @@
 
   Función:
     - Mantener separada la configuración Firebase del módulo Google Calendar.
-    - Exponer validaciones básicas para saber si la configuración está completa.
-    - Evitar escribir credenciales directamente dentro del código del repositorio.
-    - Permitir configuración por variable global o localStorage en la PC del usuario.
+    - Tomar la configuración Firebase interna compartida por AgendaJeff cuando esté disponible.
+    - Permitir respaldo por variable global o localStorage en la PC del usuario.
+    - Evitar duplicar claves dentro de este archivo.
 
   Se conecta con:
+    - modulos/telegram/config/tl-firebase-config.js
     - modulos/googlecalendar/config/gc-config.js
     - modulos/googlecalendar/firebase/gc-firebase-init.js
     - modulos/googlecalendar/firebase/gc-firebase-test.js
@@ -43,31 +44,6 @@
     return isText(source[key]) ? source[key].trim() : "";
   }
 
-  function readLocalConfig() {
-    try {
-      if (!global.localStorage) {
-        return {};
-      }
-
-      const rawValue = global.localStorage.getItem(LOCAL_CONFIG_KEY);
-      return rawValue ? JSON.parse(rawValue) : {};
-    } catch (error) {
-      return {};
-    }
-  }
-
-  function readGlobalConfig() {
-    if (global.AGENDAJEFF_FIREBASE_CONFIG && typeof global.AGENDAJEFF_FIREBASE_CONFIG === "object") {
-      return global.AGENDAJEFF_FIREBASE_CONFIG;
-    }
-
-    if (global.AJ_FIREBASE_CONFIG && typeof global.AJ_FIREBASE_CONFIG === "object") {
-      return global.AJ_FIREBASE_CONFIG;
-    }
-
-    return {};
-  }
-
   function normalizeFirebaseConfig(source) {
     const data = source && typeof source === "object" ? source : {};
 
@@ -82,19 +58,59 @@
     };
   }
 
-  function getFirebaseConfig() {
+  function readSharedModuleConfig() {
+    const telegram = root.Telegram || {};
+
+    if (telegram.FirebaseConfig && typeof telegram.FirebaseConfig.getFirebaseConfig === "function") {
+      return telegram.FirebaseConfig.getFirebaseConfig();
+    }
+
+    return {};
+  }
+
+  function readGlobalConfig() {
+    if (global.AGENDAJEFF_FIREBASE_CONFIG && typeof global.AGENDAJEFF_FIREBASE_CONFIG === "object") {
+      return global.AGENDAJEFF_FIREBASE_CONFIG;
+    }
+
+    if (global.AJ_FIREBASE_CONFIG && typeof global.AJ_FIREBASE_CONFIG === "object") {
+      return global.AJ_FIREBASE_CONFIG;
+    }
+
+    return {};
+  }
+
+  function readLocalConfig() {
+    try {
+      if (!global.localStorage) {
+        return {};
+      }
+
+      const rawValue = global.localStorage.getItem(LOCAL_CONFIG_KEY);
+      return rawValue ? JSON.parse(rawValue) : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function mergeFirebaseConfig() {
+    const sharedConfig = normalizeFirebaseConfig(readSharedModuleConfig());
     const globalConfig = normalizeFirebaseConfig(readGlobalConfig());
     const localConfig = normalizeFirebaseConfig(readLocalConfig());
 
     return {
-      apiKey: globalConfig.apiKey || localConfig.apiKey || firebaseConfigTemplate.apiKey,
-      authDomain: globalConfig.authDomain || localConfig.authDomain || firebaseConfigTemplate.authDomain,
-      projectId: globalConfig.projectId || localConfig.projectId || firebaseConfigTemplate.projectId,
-      storageBucket: globalConfig.storageBucket || localConfig.storageBucket || firebaseConfigTemplate.storageBucket,
-      messagingSenderId: globalConfig.messagingSenderId || localConfig.messagingSenderId || firebaseConfigTemplate.messagingSenderId,
-      appId: globalConfig.appId || localConfig.appId || firebaseConfigTemplate.appId,
-      measurementId: globalConfig.measurementId || localConfig.measurementId || firebaseConfigTemplate.measurementId
+      apiKey: sharedConfig.apiKey || globalConfig.apiKey || localConfig.apiKey || firebaseConfigTemplate.apiKey,
+      authDomain: sharedConfig.authDomain || globalConfig.authDomain || localConfig.authDomain || firebaseConfigTemplate.authDomain,
+      projectId: sharedConfig.projectId || globalConfig.projectId || localConfig.projectId || firebaseConfigTemplate.projectId,
+      storageBucket: sharedConfig.storageBucket || globalConfig.storageBucket || localConfig.storageBucket || firebaseConfigTemplate.storageBucket,
+      messagingSenderId: sharedConfig.messagingSenderId || globalConfig.messagingSenderId || localConfig.messagingSenderId || firebaseConfigTemplate.messagingSenderId,
+      appId: sharedConfig.appId || globalConfig.appId || localConfig.appId || firebaseConfigTemplate.appId,
+      measurementId: sharedConfig.measurementId || globalConfig.measurementId || localConfig.measurementId || firebaseConfigTemplate.measurementId
     };
+  }
+
+  function getFirebaseConfig() {
+    return mergeFirebaseConfig();
   }
 
   function saveFirebaseConfigLocal(config) {
@@ -125,6 +141,26 @@
     }
   }
 
+  function detectConfigSource() {
+    const sharedConfig = normalizeFirebaseConfig(readSharedModuleConfig());
+    const globalConfig = normalizeFirebaseConfig(readGlobalConfig());
+    const localConfig = normalizeFirebaseConfig(readLocalConfig());
+
+    if (isText(sharedConfig.projectId) && isText(sharedConfig.appId)) {
+      return "agendaJeff-interno";
+    }
+
+    if (isText(globalConfig.projectId) && isText(globalConfig.appId)) {
+      return "global";
+    }
+
+    if (isText(localConfig.projectId) && isText(localConfig.appId)) {
+      return "localStorage";
+    }
+
+    return "empty";
+  }
+
   function validateFirebaseConfig() {
     const firebaseConfig = getFirebaseConfig();
     const requiredFields = [
@@ -145,7 +181,7 @@
       missingFields,
       projectId: firebaseConfig.projectId,
       appId: firebaseConfig.appId,
-      source: Object.keys(readGlobalConfig()).length ? "global" : Object.keys(readLocalConfig()).length ? "localStorage" : "empty",
+      source: detectConfigSource(),
       checkedAt: new Date().toISOString()
     };
   }
