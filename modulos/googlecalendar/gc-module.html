@@ -4,8 +4,8 @@
 
   Función:
     - Mostrar la pantalla independiente del módulo Google Calendar.
-    - Cargar base visual, configuración, utilidades, almacenamiento local, Firebase, autenticación y API Calendar.
-    - Preparar la estructura para conexión completa, diagnóstico final y conector.
+    - Cargar base visual, configuración, utilidades, almacenamiento local, Firebase, autenticación, API, conexión, diagnóstico y conector.
+    - Preparar la estructura para UI final e integración al shell principal.
     - No mezclar lógica de Telegram ni lógica del shell principal.
 
   Se conecta con:
@@ -16,6 +16,9 @@
     - modulos/googlecalendar/firebase/*
     - modulos/googlecalendar/auth/*
     - modulos/googlecalendar/api/*
+    - modulos/googlecalendar/connection/*
+    - modulos/googlecalendar/diagnostic/*
+    - modulos/googlecalendar/connector/*
 -->
 
 <!DOCTYPE html>
@@ -38,9 +41,9 @@
       </div>
 
       <article class="gc-status-card" aria-live="polite">
-        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 4</span>
-        <h2 id="gcStatusTitle">API Google Calendar</h2>
-        <p id="gcStatusDescription">La capa API ya puede leer calendarios, leer eventos y preparar creación de eventos.</p>
+        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 5</span>
+        <h2 id="gcStatusTitle">Conexión + diagnóstico + conector</h2>
+        <p id="gcStatusDescription">El módulo ya expone conexión, diagnóstico técnico y puerta pública para otros módulos.</p>
         <div class="gc-status-meta">
           <span>Origen: <strong id="gcStatusSource">sistema</strong></span>
           <span>Actualizado: <strong id="gcStatusUpdatedAt">pendiente</strong></span>
@@ -53,7 +56,7 @@
         <div class="gc-panel-header">
           <div>
             <h2>Datos de conexión</h2>
-            <p>El módulo ya tiene base local, Firebase, OAuth y API Calendar. Los botones se activarán en la capa UI.</p>
+            <p>El módulo ya tiene base local, Firebase, OAuth, API, conexión, diagnóstico y conector. La UI final se activará en el último bloque.</p>
           </div>
           <label class="gc-switch" for="gcEnabled">
             <input id="gcEnabled" type="checkbox" checked />
@@ -91,7 +94,7 @@
         <div class="gc-panel-header">
           <div>
             <h2>Capas del módulo</h2>
-            <p>Conexión completa, diagnóstico y conector se agregarán en el siguiente bloque.</p>
+            <p>Solo falta UI final e integración al shell principal.</p>
           </div>
         </div>
 
@@ -110,7 +113,7 @@
           </div>
           <div class="gc-mini-card">
             <span>Conector</span>
-            <strong id="gcConnectorStatus" class="is-idle">Pendiente</strong>
+            <strong id="gcConnectorStatus" class="is-ready">Preparado</strong>
           </div>
         </div>
 
@@ -131,7 +134,7 @@
             <p>Resumen de la última acción del módulo.</p>
           </div>
         </div>
-        <pre id="gcResultBox" class="gc-output">Bloque 4 creado. API Google Calendar cargada.</pre>
+        <pre id="gcResultBox" class="gc-output">Bloque 5 creado. Conexión, diagnóstico y conector cargados.</pre>
         <pre id="gcErrorBox" class="gc-output gc-error" hidden></pre>
       </article>
 
@@ -142,7 +145,7 @@
             <p>Resumen técnico por capas.</p>
           </div>
         </div>
-        <pre id="gcDiagnosticBox" class="gc-output">API prepara cliente, calendarios, lectura de eventos, creación de eventos y prueba API.</pre>
+        <pre id="gcDiagnosticBox" class="gc-output">Diagnóstico completo y puerta pública window.AgendaJeffGoogleCalendar disponibles.</pre>
       </article>
     </section>
 
@@ -189,8 +192,24 @@
   <script src="./api/gc-api-events-create.js"></script>
   <script src="./api/gc-api-test.js"></script>
 
+  <script src="./connection/gc-connection-status.js"></script>
+  <script src="./connection/gc-connection-read.js"></script>
+  <script src="./connection/gc-connection-save.js"></script>
+  <script src="./connection/gc-connection-clear.js"></script>
+  <script src="./connection/gc-connection-test.js"></script>
+
+  <script src="./diagnostic/gc-diagnostic-state.js"></script>
+  <script src="./diagnostic/gc-diagnostic-local.js"></script>
+  <script src="./diagnostic/gc-diagnostic-firebase.js"></script>
+  <script src="./diagnostic/gc-diagnostic-google.js"></script>
+  <script src="./diagnostic/gc-diagnostic-report.js"></script>
+
+  <script src="./connector/gc-connector-status.js"></script>
+  <script src="./connector/gc-connector-events.js"></script>
+  <script src="./connector/gc-connector-test.js"></script>
+
   <script>
-    (function showGoogleCalendarBlockFour(global) {
+    (function showGoogleCalendarBlockFive(global) {
       "use strict";
 
       const root = global.AgendaJeffModules || {};
@@ -202,6 +221,7 @@
       const jsonBox = document.getElementById("gcJsonBox");
       const firebaseStatus = document.getElementById("gcFirebaseStatus");
       const apiStatus = document.getElementById("gcApiStatus");
+      const connectorStatus = document.getElementById("gcConnectorStatus");
       const firebaseLayer = googleCalendar.Firebase || {};
       const firebaseConfig = googleCalendar.FirebaseConfig || {};
       const validation = typeof firebaseConfig.validateFirebaseConfig === "function"
@@ -222,12 +242,17 @@
         apiStatus.className = googleCalendar.Api && googleCalendar.Api.Client ? "is-ready" : "is-idle";
       }
 
+      if (connectorStatus) {
+        connectorStatus.textContent = googleCalendar.Connector ? "Preparado" : "Pendiente";
+        connectorStatus.className = googleCalendar.Connector ? "is-ready" : "is-idle";
+      }
+
       if (jsonBox) {
         jsonBox.textContent = JSON.stringify({
           ok: true,
           module: config.module || { id: "googleCalendar" },
-          block: "Bloque 4",
-          message: "API Google Calendar cargada.",
+          block: "Bloque 5",
+          message: "Conexión, diagnóstico y conector Google Calendar cargados.",
           firebase: {
             sdkLoaded: Boolean(firebaseLayer.hasFirebaseSdk && firebaseLayer.hasFirebaseSdk()),
             configValid: Boolean(validation.ok),
@@ -237,16 +262,17 @@
             storage: Boolean(googleCalendar.Storage),
             firebase: Boolean(googleCalendar.Firebase),
             auth: Boolean(googleCalendar.Auth),
-            api: Boolean(googleCalendar.Api)
+            api: Boolean(googleCalendar.Api),
+            connection: Boolean(googleCalendar.Connection),
+            diagnostic: Boolean(googleCalendar.Diagnostic),
+            connector: Boolean(googleCalendar.Connector),
+            publicConnector: Boolean(global.AgendaJeffGoogleCalendar)
           },
-          apiFunctions: {
-            requestJson: Boolean(googleCalendar.Api && googleCalendar.Api.Client && googleCalendar.Api.Client.requestJson),
-            listCalendars: Boolean(googleCalendar.Api && googleCalendar.Api.listCalendars),
-            getCalendar: Boolean(googleCalendar.Api && googleCalendar.Api.getCalendar),
-            listEvents: Boolean(googleCalendar.Api && googleCalendar.Api.listEvents),
-            getEvent: Boolean(googleCalendar.Api && googleCalendar.Api.getEvent),
-            createEvent: Boolean(googleCalendar.Api && googleCalendar.Api.createEvent),
-            testGoogleCalendarApi: Boolean(googleCalendar.Api && googleCalendar.Api.testGoogleCalendarApi)
+          connectorFunctions: {
+            getStatus: Boolean(global.AgendaJeffGoogleCalendar && global.AgendaJeffGoogleCalendar.getStatus),
+            createEvent: Boolean(global.AgendaJeffGoogleCalendar && global.AgendaJeffGoogleCalendar.createEvent),
+            listEvents: Boolean(global.AgendaJeffGoogleCalendar && global.AgendaJeffGoogleCalendar.listEvents),
+            diagnostic: Boolean(global.AgendaJeffGoogleCalendar && global.AgendaJeffGoogleCalendar.diagnostic)
           },
           checkedAt: now
         }, null, 2);
