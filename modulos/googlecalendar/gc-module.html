@@ -4,8 +4,8 @@
 
   Función:
     - Mostrar la pantalla independiente del módulo Google Calendar.
-    - Cargar base visual, configuración, utilidades, almacenamiento local, Firebase y autenticación.
-    - Preparar la estructura para API Calendar, diagnóstico final y conector.
+    - Cargar base visual, configuración, utilidades, almacenamiento local, Firebase, autenticación y API Calendar.
+    - Preparar la estructura para conexión completa, diagnóstico final y conector.
     - No mezclar lógica de Telegram ni lógica del shell principal.
 
   Se conecta con:
@@ -15,6 +15,7 @@
     - modulos/googlecalendar/storage/*
     - modulos/googlecalendar/firebase/*
     - modulos/googlecalendar/auth/*
+    - modulos/googlecalendar/api/*
 -->
 
 <!DOCTYPE html>
@@ -37,9 +38,9 @@
       </div>
 
       <article class="gc-status-card" aria-live="polite">
-        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 3</span>
-        <h2 id="gcStatusTitle">Autenticación sin popup</h2>
-        <p id="gcStatusDescription">La capa OAuth ya prepara autorización desktop sin abrir popup interno.</p>
+        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 4</span>
+        <h2 id="gcStatusTitle">API Google Calendar</h2>
+        <p id="gcStatusDescription">La capa API ya puede leer calendarios, leer eventos y preparar creación de eventos.</p>
         <div class="gc-status-meta">
           <span>Origen: <strong id="gcStatusSource">sistema</strong></span>
           <span>Actualizado: <strong id="gcStatusUpdatedAt">pendiente</strong></span>
@@ -52,7 +53,7 @@
         <div class="gc-panel-header">
           <div>
             <h2>Datos de conexión</h2>
-            <p>El módulo ya tiene base local, Firebase y autorización preparada. Los botones se activarán en la capa UI.</p>
+            <p>El módulo ya tiene base local, Firebase, OAuth y API Calendar. Los botones se activarán en la capa UI.</p>
           </div>
           <label class="gc-switch" for="gcEnabled">
             <input id="gcEnabled" type="checkbox" checked />
@@ -90,7 +91,7 @@
         <div class="gc-panel-header">
           <div>
             <h2>Capas del módulo</h2>
-            <p>API Calendar, conexión completa y conector se agregarán en los siguientes bloques.</p>
+            <p>Conexión completa, diagnóstico y conector se agregarán en el siguiente bloque.</p>
           </div>
         </div>
 
@@ -105,7 +106,7 @@
           </div>
           <div class="gc-mini-card">
             <span>Calendar API</span>
-            <strong id="gcApiStatus" class="is-idle">Pendiente</strong>
+            <strong id="gcApiStatus" class="is-ready">Preparado</strong>
           </div>
           <div class="gc-mini-card">
             <span>Conector</span>
@@ -130,7 +131,7 @@
             <p>Resumen de la última acción del módulo.</p>
           </div>
         </div>
-        <pre id="gcResultBox" class="gc-output">Bloque 3 creado. Autenticación Google Calendar cargada sin popup.</pre>
+        <pre id="gcResultBox" class="gc-output">Bloque 4 creado. API Google Calendar cargada.</pre>
         <pre id="gcErrorBox" class="gc-output gc-error" hidden></pre>
       </article>
 
@@ -141,7 +142,7 @@
             <p>Resumen técnico por capas.</p>
           </div>
         </div>
-        <pre id="gcDiagnosticBox" class="gc-output">OAuth prepara URL, sesión pendiente, intercambio de código y renovación.</pre>
+        <pre id="gcDiagnosticBox" class="gc-output">API prepara cliente, calendarios, lectura de eventos, creación de eventos y prueba API.</pre>
       </article>
     </section>
 
@@ -182,8 +183,14 @@
   <script src="./auth/gc-auth-token.js"></script>
   <script src="./auth/gc-auth-refresh.js"></script>
 
+  <script src="./api/gc-api-client.js"></script>
+  <script src="./api/gc-api-calendars.js"></script>
+  <script src="./api/gc-api-events-read.js"></script>
+  <script src="./api/gc-api-events-create.js"></script>
+  <script src="./api/gc-api-test.js"></script>
+
   <script>
-    (function showGoogleCalendarBlockThree(global) {
+    (function showGoogleCalendarBlockFour(global) {
       "use strict";
 
       const root = global.AgendaJeffModules || {};
@@ -194,6 +201,7 @@
       const statusUpdatedAt = document.getElementById("gcStatusUpdatedAt");
       const jsonBox = document.getElementById("gcJsonBox");
       const firebaseStatus = document.getElementById("gcFirebaseStatus");
+      const apiStatus = document.getElementById("gcApiStatus");
       const firebaseLayer = googleCalendar.Firebase || {};
       const firebaseConfig = googleCalendar.FirebaseConfig || {};
       const validation = typeof firebaseConfig.validateFirebaseConfig === "function"
@@ -209,12 +217,17 @@
         firebaseStatus.className = validation.ok ? "is-ready" : "is-idle";
       }
 
+      if (apiStatus) {
+        apiStatus.textContent = googleCalendar.Api && googleCalendar.Api.Client ? "Preparado" : "Pendiente";
+        apiStatus.className = googleCalendar.Api && googleCalendar.Api.Client ? "is-ready" : "is-idle";
+      }
+
       if (jsonBox) {
         jsonBox.textContent = JSON.stringify({
           ok: true,
           module: config.module || { id: "googleCalendar" },
-          block: "Bloque 3",
-          message: "Autenticación Google Calendar cargada sin flujo popup.",
+          block: "Bloque 4",
+          message: "API Google Calendar cargada.",
           firebase: {
             sdkLoaded: Boolean(firebaseLayer.hasFirebaseSdk && firebaseLayer.hasFirebaseSdk()),
             configValid: Boolean(validation.ok),
@@ -223,13 +236,17 @@
           loadedLayers: {
             storage: Boolean(googleCalendar.Storage),
             firebase: Boolean(googleCalendar.Firebase),
-            auth: Boolean(googleCalendar.Auth)
+            auth: Boolean(googleCalendar.Auth),
+            api: Boolean(googleCalendar.Api)
           },
-          authFunctions: {
-            buildAuthorizationUrl: Boolean(googleCalendar.Auth && googleCalendar.Auth.buildAuthorizationUrl),
-            startDesktopAuth: Boolean(googleCalendar.Auth && googleCalendar.Auth.startDesktopAuth),
-            exchangeAuthorizationCode: Boolean(googleCalendar.Auth && googleCalendar.Auth.exchangeAuthorizationCode),
-            ensureAccess: Boolean(googleCalendar.Auth && googleCalendar.Auth.ensureAccess)
+          apiFunctions: {
+            requestJson: Boolean(googleCalendar.Api && googleCalendar.Api.Client && googleCalendar.Api.Client.requestJson),
+            listCalendars: Boolean(googleCalendar.Api && googleCalendar.Api.listCalendars),
+            getCalendar: Boolean(googleCalendar.Api && googleCalendar.Api.getCalendar),
+            listEvents: Boolean(googleCalendar.Api && googleCalendar.Api.listEvents),
+            getEvent: Boolean(googleCalendar.Api && googleCalendar.Api.getEvent),
+            createEvent: Boolean(googleCalendar.Api && googleCalendar.Api.createEvent),
+            testGoogleCalendarApi: Boolean(googleCalendar.Api && googleCalendar.Api.testGoogleCalendarApi)
           },
           checkedAt: now
         }, null, 2);
