@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "check": "node -e \"console.log('AgendaJeff base OK')\""
+    "check": "node scripts/aj-check.js"
   },
   "keywords": [
     "agenda",
@@ -22,7 +22,8 @@
     "funcion": "Define el proyecto Electron, scripts de ejecución y dependencias mínimas para la reconstrucción modular de AgendaJeff.",
     "seConectaCon": [
       "electron/main.js",
-      "index.html"
+      "index.html",
+      "scripts/aj-check.js"
     ],
     "nota": "JSON no permite comentarios. Por eso esta metadata queda dentro de agendaJeff para conservar el archivo válido."
   },
