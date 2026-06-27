@@ -5,13 +5,14 @@
   Función:
     - Crear un puente seguro entre Electron y la interfaz web.
     - Exponer solo funciones mínimas y controladas en window.AgendaJeffElectron.
-    - Permitir que index.html y módulos futuros detecten si están corriendo en Electron.
+    - Permitir que index.html y módulos detecten si están corriendo en Electron.
+    - Permitir apertura externa controlada para OAuth de Google Calendar.
     - Evitar que la UI tenga acceso directo a Node.js.
 
   Se conecta con:
     - electron/main.js
     - index.html
-    - módulos futuros dentro de modulos/
+    - modulos/googlecalendar/auth/gc-auth-desktop.js
 */
 
 "use strict";
@@ -19,9 +20,9 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 function createSafeInvoke(channel) {
-  return async function safeInvoke() {
+  return async function safeInvoke(...args) {
     try {
-      return await ipcRenderer.invoke(channel);
+      return await ipcRenderer.invoke(channel, ...args);
     } catch (error) {
       return {
         ok: false,
@@ -33,6 +34,10 @@ function createSafeInvoke(channel) {
   };
 }
 
+function openExternal(url) {
+  return createSafeInvoke("aj:openExternal")(url);
+}
+
 const electronBridge = Object.freeze({
   isElectron: true,
   platform: process.platform,
@@ -42,7 +47,8 @@ const electronBridge = Object.freeze({
     electron: process.versions.electron
   }),
   ping: createSafeInvoke("aj:ping"),
-  getEnvironment: createSafeInvoke("aj:environment")
+  getEnvironment: createSafeInvoke("aj:environment"),
+  openExternal
 });
 
 contextBridge.exposeInMainWorld("AgendaJeffElectron", electronBridge);
