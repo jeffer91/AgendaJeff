@@ -3,13 +3,14 @@
   Ruta: modulos/googlecalendar/gc-module.html
 
   Función:
-    - Mostrar la pantalla independiente del módulo Google Calendar.
-    - Cargar configuración, utilidades, local, Firebase, auth, API, conexión, diagnóstico, conector, UI y startup.
-    - Trabajar como módulo autónomo y exponer window.AgendaJeffGoogleCalendar.
+    - Mostrar la pantalla independiente del módulo Google Calendar en vista compacta.
+    - Cargar Firebase interno compartido, configuración, utilidades, local, auth, API, conexión, diagnóstico, conector, UI y startup.
+    - Cargar datos de conexión desde Firebase al iniciar cuando exista configuración válida.
     - No mezclar lógica de Telegram ni lógica del shell principal.
 
   Se conecta con:
     - modulos/googlecalendar/gc-module.css
+    - modulos/telegram/config/tl-firebase-config.js
     - modulos/googlecalendar/config/*
     - modulos/googlecalendar/utils/*
     - modulos/googlecalendar/storage/*
@@ -36,16 +37,16 @@
     <section class="gc-hero">
       <div>
         <p class="gc-eyebrow">AgendaJeff · Conexiones</p>
-        <h1 id="gcPageTitle">Conexión Google Calendar</h1>
+        <h1 id="gcPageTitle">Google Calendar</h1>
         <p class="gc-hero-text">
-          Módulo independiente para conectar Google Calendar, validar credenciales, crear eventos y diagnosticar errores sin depender de Telegram.
+          Conexión compacta con Firebase interno, OAuth sin popup, eventos y diagnóstico técnico.
         </p>
       </div>
 
       <article class="gc-status-card" aria-live="polite">
-        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 6</span>
-        <h2 id="gcStatusTitle">UI final + integración</h2>
-        <p id="gcStatusDescription">El módulo está listo para operar desde la interfaz.</p>
+        <span id="gcStatusBadge" class="gc-badge is-idle">Listo</span>
+        <h2 id="gcStatusTitle">Cargando conexión</h2>
+        <p id="gcStatusDescription">Al iniciar, el módulo intenta leer la conexión desde Firebase y usa respaldo local si hace falta.</p>
         <div class="gc-status-meta">
           <span>Origen: <strong id="gcStatusSource">sistema</strong></span>
           <span>Actualizado: <strong id="gcStatusUpdatedAt">pendiente</strong></span>
@@ -57,8 +58,8 @@
       <article class="gc-panel">
         <div class="gc-panel-header">
           <div>
-            <h2>Datos de conexión</h2>
-            <p>Configura Calendar ID, credenciales y URI de redirección. Los secretos se ingresan manualmente y no quedan escritos en el código.</p>
+            <h2>Conexión</h2>
+            <p>Los datos se cargan desde Firebase. Ingresa secretos solo cuando conectes o renueves.</p>
           </div>
           <label class="gc-switch" for="gcEnabled">
             <input id="gcEnabled" type="checkbox" checked />
@@ -66,9 +67,9 @@
           </label>
         </div>
 
-        <form id="gcConnectionForm" class="gc-form" autocomplete="off">
+        <form id="gcConnectionForm" class="gc-form gc-form-compact" autocomplete="off">
           <label class="gc-field" for="gcActiveCredentialType">
-            <span>Tipo de credencial activa</span>
+            <span>Tipo</span>
             <select id="gcActiveCredentialType">
               <option value="desktop" selected>Desktop</option>
               <option value="web">Web</option>
@@ -80,62 +81,67 @@
             <input id="gcCalendarId" type="text" value="primary" autocomplete="off" />
           </label>
 
-          <label class="gc-field" for="gcClientIdDesktop">
+          <label class="gc-field gc-field-full" for="gcClientIdDesktop">
             <span>Client ID Desktop</span>
-            <input id="gcClientIdDesktop" type="text" placeholder="Client ID tipo desktop" autocomplete="off" />
+            <input id="gcClientIdDesktop" type="text" placeholder="Se carga desde Firebase o se ingresa manualmente" autocomplete="off" />
           </label>
 
           <label class="gc-field" for="gcClientSecretDesktop">
-            <span>Client Secret Desktop</span>
-            <input id="gcClientSecretDesktop" type="password" placeholder="Ingresar solo para conectar o renovar" autocomplete="off" />
+            <span>Secret Desktop</span>
+            <input id="gcClientSecretDesktop" type="password" placeholder="Solo conectar/renovar" autocomplete="off" />
           </label>
 
           <label class="gc-field" for="gcRedirectUriDesktop">
-            <span>Redirect URI Desktop</span>
-            <input id="gcRedirectUriDesktop" type="text" placeholder="Ejemplo: http://localhost" autocomplete="off" />
-          </label>
-
-          <label class="gc-field" for="gcClientIdWeb">
-            <span>Client ID Web</span>
-            <input id="gcClientIdWeb" type="text" placeholder="Opcional" autocomplete="off" />
-          </label>
-
-          <label class="gc-field" for="gcClientSecretWeb">
-            <span>Client Secret Web</span>
-            <input id="gcClientSecretWeb" type="password" placeholder="Opcional" autocomplete="off" />
-          </label>
-
-          <label class="gc-field" for="gcRedirectUriWeb">
-            <span>Redirect URI Web</span>
-            <input id="gcRedirectUriWeb" type="text" placeholder="Opcional" autocomplete="off" />
-          </label>
-
-          <label class="gc-field" for="gcAuthorizationCode">
-            <span>Código de autorización</span>
-            <textarea id="gcAuthorizationCode" rows="3" placeholder="Pega aquí el código devuelto por Google" autocomplete="off"></textarea>
+            <span>Redirect Desktop</span>
+            <input id="gcRedirectUriDesktop" type="text" placeholder="http://localhost" autocomplete="off" />
           </label>
         </form>
+
+        <details class="gc-advanced">
+          <summary>Opciones web y código de autorización</summary>
+          <div class="gc-advanced-body gc-form gc-form-compact">
+            <label class="gc-field" for="gcClientIdWeb">
+              <span>Client ID Web</span>
+              <input id="gcClientIdWeb" type="text" placeholder="Opcional" autocomplete="off" />
+            </label>
+
+            <label class="gc-field" for="gcClientSecretWeb">
+              <span>Secret Web</span>
+              <input id="gcClientSecretWeb" type="password" placeholder="Opcional" autocomplete="off" />
+            </label>
+
+            <label class="gc-field gc-field-full" for="gcRedirectUriWeb">
+              <span>Redirect Web</span>
+              <input id="gcRedirectUriWeb" type="text" placeholder="Opcional" autocomplete="off" />
+            </label>
+
+            <label class="gc-field gc-field-full" for="gcAuthorizationCode">
+              <span>Código de autorización</span>
+              <textarea id="gcAuthorizationCode" rows="2" placeholder="Pega aquí el código devuelto por Google" autocomplete="off"></textarea>
+            </label>
+          </div>
+        </details>
       </article>
 
       <article class="gc-panel">
         <div class="gc-panel-header">
           <div>
             <h2>Acciones</h2>
-            <p>Primero guarda/carga conexión. Luego conecta Google y procesa el código.</p>
+            <p>Firebase se configura internamente. Guardar/Cargar usa Firestore y respaldo local.</p>
           </div>
         </div>
 
         <div class="gc-mini-grid">
           <div class="gc-mini-card">
             <span>Firebase</span>
-            <strong id="gcFirebaseStatus" class="is-idle">Preparado</strong>
+            <strong id="gcFirebaseStatus" class="is-idle">Cargando</strong>
           </div>
           <div class="gc-mini-card">
-            <span>OAuth Desktop</span>
+            <span>OAuth</span>
             <strong id="gcAuthStatus" class="is-ready">Preparado</strong>
           </div>
           <div class="gc-mini-card">
-            <span>Calendar API</span>
+            <span>API</span>
             <strong id="gcApiStatus" class="is-ready">Preparado</strong>
           </div>
           <div class="gc-mini-card">
@@ -145,15 +151,14 @@
         </div>
 
         <div class="gc-actions gc-actions-stack">
-          <button id="gcBtnSave" type="button" class="gc-btn gc-btn-primary" disabled>Guardar conexión</button>
-          <button id="gcBtnLoad" type="button" class="gc-btn" disabled>Cargar conexión</button>
-          <button id="gcBtnClear" type="button" class="gc-btn" disabled>Limpiar conexión</button>
-          <button id="gcBtnConnect" type="button" class="gc-btn" disabled>Conectar Google</button>
+          <button id="gcBtnLoad" type="button" class="gc-btn" disabled>Cargar</button>
+          <button id="gcBtnSave" type="button" class="gc-btn gc-btn-primary" disabled>Guardar</button>
+          <button id="gcBtnConnect" type="button" class="gc-btn" disabled>Conectar</button>
           <button id="gcBtnExchangeCode" type="button" class="gc-btn" disabled>Procesar código</button>
           <button id="gcBtnTestFirebase" type="button" class="gc-btn" disabled>Probar Firebase</button>
-          <button id="gcBtnTestGoogle" type="button" class="gc-btn" disabled>Probar Google Calendar</button>
-          <button id="gcBtnCreateTestEvent" type="button" class="gc-btn" disabled>Crear evento de prueba</button>
-          <button id="gcBtnDiagnostic" type="button" class="gc-btn" disabled>Diagnóstico completo</button>
+          <button id="gcBtnTestGoogle" type="button" class="gc-btn" disabled>Probar Google</button>
+          <button id="gcBtnDiagnostic" type="button" class="gc-btn" disabled>Diagnóstico</button>
+          <button id="gcBtnClear" type="button" class="gc-btn" disabled>Limpiar</button>
         </div>
       </article>
     </section>
@@ -162,66 +167,60 @@
       <article class="gc-panel">
         <div class="gc-panel-header">
           <div>
-            <h2>Evento de prueba</h2>
-            <p>Se usa solo cuando presionas “Crear evento de prueba”.</p>
-          </div>
-        </div>
-
-        <div class="gc-form">
-          <label class="gc-field" for="gcTestEventTitle">
-            <span>Título</span>
-            <input id="gcTestEventTitle" type="text" value="Prueba AgendaJeff · Google Calendar" />
-          </label>
-
-          <label class="gc-field" for="gcTestEventDescription">
-            <span>Descripción</span>
-            <textarea id="gcTestEventDescription" rows="3">Evento de prueba creado desde AgendaJeff.</textarea>
-          </label>
-
-          <label class="gc-field" for="gcTestEventLocation">
-            <span>Ubicación</span>
-            <input id="gcTestEventLocation" type="text" value="AgendaJeff" />
-          </label>
-        </div>
-      </article>
-
-      <article class="gc-panel">
-        <div class="gc-panel-header">
-          <div>
             <h2>Resultado</h2>
-            <p>Resumen de la última acción del módulo.</p>
+            <p>Resumen de la última acción.</p>
           </div>
         </div>
         <pre id="gcResultBox" class="gc-output">Cargando módulo Google Calendar...</pre>
         <pre id="gcErrorBox" class="gc-output gc-error" hidden></pre>
       </article>
-    </section>
 
-    <section class="gc-grid gc-grid-results">
       <article class="gc-panel">
         <div class="gc-panel-header">
           <div>
             <h2>Diagnóstico</h2>
-            <p>Resumen técnico por capas.</p>
+            <p>Estado técnico por capas.</p>
           </div>
         </div>
         <pre id="gcDiagnosticBox" class="gc-output">Esperando diagnóstico.</pre>
       </article>
-
-      <article class="gc-panel">
-        <div class="gc-panel-header">
-          <div>
-            <h2>JSON técnico</h2>
-            <p>Información completa para depuración.</p>
-          </div>
-        </div>
-        <pre id="gcJsonBox" class="gc-output gc-json">{}</pre>
-      </article>
     </section>
+
+    <details class="gc-advanced">
+      <summary>Evento de prueba y JSON técnico</summary>
+      <div class="gc-advanced-body gc-grid gc-grid-results">
+        <article class="gc-panel">
+          <div class="gc-form">
+            <label class="gc-field" for="gcTestEventTitle">
+              <span>Título</span>
+              <input id="gcTestEventTitle" type="text" value="Prueba AgendaJeff · Google Calendar" />
+            </label>
+
+            <label class="gc-field" for="gcTestEventDescription">
+              <span>Descripción</span>
+              <textarea id="gcTestEventDescription" rows="2">Evento de prueba creado desde AgendaJeff.</textarea>
+            </label>
+
+            <label class="gc-field" for="gcTestEventLocation">
+              <span>Ubicación</span>
+              <input id="gcTestEventLocation" type="text" value="AgendaJeff" />
+            </label>
+
+            <button id="gcBtnCreateTestEvent" type="button" class="gc-btn" disabled>Crear evento de prueba</button>
+          </div>
+        </article>
+
+        <article class="gc-panel">
+          <pre id="gcJsonBox" class="gc-output gc-json">{}</pre>
+        </article>
+      </div>
+    </details>
   </main>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+  <script src="../telegram/config/tl-firebase-config.js"></script>
 
   <script src="./config/gc-config.js"></script>
   <script src="./config/gc-firebase-config.js"></script>
