@@ -4,19 +4,16 @@
 
   Función:
     - Mostrar la pantalla independiente del módulo Google Calendar.
-    - Cargar únicamente la base visual, configuración y utilidades del Bloque 1.
-    - Preparar la estructura para conexión, autenticación, eventos, diagnóstico y conector.
+    - Cargar base visual, configuración, utilidades, almacenamiento local y Firebase.
+    - Preparar la estructura para autenticación, eventos, diagnóstico y conector.
     - No mezclar lógica de Telegram ni lógica del shell principal.
 
   Se conecta con:
     - modulos/googlecalendar/gc-module.css
-    - modulos/googlecalendar/config/gc-config.js
-    - modulos/googlecalendar/config/gc-firebase-config.js
-    - modulos/googlecalendar/config/gc-google-config.js
-    - modulos/googlecalendar/utils/gc-time.js
-    - modulos/googlecalendar/utils/gc-mask.js
-    - modulos/googlecalendar/utils/gc-normalize.js
-    - modulos/googlecalendar/utils/gc-validate.js
+    - modulos/googlecalendar/config/*
+    - modulos/googlecalendar/utils/*
+    - modulos/googlecalendar/storage/*
+    - modulos/googlecalendar/firebase/*
 -->
 
 <!DOCTYPE html>
@@ -39,9 +36,9 @@
       </div>
 
       <article class="gc-status-card" aria-live="polite">
-        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 1</span>
-        <h2 id="gcStatusTitle">Base creada</h2>
-        <p id="gcStatusDescription">La estructura visual y la configuración inicial están listas.</p>
+        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 2</span>
+        <h2 id="gcStatusTitle">Local + Firebase</h2>
+        <p id="gcStatusDescription">La base local y las capas Firebase del módulo ya están cargadas.</p>
         <div class="gc-status-meta">
           <span>Origen: <strong id="gcStatusSource">sistema</strong></span>
           <span>Actualizado: <strong id="gcStatusUpdatedAt">pendiente</strong></span>
@@ -54,7 +51,7 @@
         <div class="gc-panel-header">
           <div>
             <h2>Datos de conexión</h2>
-            <p>Se leerán y guardarán en Firebase/local en los siguientes bloques.</p>
+            <p>Este bloque ya puede leer, guardar y limpiar datos locales; Firebase queda preparado para conexión real.</p>
           </div>
           <label class="gc-switch" for="gcEnabled">
             <input id="gcEnabled" type="checkbox" checked />
@@ -91,15 +88,15 @@
       <article class="gc-panel">
         <div class="gc-panel-header">
           <div>
-            <h2>Próximas capas</h2>
-            <p>Este bloque prepara la base; todavía no ejecuta OAuth ni crea eventos.</p>
+            <h2>Capas del módulo</h2>
+            <p>OAuth y eventos se activarán en los siguientes bloques.</p>
           </div>
         </div>
 
         <div class="gc-mini-grid">
           <div class="gc-mini-card">
             <span>Firebase</span>
-            <strong id="gcFirebaseStatus" class="is-idle">Pendiente</strong>
+            <strong id="gcFirebaseStatus" class="is-idle">Preparado</strong>
           </div>
           <div class="gc-mini-card">
             <span>OAuth Desktop</span>
@@ -132,7 +129,7 @@
             <p>Resumen de la última acción del módulo.</p>
           </div>
         </div>
-        <pre id="gcResultBox" class="gc-output">Bloque 1 creado. Esperando siguientes capas.</pre>
+        <pre id="gcResultBox" class="gc-output">Bloque 2 creado. Local + Firebase cargados.</pre>
         <pre id="gcErrorBox" class="gc-output gc-error" hidden></pre>
       </article>
 
@@ -143,7 +140,7 @@
             <p>Resumen técnico por capas.</p>
           </div>
         </div>
-        <pre id="gcDiagnosticBox" class="gc-output">Sin diagnóstico ejecutado.</pre>
+        <pre id="gcDiagnosticBox" class="gc-output">Firebase se probará desde la capa gc-firebase-test.js.</pre>
       </article>
     </section>
 
@@ -158,16 +155,29 @@
     </section>
   </main>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
   <script src="./config/gc-config.js"></script>
   <script src="./config/gc-firebase-config.js"></script>
   <script src="./config/gc-google-config.js"></script>
+
   <script src="./utils/gc-time.js"></script>
   <script src="./utils/gc-mask.js"></script>
   <script src="./utils/gc-normalize.js"></script>
   <script src="./utils/gc-validate.js"></script>
 
+  <script src="./storage/gc-local-read.js"></script>
+  <script src="./storage/gc-local-save.js"></script>
+  <script src="./storage/gc-local-clear.js"></script>
+
+  <script src="./firebase/gc-firebase-init.js"></script>
+  <script src="./firebase/gc-firebase-read.js"></script>
+  <script src="./firebase/gc-firebase-save.js"></script>
+  <script src="./firebase/gc-firebase-test.js"></script>
+
   <script>
-    (function showGoogleCalendarBlockOne(global) {
+    (function showGoogleCalendarBlockTwo(global) {
       "use strict";
 
       const root = global.AgendaJeffModules || {};
@@ -177,17 +187,37 @@
       const now = typeof time.nowIso === "function" ? time.nowIso() : new Date().toISOString();
       const statusUpdatedAt = document.getElementById("gcStatusUpdatedAt");
       const jsonBox = document.getElementById("gcJsonBox");
+      const firebaseStatus = document.getElementById("gcFirebaseStatus");
+      const firebaseLayer = googleCalendar.Firebase || {};
+      const firebaseConfig = googleCalendar.FirebaseConfig || {};
+      const validation = typeof firebaseConfig.validateFirebaseConfig === "function"
+        ? firebaseConfig.validateFirebaseConfig()
+        : { ok: false, missingFields: ["FirebaseConfig"] };
 
       if (statusUpdatedAt) {
         statusUpdatedAt.textContent = now;
+      }
+
+      if (firebaseStatus) {
+        firebaseStatus.textContent = validation.ok ? "Listo" : "Config pendiente";
+        firebaseStatus.className = validation.ok ? "is-ready" : "is-idle";
       }
 
       if (jsonBox) {
         jsonBox.textContent = JSON.stringify({
           ok: true,
           module: config.module || { id: "googleCalendar" },
-          block: "Bloque 1",
-          message: "Base visual, configuración y utilidades de Google Calendar cargadas.",
+          block: "Bloque 2",
+          message: "Storage local y capas Firebase de Google Calendar cargadas.",
+          firebase: {
+            sdkLoaded: Boolean(firebaseLayer.hasFirebaseSdk && firebaseLayer.hasFirebaseSdk()),
+            configValid: Boolean(validation.ok),
+            missingFields: validation.missingFields || []
+          },
+          loadedLayers: {
+            storage: Boolean(googleCalendar.Storage),
+            firebase: Boolean(googleCalendar.Firebase)
+          },
           checkedAt: now
         }, null, 2);
       }
