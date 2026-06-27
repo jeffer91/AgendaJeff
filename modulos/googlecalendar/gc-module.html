@@ -4,8 +4,8 @@
 
   Función:
     - Mostrar la pantalla independiente del módulo Google Calendar.
-    - Cargar base visual, configuración, utilidades, almacenamiento local, Firebase, autenticación, API, conexión, diagnóstico y conector.
-    - Preparar la estructura para UI final e integración al shell principal.
+    - Cargar configuración, utilidades, local, Firebase, auth, API, conexión, diagnóstico, conector, UI y startup.
+    - Trabajar como módulo autónomo y exponer window.AgendaJeffGoogleCalendar.
     - No mezclar lógica de Telegram ni lógica del shell principal.
 
   Se conecta con:
@@ -19,6 +19,8 @@
     - modulos/googlecalendar/connection/*
     - modulos/googlecalendar/diagnostic/*
     - modulos/googlecalendar/connector/*
+    - modulos/googlecalendar/ui/*
+    - modulos/googlecalendar/startup/gc-start.js
 -->
 
 <!DOCTYPE html>
@@ -41,9 +43,9 @@
       </div>
 
       <article class="gc-status-card" aria-live="polite">
-        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 5</span>
-        <h2 id="gcStatusTitle">Conexión + diagnóstico + conector</h2>
-        <p id="gcStatusDescription">El módulo ya expone conexión, diagnóstico técnico y puerta pública para otros módulos.</p>
+        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 6</span>
+        <h2 id="gcStatusTitle">UI final + integración</h2>
+        <p id="gcStatusDescription">El módulo está listo para operar desde la interfaz.</p>
         <div class="gc-status-meta">
           <span>Origen: <strong id="gcStatusSource">sistema</strong></span>
           <span>Actualizado: <strong id="gcStatusUpdatedAt">pendiente</strong></span>
@@ -56,7 +58,7 @@
         <div class="gc-panel-header">
           <div>
             <h2>Datos de conexión</h2>
-            <p>El módulo ya tiene base local, Firebase, OAuth, API, conexión, diagnóstico y conector. La UI final se activará en el último bloque.</p>
+            <p>Configura Calendar ID, credenciales y URI de redirección. Los secretos se ingresan manualmente y no quedan escritos en el código.</p>
           </div>
           <label class="gc-switch" for="gcEnabled">
             <input id="gcEnabled" type="checkbox" checked />
@@ -80,12 +82,37 @@
 
           <label class="gc-field" for="gcClientIdDesktop">
             <span>Client ID Desktop</span>
-            <input id="gcClientIdDesktop" type="text" placeholder="Se cargará desde conexión o se ingresará manualmente" autocomplete="off" />
+            <input id="gcClientIdDesktop" type="text" placeholder="Client ID tipo desktop" autocomplete="off" />
           </label>
 
           <label class="gc-field" for="gcClientSecretDesktop">
             <span>Client Secret Desktop</span>
-            <input id="gcClientSecretDesktop" type="password" placeholder="No se deja escrito en el código del repo" autocomplete="off" />
+            <input id="gcClientSecretDesktop" type="password" placeholder="Ingresar solo para conectar o renovar" autocomplete="off" />
+          </label>
+
+          <label class="gc-field" for="gcRedirectUriDesktop">
+            <span>Redirect URI Desktop</span>
+            <input id="gcRedirectUriDesktop" type="text" placeholder="Ejemplo: http://localhost" autocomplete="off" />
+          </label>
+
+          <label class="gc-field" for="gcClientIdWeb">
+            <span>Client ID Web</span>
+            <input id="gcClientIdWeb" type="text" placeholder="Opcional" autocomplete="off" />
+          </label>
+
+          <label class="gc-field" for="gcClientSecretWeb">
+            <span>Client Secret Web</span>
+            <input id="gcClientSecretWeb" type="password" placeholder="Opcional" autocomplete="off" />
+          </label>
+
+          <label class="gc-field" for="gcRedirectUriWeb">
+            <span>Redirect URI Web</span>
+            <input id="gcRedirectUriWeb" type="text" placeholder="Opcional" autocomplete="off" />
+          </label>
+
+          <label class="gc-field" for="gcAuthorizationCode">
+            <span>Código de autorización</span>
+            <textarea id="gcAuthorizationCode" rows="3" placeholder="Pega aquí el código devuelto por Google" autocomplete="off"></textarea>
           </label>
         </form>
       </article>
@@ -93,8 +120,8 @@
       <article class="gc-panel">
         <div class="gc-panel-header">
           <div>
-            <h2>Capas del módulo</h2>
-            <p>Solo falta UI final e integración al shell principal.</p>
+            <h2>Acciones</h2>
+            <p>Primero guarda/carga conexión. Luego conecta Google y procesa el código.</p>
           </div>
         </div>
 
@@ -119,7 +146,12 @@
 
         <div class="gc-actions gc-actions-stack">
           <button id="gcBtnSave" type="button" class="gc-btn gc-btn-primary" disabled>Guardar conexión</button>
+          <button id="gcBtnLoad" type="button" class="gc-btn" disabled>Cargar conexión</button>
+          <button id="gcBtnClear" type="button" class="gc-btn" disabled>Limpiar conexión</button>
           <button id="gcBtnConnect" type="button" class="gc-btn" disabled>Conectar Google</button>
+          <button id="gcBtnExchangeCode" type="button" class="gc-btn" disabled>Procesar código</button>
+          <button id="gcBtnTestFirebase" type="button" class="gc-btn" disabled>Probar Firebase</button>
+          <button id="gcBtnTestGoogle" type="button" class="gc-btn" disabled>Probar Google Calendar</button>
           <button id="gcBtnCreateTestEvent" type="button" class="gc-btn" disabled>Crear evento de prueba</button>
           <button id="gcBtnDiagnostic" type="button" class="gc-btn" disabled>Diagnóstico completo</button>
         </div>
@@ -130,14 +162,42 @@
       <article class="gc-panel">
         <div class="gc-panel-header">
           <div>
+            <h2>Evento de prueba</h2>
+            <p>Se usa solo cuando presionas “Crear evento de prueba”.</p>
+          </div>
+        </div>
+
+        <div class="gc-form">
+          <label class="gc-field" for="gcTestEventTitle">
+            <span>Título</span>
+            <input id="gcTestEventTitle" type="text" value="Prueba AgendaJeff · Google Calendar" />
+          </label>
+
+          <label class="gc-field" for="gcTestEventDescription">
+            <span>Descripción</span>
+            <textarea id="gcTestEventDescription" rows="3">Evento de prueba creado desde AgendaJeff.</textarea>
+          </label>
+
+          <label class="gc-field" for="gcTestEventLocation">
+            <span>Ubicación</span>
+            <input id="gcTestEventLocation" type="text" value="AgendaJeff" />
+          </label>
+        </div>
+      </article>
+
+      <article class="gc-panel">
+        <div class="gc-panel-header">
+          <div>
             <h2>Resultado</h2>
             <p>Resumen de la última acción del módulo.</p>
           </div>
         </div>
-        <pre id="gcResultBox" class="gc-output">Bloque 5 creado. Conexión, diagnóstico y conector cargados.</pre>
+        <pre id="gcResultBox" class="gc-output">Cargando módulo Google Calendar...</pre>
         <pre id="gcErrorBox" class="gc-output gc-error" hidden></pre>
       </article>
+    </section>
 
+    <section class="gc-grid gc-grid-results">
       <article class="gc-panel">
         <div class="gc-panel-header">
           <div>
@@ -145,18 +205,18 @@
             <p>Resumen técnico por capas.</p>
           </div>
         </div>
-        <pre id="gcDiagnosticBox" class="gc-output">Diagnóstico completo y puerta pública window.AgendaJeffGoogleCalendar disponibles.</pre>
+        <pre id="gcDiagnosticBox" class="gc-output">Esperando diagnóstico.</pre>
       </article>
-    </section>
 
-    <section class="gc-panel">
-      <div class="gc-panel-header">
-        <div>
-          <h2>JSON técnico</h2>
-          <p>Información completa para depuración.</p>
+      <article class="gc-panel">
+        <div class="gc-panel-header">
+          <div>
+            <h2>JSON técnico</h2>
+            <p>Información completa para depuración.</p>
+          </div>
         </div>
-      </div>
-      <pre id="gcJsonBox" class="gc-output gc-json">{}</pre>
+        <pre id="gcJsonBox" class="gc-output gc-json">{}</pre>
+      </article>
     </section>
   </main>
 
@@ -208,76 +268,9 @@
   <script src="./connector/gc-connector-events.js"></script>
   <script src="./connector/gc-connector-test.js"></script>
 
-  <script>
-    (function showGoogleCalendarBlockFive(global) {
-      "use strict";
-
-      const root = global.AgendaJeffModules || {};
-      const googleCalendar = root.GoogleCalendar || {};
-      const config = googleCalendar.CONFIG || {};
-      const time = googleCalendar.Utils && googleCalendar.Utils.Time ? googleCalendar.Utils.Time : {};
-      const now = typeof time.nowIso === "function" ? time.nowIso() : new Date().toISOString();
-      const statusUpdatedAt = document.getElementById("gcStatusUpdatedAt");
-      const jsonBox = document.getElementById("gcJsonBox");
-      const firebaseStatus = document.getElementById("gcFirebaseStatus");
-      const apiStatus = document.getElementById("gcApiStatus");
-      const connectorStatus = document.getElementById("gcConnectorStatus");
-      const firebaseLayer = googleCalendar.Firebase || {};
-      const firebaseConfig = googleCalendar.FirebaseConfig || {};
-      const validation = typeof firebaseConfig.validateFirebaseConfig === "function"
-        ? firebaseConfig.validateFirebaseConfig()
-        : { ok: false, missingFields: ["FirebaseConfig"] };
-
-      if (statusUpdatedAt) {
-        statusUpdatedAt.textContent = now;
-      }
-
-      if (firebaseStatus) {
-        firebaseStatus.textContent = validation.ok ? "Listo" : "Config pendiente";
-        firebaseStatus.className = validation.ok ? "is-ready" : "is-idle";
-      }
-
-      if (apiStatus) {
-        apiStatus.textContent = googleCalendar.Api && googleCalendar.Api.Client ? "Preparado" : "Pendiente";
-        apiStatus.className = googleCalendar.Api && googleCalendar.Api.Client ? "is-ready" : "is-idle";
-      }
-
-      if (connectorStatus) {
-        connectorStatus.textContent = googleCalendar.Connector ? "Preparado" : "Pendiente";
-        connectorStatus.className = googleCalendar.Connector ? "is-ready" : "is-idle";
-      }
-
-      if (jsonBox) {
-        jsonBox.textContent = JSON.stringify({
-          ok: true,
-          module: config.module || { id: "googleCalendar" },
-          block: "Bloque 5",
-          message: "Conexión, diagnóstico y conector Google Calendar cargados.",
-          firebase: {
-            sdkLoaded: Boolean(firebaseLayer.hasFirebaseSdk && firebaseLayer.hasFirebaseSdk()),
-            configValid: Boolean(validation.ok),
-            missingFields: validation.missingFields || []
-          },
-          loadedLayers: {
-            storage: Boolean(googleCalendar.Storage),
-            firebase: Boolean(googleCalendar.Firebase),
-            auth: Boolean(googleCalendar.Auth),
-            api: Boolean(googleCalendar.Api),
-            connection: Boolean(googleCalendar.Connection),
-            diagnostic: Boolean(googleCalendar.Diagnostic),
-            connector: Boolean(googleCalendar.Connector),
-            publicConnector: Boolean(global.AgendaJeffGoogleCalendar)
-          },
-          connectorFunctions: {
-            getStatus: Boolean(global.AgendaJeffGoogleCalendar && global.AgendaJeffGoogleCalendar.getStatus),
-            createEvent: Boolean(global.AgendaJeffGoogleCalendar && global.AgendaJeffGoogleCalendar.createEvent),
-            listEvents: Boolean(global.AgendaJeffGoogleCalendar && global.AgendaJeffGoogleCalendar.listEvents),
-            diagnostic: Boolean(global.AgendaJeffGoogleCalendar && global.AgendaJeffGoogleCalendar.diagnostic)
-          },
-          checkedAt: now
-        }, null, 2);
-      }
-    })(window);
-  </script>
+  <script src="./ui/gc-ui-dom.js"></script>
+  <script src="./ui/gc-ui-render.js"></script>
+  <script src="./ui/gc-ui-events.js"></script>
+  <script src="./startup/gc-start.js"></script>
 </body>
 </html>
