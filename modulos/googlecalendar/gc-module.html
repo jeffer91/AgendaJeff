@@ -1,0 +1,197 @@
+<!--
+  Nombre completo: gc-module.html
+  Ruta: modulos/googlecalendar/gc-module.html
+
+  Función:
+    - Mostrar la pantalla independiente del módulo Google Calendar.
+    - Cargar únicamente la base visual, configuración y utilidades del Bloque 1.
+    - Preparar la estructura para conexión, autenticación, eventos, diagnóstico y conector.
+    - No mezclar lógica de Telegram ni lógica del shell principal.
+
+  Se conecta con:
+    - modulos/googlecalendar/gc-module.css
+    - modulos/googlecalendar/config/gc-config.js
+    - modulos/googlecalendar/config/gc-firebase-config.js
+    - modulos/googlecalendar/config/gc-google-config.js
+    - modulos/googlecalendar/utils/gc-time.js
+    - modulos/googlecalendar/utils/gc-mask.js
+    - modulos/googlecalendar/utils/gc-normalize.js
+    - modulos/googlecalendar/utils/gc-validate.js
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgendaJeff · Google Calendar</title>
+  <link rel="stylesheet" href="./gc-module.css" />
+</head>
+<body>
+  <main class="gc-page" aria-labelledby="gcPageTitle">
+    <section class="gc-hero">
+      <div>
+        <p class="gc-eyebrow">AgendaJeff · Conexiones</p>
+        <h1 id="gcPageTitle">Conexión Google Calendar</h1>
+        <p class="gc-hero-text">
+          Módulo independiente para conectar Google Calendar, validar credenciales, crear eventos y diagnosticar errores sin depender de Telegram.
+        </p>
+      </div>
+
+      <article class="gc-status-card" aria-live="polite">
+        <span id="gcStatusBadge" class="gc-badge is-idle">Bloque 1</span>
+        <h2 id="gcStatusTitle">Base creada</h2>
+        <p id="gcStatusDescription">La estructura visual y la configuración inicial están listas.</p>
+        <div class="gc-status-meta">
+          <span>Origen: <strong id="gcStatusSource">sistema</strong></span>
+          <span>Actualizado: <strong id="gcStatusUpdatedAt">pendiente</strong></span>
+        </div>
+      </article>
+    </section>
+
+    <section class="gc-grid">
+      <article class="gc-panel">
+        <div class="gc-panel-header">
+          <div>
+            <h2>Datos de conexión</h2>
+            <p>Se leerán y guardarán en Firebase/local en los siguientes bloques.</p>
+          </div>
+          <label class="gc-switch" for="gcEnabled">
+            <input id="gcEnabled" type="checkbox" checked />
+            <span>Activo</span>
+          </label>
+        </div>
+
+        <form id="gcConnectionForm" class="gc-form" autocomplete="off">
+          <label class="gc-field" for="gcActiveCredentialType">
+            <span>Tipo de credencial activa</span>
+            <select id="gcActiveCredentialType">
+              <option value="desktop" selected>Desktop</option>
+              <option value="web">Web</option>
+            </select>
+          </label>
+
+          <label class="gc-field" for="gcCalendarId">
+            <span>Calendar ID</span>
+            <input id="gcCalendarId" type="text" value="primary" autocomplete="off" />
+          </label>
+
+          <label class="gc-field" for="gcClientIdDesktop">
+            <span>Client ID Desktop</span>
+            <input id="gcClientIdDesktop" type="text" placeholder="Se cargará desde conexión o se ingresará manualmente" autocomplete="off" />
+          </label>
+
+          <label class="gc-field" for="gcClientSecretDesktop">
+            <span>Client Secret Desktop</span>
+            <input id="gcClientSecretDesktop" type="password" placeholder="No se deja escrito en el código del repo" autocomplete="off" />
+          </label>
+        </form>
+      </article>
+
+      <article class="gc-panel">
+        <div class="gc-panel-header">
+          <div>
+            <h2>Próximas capas</h2>
+            <p>Este bloque prepara la base; todavía no ejecuta OAuth ni crea eventos.</p>
+          </div>
+        </div>
+
+        <div class="gc-mini-grid">
+          <div class="gc-mini-card">
+            <span>Firebase</span>
+            <strong id="gcFirebaseStatus" class="is-idle">Pendiente</strong>
+          </div>
+          <div class="gc-mini-card">
+            <span>OAuth Desktop</span>
+            <strong id="gcAuthStatus" class="is-idle">Pendiente</strong>
+          </div>
+          <div class="gc-mini-card">
+            <span>Calendar API</span>
+            <strong id="gcApiStatus" class="is-idle">Pendiente</strong>
+          </div>
+          <div class="gc-mini-card">
+            <span>Conector</span>
+            <strong id="gcConnectorStatus" class="is-idle">Pendiente</strong>
+          </div>
+        </div>
+
+        <div class="gc-actions gc-actions-stack">
+          <button id="gcBtnSave" type="button" class="gc-btn gc-btn-primary" disabled>Guardar conexión</button>
+          <button id="gcBtnConnect" type="button" class="gc-btn" disabled>Conectar Google</button>
+          <button id="gcBtnCreateTestEvent" type="button" class="gc-btn" disabled>Crear evento de prueba</button>
+          <button id="gcBtnDiagnostic" type="button" class="gc-btn" disabled>Diagnóstico completo</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="gc-grid gc-grid-results">
+      <article class="gc-panel">
+        <div class="gc-panel-header">
+          <div>
+            <h2>Resultado</h2>
+            <p>Resumen de la última acción del módulo.</p>
+          </div>
+        </div>
+        <pre id="gcResultBox" class="gc-output">Bloque 1 creado. Esperando siguientes capas.</pre>
+        <pre id="gcErrorBox" class="gc-output gc-error" hidden></pre>
+      </article>
+
+      <article class="gc-panel">
+        <div class="gc-panel-header">
+          <div>
+            <h2>Diagnóstico</h2>
+            <p>Resumen técnico por capas.</p>
+          </div>
+        </div>
+        <pre id="gcDiagnosticBox" class="gc-output">Sin diagnóstico ejecutado.</pre>
+      </article>
+    </section>
+
+    <section class="gc-panel">
+      <div class="gc-panel-header">
+        <div>
+          <h2>JSON técnico</h2>
+          <p>Información completa para depuración.</p>
+        </div>
+      </div>
+      <pre id="gcJsonBox" class="gc-output gc-json">{}</pre>
+    </section>
+  </main>
+
+  <script src="./config/gc-config.js"></script>
+  <script src="./config/gc-firebase-config.js"></script>
+  <script src="./config/gc-google-config.js"></script>
+  <script src="./utils/gc-time.js"></script>
+  <script src="./utils/gc-mask.js"></script>
+  <script src="./utils/gc-normalize.js"></script>
+  <script src="./utils/gc-validate.js"></script>
+
+  <script>
+    (function showGoogleCalendarBlockOne(global) {
+      "use strict";
+
+      const root = global.AgendaJeffModules || {};
+      const googleCalendar = root.GoogleCalendar || {};
+      const config = googleCalendar.CONFIG || {};
+      const time = googleCalendar.Utils && googleCalendar.Utils.Time ? googleCalendar.Utils.Time : {};
+      const now = typeof time.nowIso === "function" ? time.nowIso() : new Date().toISOString();
+      const statusUpdatedAt = document.getElementById("gcStatusUpdatedAt");
+      const jsonBox = document.getElementById("gcJsonBox");
+
+      if (statusUpdatedAt) {
+        statusUpdatedAt.textContent = now;
+      }
+
+      if (jsonBox) {
+        jsonBox.textContent = JSON.stringify({
+          ok: true,
+          module: config.module || { id: "googleCalendar" },
+          block: "Bloque 1",
+          message: "Base visual, configuración y utilidades de Google Calendar cargadas.",
+          checkedAt: now
+        }, null, 2);
+      }
+    })(window);
+  </script>
+</body>
+</html>
