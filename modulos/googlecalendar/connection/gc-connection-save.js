@@ -6,6 +6,7 @@
     - Guardar conexión Google Calendar en Firebase y respaldo local.
     - Validar y normalizar datos antes de guardar.
     - Mantener fallback local cuando Firebase falle.
+    - No guardar secretos OAuth en Firebase ni en respaldo local.
 
   Se conecta con:
     - modulos/googlecalendar/firebase/gc-firebase-save.js
@@ -50,6 +51,25 @@
     return data && typeof data === "object" ? data : {};
   }
 
+  function removeSensitiveFields(data) {
+    const source = data && typeof data === "object" ? data : {};
+    const safeData = { ...source };
+
+    delete safeData.clientSecret;
+    delete safeData.clientSecretDesktop;
+    delete safeData.clientSecretWeb;
+    delete safeData.accessToken;
+    delete safeData.refreshToken;
+    delete safeData.authorizationCode;
+    delete safeData.code;
+
+    safeData.hasClientSecretDesktop = Boolean(source.clientSecretDesktop || source.clientSecret);
+    safeData.hasClientSecretWeb = Boolean(source.clientSecretWeb);
+    safeData.secretStoragePolicy = "manual-only";
+
+    return safeData;
+  }
+
   async function saveConnection(input, options) {
     const config = getConfig();
     const opts = options && typeof options === "object" ? options : {};
@@ -73,8 +93,9 @@
       });
     }
 
+    const safeValidationData = removeSensitiveFields(validation.data);
     const normalized = normalizeConnection({
-      ...validation.data,
+      ...safeValidationData,
       configured: true,
       configurado: true,
       status: config.status ? config.status.PARTIAL : "partial",
@@ -116,15 +137,16 @@
       source: firebaseOk ? "firebase" : "local",
       file,
       message: firebaseOk
-        ? "Conexión Google Calendar guardada en Firebase y local."
+        ? "Conexión Google Calendar guardada en Firebase y local sin guardar secretos."
         : localOk
-          ? "Firebase falló, pero la conexión quedó guardada localmente."
+          ? "Firebase falló, pero la conexión quedó guardada localmente sin guardar secretos."
           : "No se pudo guardar la conexión Google Calendar.",
       error: firebaseOk || localOk ? null : { message: "Falló Firebase y respaldo local.", file },
-      data: { connection: finalConnection, validation, localResult, firebaseResult, statusResult },
+      data: { connection: finalConnection, validation: { ...validation, data: safeValidationData }, localResult, firebaseResult, statusResult },
       checkedAt
     });
   }
 
+  connection.removeSensitiveFields = removeSensitiveFields;
   connection.saveConnection = saveConnection;
 })(window);
