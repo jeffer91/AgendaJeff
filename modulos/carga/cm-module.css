@@ -8,8 +8,8 @@
   --cm-primary-dark: #1d4ed8;
   --cm-success: #15803d;
   --cm-success-soft: #ecfdf3;
-  --cm-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
-  --cm-radius: 18px;
+  --cm-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  --cm-radius: 14px;
   --cm-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -21,6 +21,7 @@ body {
   background: var(--cm-bg);
   color: var(--cm-text);
   font-family: var(--cm-font);
+  font-size: 13px;
 }
 
 button,
@@ -29,15 +30,15 @@ textarea { font: inherit; }
 
 .cm-page {
   display: grid;
-  gap: 18px;
-  padding: 22px;
+  gap: 10px;
+  padding: 10px;
 }
 
 .cm-hero,
 .cm-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.85fr);
+  gap: 10px;
 }
 
 .cm-hero,
@@ -51,16 +52,16 @@ textarea { font: inherit; }
 
 .cm-hero {
   align-items: stretch;
-  padding: 22px;
+  padding: 14px 16px;
 }
 
 .cm-panel,
-.cm-status-card { padding: 18px; }
+.cm-status-card { padding: 12px; }
 
 .cm-eyebrow {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   color: var(--cm-primary);
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -74,26 +75,37 @@ textarea { font: inherit; }
 .cm-status-card p { margin-top: 0; }
 
 .cm-hero h1 {
-  margin-bottom: 8px;
-  font-size: 32px;
-  line-height: 1.1;
+  margin-bottom: 4px;
+  font-size: 24px;
+  line-height: 1.08;
+}
+
+.cm-panel h2,
+.cm-status-card h2 {
+  margin-bottom: 4px;
+  font-size: 18px;
+  line-height: 1.15;
 }
 
 .cm-hero-text,
 .cm-panel p,
 .cm-status-card p {
   color: var(--cm-muted);
-  line-height: 1.55;
+  line-height: 1.35;
 }
+
+.cm-hero-text,
+.cm-panel p,
+.cm-status-card p { margin-bottom: 0; }
 
 .cm-badge {
   display: inline-flex;
-  margin-bottom: 12px;
-  padding: 6px 10px;
+  margin-bottom: 8px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: var(--cm-success-soft);
   color: var(--cm-success);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -102,40 +114,41 @@ textarea { font: inherit; }
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .cm-textarea {
   width: 100%;
   resize: vertical;
+  min-height: 110px;
   border: 1px solid var(--cm-border);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 12px;
+  padding: 10px;
   outline: none;
 }
 
 .cm-textarea:focus {
   border-color: var(--cm-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
 .cm-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .cm-btn {
-  min-height: 42px;
+  min-height: 34px;
   border: 1px solid var(--cm-border);
-  border-radius: 14px;
+  border-radius: 10px;
   background: #ffffff;
   color: var(--cm-text);
   cursor: pointer;
   font-weight: 900;
-  padding: 10px 14px;
+  padding: 7px 11px;
 }
 
 .cm-btn-primary {
@@ -149,11 +162,11 @@ textarea { font: inherit; }
 .cm-dropzone {
   display: grid;
   place-items: center;
-  min-height: 190px;
-  gap: 8px;
-  padding: 20px;
+  min-height: 118px;
+  gap: 5px;
+  padding: 14px;
   border: 2px dashed var(--cm-border);
-  border-radius: 18px;
+  border-radius: 14px;
   background: #f8fafc;
   color: var(--cm-muted);
   text-align: center;
@@ -161,28 +174,30 @@ textarea { font: inherit; }
 
 .cm-dropzone strong {
   color: var(--cm-text);
-  font-size: 18px;
+  font-size: 15px;
 }
 
 #cmFileInput {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 8px;
+  font-size: 12px;
 }
 
 .cm-source-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .cm-source-item,
 .cm-empty,
 .cm-review-table,
 .cm-review-detail {
-  padding: 14px;
+  padding: 10px 12px;
   border: 1px dashed var(--cm-border);
-  border-radius: 16px;
+  border-radius: 12px;
   background: #f8fafc;
   color: var(--cm-muted);
+  font-size: 12px;
 }
 
 .cm-source-item {
@@ -196,25 +211,25 @@ textarea { font: inherit; }
   z-index: 10;
   display: grid;
   place-items: center;
-  padding: 22px;
+  padding: 12px;
   background: rgba(15, 23, 42, 0.45);
 }
 
 .cm-modal[hidden] { display: none; }
 
 .cm-modal-card {
-  width: min(1180px, 100%);
+  width: min(1120px, 100%);
   max-height: 92vh;
   overflow: auto;
-  padding: 18px;
-  border-radius: 20px;
+  padding: 12px;
+  border-radius: 16px;
   background: #ffffff;
 }
 
 .cm-review-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.8fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.8fr);
+  gap: 10px;
 }
 
 @media (max-width: 980px) {
