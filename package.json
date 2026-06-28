@@ -7,7 +7,14 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "check": "node scripts/aj-check.js"
+    "check": "node scripts/aj-check.js",
+    "version:bump": "node scripts/version/aj-version-bump.js patch",
+    "version:minor": "node scripts/version/aj-version-bump.js minor",
+    "version:major": "node scripts/version/aj-version-bump.js major",
+    "release:prepare": "node scripts/release/aj-release-prepare.js",
+    "build:guard": "node scripts/build/aj-build-guard.js",
+    "build:win": "npm run build:guard && electron-builder --win nsis",
+    "release:win": "scripts\\windows\\aj-release.bat patch"
   },
   "keywords": [
     "agenda",
@@ -16,18 +23,48 @@
   ],
   "author": "Jefferson Villarreal",
   "license": "MIT",
+  "build": {
+    "appId": "com.agendajeff.app",
+    "productName": "AgendaJeff",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "electron/**/*",
+      "core/**/*",
+      "modulos/**/*",
+      "release/agenda-jeff-version.json",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "AgendaJeff-Setup-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AgendaJeff"
+    }
+  },
   "agendaJeff": {
     "nombreCompleto": "package.json",
     "ruta": "package.json",
-    "funcion": "Define el proyecto Electron, scripts de ejecución y dependencias mínimas para la reconstrucción modular de AgendaJeff.",
+    "funcion": "Define el proyecto Electron, scripts de ejecución, verificación, versionado y build para AgendaJeff.",
     "seConectaCon": [
       "electron/main.js",
       "index.html",
-      "scripts/aj-check.js"
+      "scripts/aj-check.js",
+      "scripts/version/aj-version-bump.js",
+      "scripts/release/aj-release-prepare.js",
+      "scripts/windows/aj-release.bat"
     ],
     "nota": "JSON no permite comentarios. Por eso esta metadata queda dentro de agendaJeff para conservar el archivo válido."
   },
   "devDependencies": {
-    "electron": "^31.7.7"
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
   }
 }
