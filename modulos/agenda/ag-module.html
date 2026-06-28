@@ -5,7 +5,7 @@
   Función:
     - Pantalla para crear, editar, completar y eliminar eventos, recordatorios y pendientes.
     - Guardar registros en base local JSON cuando Electron esté disponible.
-    - Mantener separada la pantalla Agenda de Telegram, Google Calendar y Notificaciones.
+    - Enviar salida hacia Google Calendar, Telegram y Notificaciones usando conectores existentes.
 -->
 
 <!DOCTYPE html>
@@ -26,9 +26,9 @@
         <p class="ag-hero-text">Crear, editar, completar y eliminar eventos, recordatorios y pendientes en la base local JSON.</p>
       </div>
       <article class="ag-status-card">
-        <span id="agStatusBadge" class="ag-badge is-ready">Base local</span>
+        <span id="agStatusBadge" class="ag-badge is-ready">Integración</span>
         <h2 id="agStatusTitle">Agenda conectada</h2>
-        <p id="agStatusDescription">Los registros quedan locales y entran a cola de sincronización.</p>
+        <p id="agStatusDescription">Local primero; luego Google Calendar, Telegram y Notificaciones según canales activos.</p>
       </article>
     </section>
 
@@ -144,7 +144,7 @@
         <div class="ag-panel-header ag-panel-subheader">
           <div>
             <h2>Canales</h2>
-            <p>Los conectores actuales se usarán en bloques posteriores.</p>
+            <p>Al guardar, AgendaJeff intenta usar estos canales.</p>
           </div>
         </div>
 
@@ -158,7 +158,7 @@
 
     <section class="ag-panel">
       <div class="ag-actions">
-        <button id="agBtnSaveDraft" class="ag-btn ag-btn-primary" type="button">Guardar en base local</button>
+        <button id="agBtnSaveDraft" class="ag-btn ag-btn-primary" type="button">Guardar y sincronizar</button>
         <button id="agBtnCancelEdit" class="ag-btn" type="button" hidden>Cancelar edición</button>
         <button id="agBtnClear" class="ag-btn" type="button">Limpiar</button>
         <button id="agBtnBackup" class="ag-btn" type="button">Crear respaldo</button>
@@ -192,6 +192,11 @@
     </section>
   </main>
 
+  <script src="../../core/integrations/aj-service-bridge.js"></script>
+  <script src="../../core/integrations/aj-telegram-adapter.js"></script>
+  <script src="../../core/integrations/aj-google-adapter.js"></script>
+  <script src="../../core/integrations/aj-notification-adapter.js"></script>
+  <script src="../../core/sync/aj-sync-orchestrator.js"></script>
   <script src="./form/ag-form-dom.js"></script>
   <script src="./form/ag-form-read.js"></script>
   <script src="./form/ag-form-fill.js"></script>
