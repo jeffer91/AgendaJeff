@@ -73,13 +73,35 @@
     return dom.readTestForm ? dom.readTestForm() : {};
   }
 
-  function handleTest(type) {
-    return runUiAction("Probando notificación...", async function testAction() {
-      if (!nt.Desktop || !nt.Desktop.runTest) {
-        throw new Error("No está disponible Notificaciones.Desktop.runTest.");
+  function isNativeMode(displayMode) {
+    const modes = nt.CONFIG && nt.CONFIG.displayModes ? nt.CONFIG.displayModes : {};
+    return displayMode === (modes.NATIVE || "native");
+  }
+
+  function sendByDisplayMode(payload) {
+    if (isNativeMode(payload.displayMode)) {
+      if (!nt.Desktop || !nt.Desktop.send) {
+        throw new Error("No está disponible Notificaciones.Desktop.send.");
       }
 
-      return nt.Desktop.runTest(type, buildInput());
+      return nt.Desktop.send(payload);
+    }
+
+    if (!nt.Visual || !nt.Visual.sendVisualNotification) {
+      throw new Error("No está disponible Notificaciones.Visual.sendVisualNotification.");
+    }
+
+    return nt.Visual.sendVisualNotification(payload.displayMode, payload);
+  }
+
+  function handleTest(type) {
+    return runUiAction("Probando notificación...", async function testAction() {
+      if (!nt.Desktop || !nt.Desktop.buildPayload) {
+        throw new Error("No está disponible Notificaciones.Desktop.buildPayload.");
+      }
+
+      const payload = nt.Desktop.buildPayload(type, buildInput());
+      return sendByDisplayMode(payload);
     });
   }
 
