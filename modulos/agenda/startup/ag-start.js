@@ -4,7 +4,7 @@
 
   Función:
     - Iniciar la pantalla Agenda.
-    - Guardar eventos, recordatorios y pendientes en la base local JSON cuando Electron esté disponible.
+    - Crear, editar, completar, eliminar, listar y respaldar registros de la base local JSON.
 */
 
 (function initAgendaModule(global) {
@@ -13,137 +13,143 @@
   const root = global.AgendaJeffModules = global.AgendaJeffModules || {};
   const agenda = root.Agenda = root.Agenda || {};
 
-  const state = {
+  agenda.state = agenda.state || {
     started: false,
     startedAt: "",
-    lastDraft: null,
-    lastSavedResult: null
+    items: [],
+    currentFilter: "all",
+    lastResult: null
   };
 
-  function getElement(id) {
-    return global.document ? global.document.getElementById(id) : null;
+  function getFilter() {
+    const filter = agenda.dom.getElement("agFilterView");
+    return filter && filter.value ? filter.value : "all";
   }
 
-  function getBridge() {
-    try {
-      if (global.AgendaJeffElectron) return global.AgendaJeffElectron;
-      if (global.parent && global.parent.AgendaJeffElectron) return global.parent.AgendaJeffElectron;
-    } catch (error) {
+  function buildQueryFilter() {
+    const view = getFilter();
+    if (view === "all") return {};
+    return { view };
+  }
+
+  async function loadItems() {
+    const bridge = agenda.dom.getBridge();
+
+    if (!bridge || typeof bridge.queryAgendaItems !== "function") {
+      agenda.state.lastResult = { ok: false, message: "Puente Electron no disponible para listar registros." };
+      agenda.listRender.renderList([]);
+      agenda.dom.setOutput(agenda.state.lastResult);
+      return agenda.state.lastResult;
+    }
+
+    const result = await bridge.queryAgendaItems(buildQueryFilter());
+    const items = result && result.ok && result.data && Array.isArray(result.data.items) ? result.data.items : [];
+
+    agenda.state.items = items;
+    agenda.state.currentFilter = getFilter();
+    agenda.state.lastResult = result;
+    agenda.listRender.renderList(items);
+    return result;
+  }
+
+  async function saveItem() {
+    const bridge = agenda.dom.getBridge();
+    const item = agenda.formRead.readFormItem();
+    const validation = agenda.formRead.validateFormItem(item);
+
+    if (!validation.ok) {
+      agenda.dom.setOutput({ ok: false, action: "validate", message: validation.message, errors: validation.errors, data: item });
       return null;
     }
-    return null;
-  }
-
-  function setOutput(data) {
-    const output = getElement("agResultBox");
-    if (output) output.textContent = JSON.stringify(data, null, 2);
-  }
-
-  function readFormDraft() {
-    return {
-      tipo: getElement("agType") ? getElement("agType").value : "evento",
-      titulo: getElement("agTitle") ? getElement("agTitle").value.trim() : "",
-      descripcion: getElement("agDescription") ? getElement("agDescription").value.trim() : "",
-      fechaInicio: getElement("agStartDate") ? getElement("agStartDate").value : "",
-      fechaFin: getElement("agEndDate") ? getElement("agEndDate").value : "",
-      horaInicio: getElement("agStartTime") ? getElement("agStartTime").value : "",
-      horaFin: getElement("agEndTime") ? getElement("agEndTime").value : "",
-      todoDia: getElement("agAllDay") ? getElement("agAllDay").checked : false,
-      categoria: getElement("agCategory") ? getElement("agCategory").value : "otro",
-      repeticion: {
-        tipo: getElement("agRepeat") ? getElement("agRepeat").value : "none"
-      },
-      canales: {
-        escritorio: true,
-        telegram: true,
-        googleCalendar: true
-      },
-      recordatorios: {
-        cincoDiasAntes: true,
-        tresDiasAntes: true,
-        unDiaAntes: true,
-        mismoDia: true,
-        usarDiasLaborables: false,
-        horasSinHora: ["06:00", "13:00", "17:00"],
-        horasPendiente: ["06:00", "17:00"]
-      },
-      origen: {
-        tipo: "manual",
-        archivo: "",
-        textoOriginal: ""
-      },
-      creadoEn: new Date().toISOString()
-    };
-  }
-
-  async function saveVisualDraft() {
-    const bridge = getBridge();
-    state.lastDraft = readFormDraft();
 
     if (!bridge || typeof bridge.saveAgendaItem !== "function") {
-      setOutput({
-        ok: false,
-        action: "saveAgendaItem",
-        message: "No se detectó el puente Electron. Se muestra solo el borrador visual.",
-        data: state.lastDraft
-      });
-      return state.lastDraft;
+      agenda.dom.setOutput({ ok: false, action: "saveAgendaItem", message: "Puente Electron no disponible.", data: item });
+      return null;
     }
 
-    const result = await bridge.saveAgendaItem(state.lastDraft);
-    state.lastSavedResult = result;
-    setOutput(result);
+    const result = await bridge.saveAgendaItem(item);
+    agenda.state.lastResult = result;
+    agenda.dom.setOutput(result);
 
     if (result && result.ok) {
-      clearForm(false);
+      agenda.formFill.clearForm();
+      await loadItems();
     }
 
     return result;
   }
 
-  function clearForm(renderMessage) {
-    const form = getElement("agEventForm");
-    if (form && typeof form.reset === "function") form.reset();
-    state.lastDraft = null;
+  async function createBackup() {
+    const bridge = agenda.dom.getBridge();
 
-    if (renderMessage !== false) {
-      setOutput({ ok: true, action: "clear", message: "Formulario limpiado." });
+    if (!bridge || typeof bridge.createLocalBackup !== "function") {
+      agenda.dom.setOutput({ ok: false, action: "backup", message: "Puente Electron no disponible." });
+      return null;
     }
+
+    const result = await bridge.createLocalBackup();
+    agenda.state.lastResult = result;
+    agenda.dom.setOutput(result);
+    return result;
+  }
+
+  function clearForm() {
+    agenda.formFill.clearForm();
+    agenda.dom.setOutput({ ok: true, action: "clear", message: "Formulario listo para crear un nuevo registro." });
   }
 
   function attachEvents() {
-    const saveButton = getElement("agBtnSaveDraft");
-    const clearButton = getElement("agBtnClear");
-    if (saveButton) saveButton.addEventListener("click", saveVisualDraft);
-    if (clearButton) clearButton.addEventListener("click", function handleClear() { clearForm(true); });
+    const saveButton = agenda.dom.getElement("agBtnSaveDraft");
+    const clearButton = agenda.dom.getElement("agBtnClear");
+    const cancelButton = agenda.dom.getElement("agBtnCancelEdit");
+    const backupButton = agenda.dom.getElement("agBtnBackup");
+    const refreshButton = agenda.dom.getElement("agBtnRefresh");
+    const filterView = agenda.dom.getElement("agFilterView");
+
+    if (saveButton) saveButton.addEventListener("click", saveItem);
+    if (clearButton) clearButton.addEventListener("click", clearForm);
+    if (cancelButton) cancelButton.addEventListener("click", clearForm);
+    if (backupButton) backupButton.addEventListener("click", createBackup);
+    if (refreshButton) refreshButton.addEventListener("click", loadItems);
+    if (filterView) filterView.addEventListener("change", loadItems);
+
+    if (agenda.listEvents && typeof agenda.listEvents.attachListEvents === "function") {
+      agenda.listEvents.attachListEvents();
+    }
   }
 
   async function start() {
-    state.started = true;
-    state.startedAt = new Date().toISOString();
+    agenda.state.started = true;
+    agenda.state.startedAt = new Date().toISOString();
     attachEvents();
 
-    const bridge = getBridge();
+    const bridge = agenda.dom.getBridge();
     const ensureResult = bridge && typeof bridge.ensureLocalDatabase === "function"
       ? await bridge.ensureLocalDatabase()
       : { ok: false, message: "Puente Electron no disponible." };
 
-    setOutput({
+    agenda.formFill.clearForm();
+    await loadItems();
+
+    agenda.dom.setOutput({
       ok: true,
       module: "agenda",
-      message: "Pantalla Agenda conectada a base local JSON cuando Electron está disponible.",
+      message: "Pantalla Agenda lista para crear, editar, completar, eliminar y respaldar registros.",
       localDatabase: ensureResult,
-      checkedAt: state.startedAt
+      totalItems: agenda.state.items.length,
+      checkedAt: agenda.state.startedAt
     });
+
     return getState();
   }
 
   function getState() {
     return {
-      started: state.started,
-      startedAt: state.startedAt,
-      lastDraft: state.lastDraft,
-      lastSavedResult: state.lastSavedResult
+      started: agenda.state.started,
+      startedAt: agenda.state.startedAt,
+      currentFilter: agenda.state.currentFilter,
+      items: agenda.state.items.slice(),
+      lastResult: agenda.state.lastResult
     };
   }
 
@@ -157,7 +163,8 @@
 
   agenda.start = start;
   agenda.getState = getState;
-  agenda.readFormDraft = readFormDraft;
-  agenda.saveVisualDraft = saveVisualDraft;
+  agenda.loadItems = loadItems;
+  agenda.saveItem = saveItem;
+  agenda.createBackup = createBackup;
   autoStart();
 })(window);
