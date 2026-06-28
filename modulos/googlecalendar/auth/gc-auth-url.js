@@ -5,13 +5,13 @@
   Función:
     - Construir URLs de autorización Google Calendar sin usar popup.
     - Centralizar scopes, redirectUri, estado de seguridad y parámetros OAuth.
-    - Aplicar respaldo automático de Redirect URI para credenciales desktop.
-    - No abrir ventanas ni guardar datos: solo prepara URL y metadatos.
+    - Usar la misma ruta local que sí responde en Electron.
 
   Se conecta con:
     - modulos/googlecalendar/config/gc-config.js
     - modulos/googlecalendar/config/gc-google-config.js
     - modulos/googlecalendar/utils/gc-normalize.js
+    - electron/oauth/gc-local-callback.js
 */
 
 (function initGoogleCalendarAuthUrl(global) {
@@ -20,7 +20,7 @@
   const root = global.AgendaJeffModules = global.AgendaJeffModules || {};
   const googleCalendar = root.GoogleCalendar = root.GoogleCalendar || {};
   const auth = googleCalendar.Auth = googleCalendar.Auth || {};
-  const DEFAULT_DESKTOP_REDIRECT_URI = "http://localhost";
+  const DEFAULT_DESKTOP_REDIRECT_URI = "http://127.0.0.1:53682/oauth/google/callback";
 
   function getConfig() {
     return googleCalendar.CONFIG || {};
@@ -30,7 +30,11 @@
     const googleConfig = googleCalendar.GoogleConfig || {};
 
     if (typeof googleConfig.getGoogleRuntimeConfig === "function") {
-      return googleConfig.getGoogleRuntimeConfig();
+      const runtime = googleConfig.getGoogleRuntimeConfig();
+      return {
+        ...runtime,
+        defaultDesktopRedirectUri: runtime.defaultDesktopRedirectUri || DEFAULT_DESKTOP_REDIRECT_URI
+      };
     }
 
     return {
@@ -122,17 +126,9 @@
   function buildMissingMessage(missing) {
     const parts = [];
 
-    if (missing.clientId) {
-      parts.push("Client ID");
-    }
-
-    if (missing.redirectUri) {
-      parts.push("Redirect URI");
-    }
-
-    if (missing.scopes) {
-      parts.push("scopes");
-    }
+    if (missing.clientId) parts.push("Client ID");
+    if (missing.redirectUri) parts.push("Redirect URI");
+    if (missing.scopes) parts.push("scopes");
 
     return parts.length ? `Faltan datos para OAuth: ${parts.join(", ")}.` : "Datos OAuth completos.";
   }
@@ -180,7 +176,6 @@
 
     Object.keys(authParams.params).forEach(function appendParam(key) {
       const value = authParams.params[key];
-
       if (value !== undefined && value !== null && String(value).length > 0) {
         url.searchParams.set(key, value);
       }
