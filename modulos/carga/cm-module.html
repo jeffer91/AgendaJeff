@@ -1,0 +1,96 @@
+<!--
+  Nombre completo: cm-module.html
+  Ruta: modulos/carga/cm-module.html
+
+  Función:
+    - Pantalla base para carga masiva inteligente.
+    - Permitir estructura visual para soltar archivos, pegar texto y revisar fuentes.
+    - Preparar modal de revisión que se conectará al parser local en bloques posteriores.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgendaJeff · Carga Masiva</title>
+  <link rel="stylesheet" href="./cm-module.css" />
+</head>
+<body>
+  <main class="cm-page" aria-labelledby="cmPageTitle">
+    <section class="cm-hero">
+      <div>
+        <p class="cm-eyebrow">AgendaJeff · Carga Masiva</p>
+        <h1 id="cmPageTitle">Procesar eventos desde fuentes</h1>
+        <p class="cm-hero-text">Base para pegar texto, tablas o subir archivos. Todo se revisará en modal antes de crear eventos.</p>
+      </div>
+      <article class="cm-status-card">
+        <span id="cmStatusBadge" class="cm-badge is-ready">Base lista</span>
+        <h2 id="cmStatusTitle">Carga preparada</h2>
+        <p id="cmStatusDescription">Los parsers locales se conectarán por fases sin usar IA externa.</p>
+      </article>
+    </section>
+
+    <section class="cm-grid">
+      <article class="cm-panel">
+        <div class="cm-panel-header">
+          <div>
+            <h2>Entrada rápida</h2>
+            <p>Pega texto, tablas o contenido copiado de documentos.</p>
+          </div>
+        </div>
+        <textarea id="cmPasteBox" class="cm-textarea" rows="10" placeholder="Pega aquí texto, una tabla o un cronograma..."></textarea>
+        <div class="cm-actions">
+          <button id="cmBtnRegisterText" class="cm-btn cm-btn-primary" type="button">Registrar texto como fuente</button>
+          <button id="cmBtnClear" class="cm-btn" type="button">Limpiar</button>
+        </div>
+      </article>
+
+      <article class="cm-panel">
+        <div class="cm-panel-header">
+          <div>
+            <h2>Archivos</h2>
+            <p>PDF, Word, Excel e imágenes se procesarán como fuentes independientes.</p>
+          </div>
+        </div>
+        <div id="cmDropzone" class="cm-dropzone">
+          <strong>Soltar archivos aquí</strong>
+          <span>Base visual lista. La lectura real de archivos se conectará en los bloques de carga masiva.</span>
+        </div>
+        <input id="cmFileInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*" />
+      </article>
+    </section>
+
+    <section class="cm-panel">
+      <div class="cm-panel-header">
+        <div>
+          <h2>Fuentes registradas</h2>
+          <p>Todo se mostrará junto, con columna de origen y filtro por archivo/tipo.</p>
+        </div>
+        <button id="cmBtnProcess" class="cm-btn cm-btn-primary" type="button">Procesar</button>
+      </div>
+      <div id="cmSourceList" class="cm-source-list">
+        <div class="cm-empty">Todavía no hay fuentes registradas.</div>
+      </div>
+    </section>
+
+    <section id="cmReviewModal" class="cm-modal" hidden>
+      <div class="cm-modal-card" role="dialog" aria-modal="true" aria-labelledby="cmReviewTitle">
+        <div class="cm-panel-header">
+          <div>
+            <h2 id="cmReviewTitle">Revisión de eventos detectados</h2>
+            <p>Modal base. Aquí se aprobará, corregirá, editará o eliminará antes de crear.</p>
+          </div>
+          <button id="cmBtnCloseModal" class="cm-btn" type="button">Cerrar</button>
+        </div>
+        <div class="cm-review-grid">
+          <div class="cm-review-table">Tabla editable pendiente de parser.</div>
+          <div class="cm-review-detail">Detalle y errores pendientes.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./startup/cm-start.js"></script>
+</body>
+</html>
