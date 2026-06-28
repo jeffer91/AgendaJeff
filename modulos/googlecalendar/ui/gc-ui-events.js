@@ -123,6 +123,11 @@
     return runUiAction("Procesando autorización Google Calendar...", async function exchangeAction() {
       if (!auth.exchangeAuthorizationCode) throw new Error("No está disponible Auth.exchangeAuthorizationCode.");
       const built = await buildAuthInputFromUi();
+      const pending = auth.readPendingAuth ? auth.readPendingAuth() : null;
+      if (pending && pending.redirectUri) {
+        built.authInput.redirectUri = pending.redirectUri;
+        built.authInput.redirectUriDesktop = pending.redirectUri;
+      }
       const returned = await readReturnFromElectron();
       const callbackKey = "call" + "back";
       const valueKey = String.fromCharCode(99, 111, 100, 101);
