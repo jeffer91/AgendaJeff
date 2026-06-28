@@ -30,6 +30,7 @@
       lastTestStatus: byId("ntLastTestStatus"),
       titleInput: byId("ntTitle"),
       bodyInput: byId("ntBody"),
+      displayModeSelect: byId("ntDisplayMode"),
       delaySelect: byId("ntDelaySeconds"),
       btnNormal: byId("ntBtnNormal"),
       btnSound: byId("ntBtnSound"),
@@ -47,12 +48,14 @@
 
   function readTestForm() {
     const elements = getElements();
-    const defaults = nt.CONFIG && nt.CONFIG.defaults ? nt.CONFIG.defaults : {};
+    const config = nt.CONFIG || {};
+    const defaults = config.defaults || {};
     const delaySeconds = Number(elements.delaySelect && elements.delaySelect.value ? elements.delaySelect.value : defaults.delaySeconds || 5);
 
     return {
       title: elements.titleInput && elements.titleInput.value ? elements.titleInput.value : defaults.title || "AgendaJeff",
       body: elements.bodyInput && elements.bodyInput.value ? elements.bodyInput.value : defaults.body || "notificaciones prueba",
+      displayMode: elements.displayModeSelect && elements.displayModeSelect.value ? elements.displayModeSelect.value : defaults.displayMode || "native",
       delaySeconds,
       delayMs: delaySeconds * 1000
     };
