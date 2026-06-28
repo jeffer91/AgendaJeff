@@ -3,7 +3,7 @@
   Ruta: modulos/agenda/ag-module.html
 
   Función:
-    - Pantalla base para crear eventos, recordatorios y pendientes uno por uno.
+    - Pantalla para crear, editar, completar y eliminar eventos, recordatorios y pendientes.
     - Guardar registros en base local JSON cuando Electron esté disponible.
     - Mantener separada la pantalla Agenda de Telegram, Google Calendar y Notificaciones.
 -->
@@ -21,13 +21,13 @@
     <section class="ag-hero">
       <div>
         <p class="ag-eyebrow">AgendaJeff · Agenda</p>
-        <h1 id="agPageTitle">Agendar manualmente</h1>
-        <p class="ag-hero-text">Formulario base para crear eventos, recordatorios y pendientes en la base local JSON.</p>
+        <h1 id="agPageTitle">Gestión manual</h1>
+        <p class="ag-hero-text">Crear, editar, completar y eliminar eventos, recordatorios y pendientes en la base local JSON.</p>
       </div>
       <article class="ag-status-card">
         <span id="agStatusBadge" class="ag-badge is-ready">Base local</span>
-        <h2 id="agStatusTitle">Agenda preparada</h2>
-        <p id="agStatusDescription">Guarda localmente; Firebase, Google Calendar, Telegram y notificaciones se integrarán en los siguientes bloques.</p>
+        <h2 id="agStatusTitle">Agenda conectada</h2>
+        <p id="agStatusDescription">Los registros quedan locales y entran a cola de sincronización.</p>
       </article>
     </section>
 
@@ -35,18 +35,33 @@
       <article class="ag-panel ag-panel-main">
         <div class="ag-panel-header">
           <div>
-            <h2>Nuevo registro</h2>
-            <p>Un solo modelo para evento, recordatorio o pendiente.</p>
+            <h2 id="agFormTitle">Nuevo registro</h2>
+            <p id="agFormDescription">Un solo modelo para evento, recordatorio o pendiente.</p>
           </div>
         </div>
 
         <form id="agEventForm" class="ag-form" autocomplete="off">
+          <input id="agIdLocal" type="hidden" />
+
           <label class="ag-field" for="agType">
             <span>Tipo</span>
             <select id="agType">
               <option value="evento">Evento</option>
               <option value="recordatorio">Recordatorio</option>
               <option value="pendiente">Pendiente</option>
+            </select>
+          </label>
+
+          <label class="ag-field" for="agStatus">
+            <span>Estado</span>
+            <select id="agStatus">
+              <option value="activo">Activo</option>
+              <option value="pendiente_sincronizar">Pendiente sincronizar</option>
+              <option value="sincronizado">Sincronizado</option>
+              <option value="error">Error</option>
+              <option value="completado">Completado</option>
+              <option value="vencido">Vencido</option>
+              <option value="cancelado">Cancelado</option>
             </select>
           </label>
 
@@ -118,11 +133,11 @@
         </div>
 
         <div class="ag-options">
-          <label class="ag-check"><input type="checkbox" checked /> <span>5 días antes</span></label>
-          <label class="ag-check"><input type="checkbox" checked /> <span>3 días antes</span></label>
-          <label class="ag-check"><input type="checkbox" checked /> <span>1 día antes</span></label>
-          <label class="ag-check"><input type="checkbox" checked /> <span>Mismo día</span></label>
-          <label class="ag-check"><input type="checkbox" /> <span>Usar días laborables</span></label>
+          <label class="ag-check"><input id="agReminder5" type="checkbox" checked /> <span>5 días antes</span></label>
+          <label class="ag-check"><input id="agReminder3" type="checkbox" checked /> <span>3 días antes</span></label>
+          <label class="ag-check"><input id="agReminder1" type="checkbox" checked /> <span>1 día antes</span></label>
+          <label class="ag-check"><input id="agReminderSameDay" type="checkbox" checked /> <span>Mismo día</span></label>
+          <label class="ag-check"><input id="agUseWorkdays" type="checkbox" /> <span>Usar días laborables</span></label>
         </div>
 
         <div class="ag-panel-header ag-panel-subheader">
@@ -133,9 +148,9 @@
         </div>
 
         <div class="ag-options">
-          <label class="ag-check"><input type="checkbox" checked /> <span>Escritorio</span></label>
-          <label class="ag-check"><input type="checkbox" checked /> <span>Telegram</span></label>
-          <label class="ag-check"><input type="checkbox" checked /> <span>Google Calendar</span></label>
+          <label class="ag-check"><input id="agChannelDesktop" type="checkbox" checked /> <span>Escritorio</span></label>
+          <label class="ag-check"><input id="agChannelTelegram" type="checkbox" checked /> <span>Telegram</span></label>
+          <label class="ag-check"><input id="agChannelGoogle" type="checkbox" checked /> <span>Google Calendar</span></label>
         </div>
       </aside>
     </section>
@@ -143,12 +158,44 @@
     <section class="ag-panel">
       <div class="ag-actions">
         <button id="agBtnSaveDraft" class="ag-btn ag-btn-primary" type="button">Guardar en base local</button>
+        <button id="agBtnCancelEdit" class="ag-btn" type="button" hidden>Cancelar edición</button>
         <button id="agBtnClear" class="ag-btn" type="button">Limpiar</button>
+        <button id="agBtnBackup" class="ag-btn" type="button">Crear respaldo</button>
       </div>
       <pre id="agResultBox" class="ag-output">Pantalla Agenda cargando...</pre>
     </section>
+
+    <section class="ag-panel">
+      <div class="ag-panel-header ag-list-header">
+        <div>
+          <h2>Registros guardados</h2>
+          <p>Editar, completar o eliminar desde la base local.</p>
+        </div>
+        <div class="ag-list-tools">
+          <label class="ag-field ag-filter" for="agFilterView">
+            <span>Filtro</span>
+            <select id="agFilterView">
+              <option value="all">Todos</option>
+              <option value="today">Hoy</option>
+              <option value="upcoming">Próximos</option>
+              <option value="pending">Pendientes</option>
+            </select>
+          </label>
+          <button id="agBtnRefresh" class="ag-btn" type="button">Actualizar</button>
+          <span id="agListCount" class="ag-count">0</span>
+        </div>
+      </div>
+      <div id="agListBox" class="ag-list-box">
+        <div class="ag-empty">Cargando registros...</div>
+      </div>
+    </section>
   </main>
 
+  <script src="./form/ag-form-dom.js"></script>
+  <script src="./form/ag-form-read.js"></script>
+  <script src="./form/ag-form-fill.js"></script>
+  <script src="./list/ag-list-render.js"></script>
+  <script src="./list/ag-list-events.js"></script>
   <script src="./startup/ag-start.js"></script>
 </body>
 </html>
