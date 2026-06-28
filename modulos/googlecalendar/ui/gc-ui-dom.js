@@ -6,7 +6,7 @@
     - Centralizar referencias DOM del módulo Google Calendar.
     - Leer y escribir datos del formulario sin mezclar lógica de conexión.
     - Cargar todos los campos disponibles desde Firebase: desktop, web, redirect y secretos.
-    - Aplicar Redirect Desktop por defecto para evitar bloqueo OAuth.
+    - Aplicar Redirect Desktop por defecto con la ruta OAuth funcional.
     - Preparar datos para guardar, conectar, intercambiar código y crear eventos.
 
   Se conecta con:
@@ -21,7 +21,7 @@
   const root = global.AgendaJeffModules = global.AgendaJeffModules || {};
   const googleCalendar = root.GoogleCalendar = root.GoogleCalendar || {};
   const ui = googleCalendar.UI = googleCalendar.UI || {};
-  const DEFAULT_DESKTOP_REDIRECT_URI = "http://localhost";
+  const DEFAULT_DESKTOP_REDIRECT_URI = "http://127.0.0.1:53682/oauth/google/callback";
 
   function byId(id) {
     return document.getElementById(id);
@@ -109,7 +109,13 @@
   }
 
   function normalizeDesktopRedirectUri(value) {
-    return value && String(value).trim() ? String(value).trim() : DEFAULT_DESKTOP_REDIRECT_URI;
+    const text = value && String(value).trim() ? String(value).trim() : "";
+
+    if (!text || text === "http://localhost" || text.includes("/auth/google/callback")) {
+      return DEFAULT_DESKTOP_REDIRECT_URI;
+    }
+
+    return text;
   }
 
   function readConnectionForm() {
@@ -161,7 +167,7 @@
       calendarId: firstText(data, ["calendarId", "idCalendario"], "primary"),
       clientIdDesktop: firstText(data, ["clientIdDesktop", "desktopClientId"]),
       clientSecretDesktop: firstText(data, ["clientSecretDesktop", "desktopClientSecret", "clientSecret"]),
-      redirectUriDesktop: firstText(data, ["redirectUriDesktop", "desktopRedirectUri", "redirectUri"], DEFAULT_DESKTOP_REDIRECT_URI),
+      redirectUriDesktop: normalizeDesktopRedirectUri(firstText(data, ["redirectUriDesktop", "desktopRedirectUri", "redirectUri"], DEFAULT_DESKTOP_REDIRECT_URI)),
       clientIdWeb: firstText(data, ["clientIdWeb", "webClientId"]),
       clientSecretWeb: firstText(data, ["clientSecretWeb", "webClientSecret"]),
       redirectUriWeb: firstText(data, ["redirectUriWeb", "webRedirectUri"])
