@@ -28,8 +28,8 @@
       --aj-success-soft: #ecfdf3;
       --aj-warning: #b45309;
       --aj-warning-soft: #fff7ed;
-      --aj-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
-      --aj-radius: 18px;
+      --aj-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      --aj-radius: 14px;
       --aj-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -58,8 +58,8 @@
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: 18px;
-      padding: 14px 18px;
+      gap: 12px;
+      padding: 8px 14px;
       background: var(--aj-card);
       border-bottom: 1px solid var(--aj-border);
       box-shadow: var(--aj-shadow);
@@ -69,40 +69,41 @@
     .aj-brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 9px;
       min-width: 0;
     }
 
     .aj-brand-mark {
       display: inline-flex;
-      width: 42px;
-      height: 42px;
+      width: 34px;
+      height: 34px;
       align-items: center;
       justify-content: center;
-      border-radius: 14px;
+      border-radius: 10px;
       background: var(--aj-primary);
       color: #ffffff;
+      font-size: 13px;
       font-weight: 900;
     }
 
     .aj-brand-text strong {
       display: block;
-      font-size: 16px;
-      line-height: 1.2;
+      font-size: 14px;
+      line-height: 1.15;
     }
 
     .aj-brand-text span {
       display: block;
       color: var(--aj-muted);
-      font-size: 13px;
-      line-height: 1.4;
+      font-size: 11px;
+      line-height: 1.2;
     }
 
     .aj-main-menu {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
     }
 
@@ -112,20 +113,20 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 40px;
+      min-height: 32px;
       border: 1px solid var(--aj-border);
       background: #ffffff;
       color: var(--aj-text);
       cursor: pointer;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 800;
       text-decoration: none;
       transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
     }
 
     .aj-menu-item {
-      gap: 8px;
-      padding: 10px 14px;
+      gap: 6px;
+      padding: 7px 12px;
       border-radius: 999px;
       white-space: nowrap;
     }
@@ -134,7 +135,7 @@
     .aj-submenu-item:hover,
     .aj-chip:hover {
       border-color: var(--aj-primary);
-      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
       transform: translateY(-1px);
     }
 
@@ -153,13 +154,13 @@
 
     .aj-submenu {
       position: absolute;
-      top: calc(100% + 10px);
+      top: calc(100% + 8px);
       right: 0;
       display: grid;
-      min-width: 260px;
-      padding: 8px;
+      min-width: 230px;
+      padding: 6px;
       border: 1px solid var(--aj-border);
-      border-radius: 16px;
+      border-radius: 13px;
       background: #ffffff;
       box-shadow: var(--aj-shadow);
       opacity: 0;
@@ -180,10 +181,10 @@
     .aj-submenu::before {
       content: "";
       position: absolute;
-      top: -11px;
-      right: 22px;
-      width: 20px;
-      height: 20px;
+      top: -8px;
+      right: 20px;
+      width: 14px;
+      height: 14px;
       background: #ffffff;
       border-left: 1px solid var(--aj-border);
       border-top: 1px solid var(--aj-border);
@@ -191,9 +192,9 @@
     }
 
     .aj-submenu-title {
-      margin: 2px 6px 8px;
+      margin: 2px 6px 6px;
       color: var(--aj-muted);
-      font-size: 12px;
+      font-size: 10px;
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -203,9 +204,9 @@
       position: relative;
       justify-content: flex-start;
       width: 100%;
-      margin: 0 0 6px;
-      padding: 11px 12px;
-      border-radius: 12px;
+      margin: 0 0 5px;
+      padding: 8px 10px;
+      border-radius: 10px;
       text-align: left;
     }
 
@@ -214,24 +215,22 @@
     .aj-topbar-actions {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
       justify-content: flex-end;
     }
 
     .aj-runtime-badge,
     .aj-chip {
-      min-height: 34px;
-      padding: 8px 12px;
+      min-height: 30px;
+      padding: 7px 10px;
       border-radius: 999px;
       color: var(--aj-muted);
-      font-size: 13px;
+      font-size: 12px;
       white-space: nowrap;
     }
 
-    .aj-chip {
-      font-weight: 800;
-    }
+    .aj-chip { font-weight: 800; }
 
     .aj-runtime-badge {
       display: inline-flex;
@@ -257,13 +256,13 @@
     .aj-layout {
       display: grid;
       min-height: 0;
-      padding: 18px;
+      padding: 8px;
     }
 
     .aj-content-card {
       display: grid;
       min-width: 0;
-      min-height: calc(100vh - 132px);
+      min-height: calc(100vh - 94px);
       padding: 0;
       overflow: hidden;
       background: var(--aj-card);
@@ -276,7 +275,7 @@
       display: block;
       width: 100%;
       height: 100%;
-      min-height: calc(100vh - 134px);
+      min-height: calc(100vh - 96px);
       border: 0;
       background: #ffffff;
     }
@@ -285,12 +284,12 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 10px 16px;
+      gap: 10px;
+      padding: 6px 12px;
       background: var(--aj-card);
       border-top: 1px solid var(--aj-border);
       color: var(--aj-muted);
-      font-size: 13px;
+      font-size: 11px;
     }
 
     @media (max-width: 1080px) {
@@ -312,14 +311,14 @@
     }
 
     @media (max-width: 700px) {
-      .aj-layout { padding: 10px; }
+      .aj-layout { padding: 6px; }
       .aj-footer { align-items: flex-start; flex-direction: column; }
       .aj-main-menu { display: grid; grid-template-columns: 1fr 1fr; }
       .aj-menu-group { display: grid; }
       .aj-menu-item { width: 100%; }
-      .aj-submenu { left: 0; right: auto; min-width: min(320px, calc(100vw - 20px)); }
+      .aj-submenu { left: 0; right: auto; min-width: min(280px, calc(100vw - 16px)); }
       .aj-content-card,
-      .aj-module-frame { min-height: 720px; }
+      .aj-module-frame { min-height: 680px; }
     }
   </style>
 </head>
