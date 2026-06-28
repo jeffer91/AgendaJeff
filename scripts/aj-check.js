@@ -75,10 +75,11 @@ function validateScreens() {
 }
 
 function validateCore() {
-  required("Core", ["core/config/aj-core-config.js", "core/models/aj-event-model.js", "core/models/aj-reminder-model.js", "core/models/aj-pending-model.js", "core/models/aj-category-model.js", "core/models/aj-sync-model.js", "core/utils/aj-id.js", "core/utils/aj-date.js", "core/utils/aj-result.js", "core/integrations/aj-service-bridge.js", "core/integrations/aj-firebase-adapter.js", "core/integrations/aj-telegram-adapter.js", "core/integrations/aj-google-adapter.js", "core/integrations/aj-notification-adapter.js", "core/sync/aj-sync-orchestrator.js", "core/updater/aj-update-config.js", "core/updater/aj-update-check.js"]);
+  required("Core", ["core/config/aj-core-config.js", "core/models/aj-event-model.js", "core/models/aj-reminder-model.js", "core/models/aj-pending-model.js", "core/models/aj-category-model.js", "core/models/aj-sync-model.js", "core/utils/aj-id.js", "core/utils/aj-date.js", "core/utils/aj-result.js", "core/integrations/aj-service-bridge.js", "core/integrations/aj-firebase-adapter.js", "core/integrations/aj-telegram-adapter.js", "core/integrations/aj-google-adapter.js", "core/integrations/aj-notification-adapter.js", "core/sync/aj-sync-orchestrator.js", "core/updater/aj-update-config.js", "core/updater/aj-update-check.js", "core/mobile/aj-mobile-bridge.js"]);
   required("Base local", ["electron/localdb/aj-local-paths.js", "electron/localdb/aj-local-defaults.js", "electron/localdb/aj-local-read.js", "electron/localdb/aj-local-save.js", "electron/localdb/aj-local-index.js", "electron/localdb/aj-local-backup.js", "electron/localdb/aj-local-ipc.js"]);
   required("Segundo plano", ["electron/background/aj-background-pending.js", "electron/background/aj-background-reminders.js", "electron/background/aj-background-scheduler.js", "electron/background/aj-background-runner.js", "electron/background/aj-background-notify.js", "electron/tray/aj-tray-menu.js", "electron/tray/aj-tray.js"]);
   required("Release", ["release/agenda-jeff-version.json", "release/notes/v0.0.1.md", "scripts/version/aj-version-tools.js", "scripts/version/aj-version-bump.js", "scripts/release/aj-release-prepare.js", "scripts/build/aj-build-guard.js", "scripts/windows/aj-release.bat"]);
+  required("Android", ["capacitor.config.json", "scripts/android/aj-android-prepare.js", "scripts/android/aj-android-check.js", "scripts/windows/aj-android-apk.bat", "docs/android/aj-android-guia.md"]);
 }
 
 function validateConnections() {
