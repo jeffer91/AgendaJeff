@@ -4,7 +4,7 @@
 
   Función:
     - Centralizar la configuración del módulo Notificaciones.
-    - Definir estados, acciones, tipos de prueba y resultado estándar.
+    - Definir estados, acciones, tipos de prueba, modos de visualización y resultado estándar.
 */
 
 (function initNotificacionesConfig(global) {
@@ -26,7 +26,8 @@
     INIT: "init",
     DIAGNOSTIC: "diagnostic",
     SEND: "sendNotification",
-    TEST: "testNotification"
+    TEST: "testNotification",
+    VISUAL: "visualNotification"
   });
 
   const TYPES = Object.freeze({
@@ -39,29 +40,39 @@
     ERROR: "error"
   });
 
+  const DISPLAY_MODES = Object.freeze({
+    NATIVE: "native",
+    TOAST: "toast",
+    BANNER: "banner",
+    CENTER: "center"
+  });
+
   const CONFIG = Object.freeze({
     module: Object.freeze({
       id: "notificaciones",
       prefix: "nt",
       name: "Notificaciones",
       title: "Notificaciones de escritorio",
-      version: "0.1.0",
-      description: "Módulo independiente para probar notificaciones nativas de escritorio en AgendaJeff."
+      version: "0.2.0",
+      description: "Módulo independiente para probar notificaciones nativas de escritorio y notificaciones visuales internas en AgendaJeff."
     }),
     defaults: Object.freeze({
       title: "AgendaJeff",
       body: "notificaciones prueba",
       delaySeconds: 5,
-      silent: false
+      silent: false,
+      displayMode: DISPLAY_MODES.NATIVE
     }),
     status: STATUS,
     action: ACTION,
     types: TYPES,
+    displayModes: DISPLAY_MODES,
     fileHints: Object.freeze({
       MODULE_HTML: "modulos/notificaciones/nt-module.html",
       CONFIG: "modulos/notificaciones/config/nt-config.js",
       NORMALIZE: "modulos/notificaciones/utils/nt-normalize.js",
       DESKTOP: "modulos/notificaciones/desktop/",
+      VISUAL: "modulos/notificaciones/visual/",
       DIAGNOSTIC: "modulos/notificaciones/diagnostic/",
       UI: "modulos/notificaciones/ui/",
       STARTUP: "modulos/notificaciones/startup/nt-start.js"
@@ -90,6 +101,7 @@
       body: CONFIG.defaults.body,
       silent: CONFIG.defaults.silent,
       delaySeconds: CONFIG.defaults.delaySeconds,
+      displayMode: CONFIG.defaults.displayMode,
       type: TYPES.NORMAL
     };
   }
