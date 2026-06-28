@@ -4,13 +4,17 @@
 
   Función:
     - Servir como shell raíz de AgendaJeff.
-    - Verificar que Electron, main.js y preload.js funcionen correctamente.
-    - Cargar módulos internos de forma modular mediante iframe.
-    - Integrar Telegram, Google Calendar y Notificaciones sin mezclar su lógica interna con el shell principal.
+    - Mostrar navegación principal por pantallas: Inicio, Agenda, Carga Masiva, Ajustes y Conexiones.
+    - Cargar módulos internos mediante iframe sin mezclar su lógica interna.
+    - Conservar Telegram, Google Calendar y Notificaciones como módulos funcionales ya probados.
 
   Se conecta con:
     - electron/main.js
     - electron/preload.js
+    - modulos/inicio/in-module.html
+    - modulos/agenda/ag-module.html
+    - modulos/carga/cm-module.html
+    - modulos/ajustes/aj-module.html
     - modulos/telegram/tl-module.html
     - modulos/googlecalendar/gc-module.html
     - modulos/notificaciones/nt-module.html
@@ -55,10 +59,7 @@
       color: var(--aj-text);
     }
 
-    button,
-    input,
-    textarea,
-    select { font: inherit; }
+    button { font: inherit; }
 
     .aj-shell {
       display: grid;
@@ -123,7 +124,8 @@
       justify-content: flex-end;
     }
 
-    .aj-runtime-badge {
+    .aj-runtime-badge,
+    .aj-chip {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -152,7 +154,7 @@
 
     .aj-layout {
       display: grid;
-      grid-template-columns: 290px minmax(0, 1fr);
+      grid-template-columns: 300px minmax(0, 1fr);
       gap: 18px;
       min-height: 0;
       padding: 18px;
@@ -174,17 +176,12 @@
       min-height: 0;
     }
 
-    .aj-sidebar-section h2,
-    .aj-content-card h1,
-    .aj-content-card h2,
-    .aj-content-card p { margin-top: 0; }
-
     .aj-sidebar-section h2 {
-      margin-bottom: 12px;
+      margin: 0 0 12px;
       font-size: 15px;
     }
 
-    .aj-module-button {
+    .aj-nav-button {
       display: flex;
       width: 100%;
       align-items: center;
@@ -201,23 +198,23 @@
       transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease;
     }
 
-    .aj-module-button:hover {
+    .aj-nav-button:hover {
       border-color: var(--aj-primary);
       box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
       transform: translateY(-1px);
     }
 
-    .aj-module-button.is-active {
+    .aj-nav-button.is-active {
       border-color: var(--aj-primary);
       background: var(--aj-primary-soft);
     }
 
-    .aj-module-button strong {
+    .aj-nav-button strong {
       display: block;
       font-size: 14px;
     }
 
-    .aj-module-button span {
+    .aj-nav-button span {
       display: block;
       color: var(--aj-muted);
       font-size: 12px;
@@ -254,104 +251,14 @@
       overflow: hidden;
     }
 
-    .aj-welcome {
-      max-width: 1120px;
-      padding: 24px;
-    }
-
-    .aj-welcome h1 {
-      margin-bottom: 8px;
-      font-size: 30px;
-      line-height: 1.15;
-    }
-
-    .aj-welcome p {
-      color: var(--aj-muted);
-      line-height: 1.6;
-    }
-
-    .aj-status-grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 12px;
-      margin: 20px 0;
-    }
-
-    .aj-status-card {
-      padding: 14px;
-      border: 1px solid var(--aj-border);
-      border-radius: 16px;
-      background: #ffffff;
-    }
-
-    .aj-status-card strong {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 14px;
-    }
-
-    .aj-status-card span {
-      color: var(--aj-muted);
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .aj-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin: 18px 0;
-    }
-
-    .aj-button-primary,
-    .aj-button-secondary {
-      min-height: 42px;
-      border-radius: 14px;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-weight: 800;
-    }
-
-    .aj-button-primary {
-      border: 0;
-      background: var(--aj-primary);
-      color: #ffffff;
-    }
-
-    .aj-button-primary:hover { background: var(--aj-primary-dark); }
-
-    .aj-button-secondary {
-      border: 1px solid var(--aj-border-strong);
-      background: #ffffff;
-      color: var(--aj-text);
-    }
-
-    .aj-result {
-      width: 100%;
-      min-height: 170px;
-      margin: 0;
-      padding: 14px;
-      overflow: auto;
-      border: 1px solid var(--aj-border);
-      border-radius: 16px;
-      background: #0f172a;
-      color: #dbeafe;
-      font-size: 13px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-    }
-
     .aj-module-frame {
-      display: none;
+      display: block;
       width: 100%;
       height: 100%;
       min-height: calc(100vh - 134px);
       border: 0;
       background: #ffffff;
     }
-
-    .aj-module-frame.is-visible { display: block; }
 
     .aj-footer {
       display: flex;
@@ -365,15 +272,10 @@
       font-size: 13px;
     }
 
-    @media (max-width: 1100px) {
-      .aj-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
     @media (max-width: 940px) {
       .aj-layout { grid-template-columns: 1fr; }
       .aj-sidebar { display: block; }
-      .aj-status-grid { grid-template-columns: 1fr; }
-      .aj-content-card { min-height: 720px; }
+      .aj-content-card,
       .aj-module-frame { min-height: 720px; }
     }
 
@@ -388,7 +290,6 @@
         width: 100%;
         justify-content: flex-start;
       }
-      .aj-welcome { padding: 18px; }
     }
   </style>
 </head>
@@ -400,103 +301,95 @@
         <span class="aj-brand-mark">AJ</span>
         <div class="aj-brand-text">
           <strong>AgendaJeff</strong>
-          <span>Reconstrucción modular · Conexiones</span>
+          <span>Agenda modular · Eventos · Recordatorios · Carga masiva</span>
         </div>
       </div>
 
       <div class="aj-topbar-actions">
-        <button id="homeBtn" class="aj-button-secondary" type="button">Inicio</button>
-        <span id="runtimeBadge" class="aj-runtime-badge">Verificando entorno</span>
+        <button id="checkElectronBtn" class="aj-chip" type="button">Verificar Electron</button>
+        <span id="runtimeBadge" class="aj-runtime-badge">Verificando...</span>
       </div>
     </header>
 
     <main class="aj-layout">
-      <aside class="aj-sidebar" aria-label="Módulos de AgendaJeff">
+      <aside class="aj-sidebar" aria-label="Navegación principal de AgendaJeff">
+        <section class="aj-sidebar-section">
+          <h2>AgendaJeff</h2>
+
+          <button class="aj-nav-button is-active" type="button" data-module="inicio">
+            <span>
+              <strong>Inicio</strong>
+              <span>Eventos de hoy, próximos y pendientes.</span>
+            </span>
+            <span id="inicioModuleState" class="aj-module-state">listo</span>
+          </button>
+
+          <button class="aj-nav-button" type="button" data-module="agenda">
+            <span>
+              <strong>Agenda</strong>
+              <span>Crear evento, recordatorio o pendiente.</span>
+            </span>
+            <span id="agendaModuleState" class="aj-module-state">listo</span>
+          </button>
+
+          <button class="aj-nav-button" type="button" data-module="carga">
+            <span>
+              <strong>Carga Masiva</strong>
+              <span>Texto, tablas, PDF, Word, Excel e imágenes.</span>
+            </span>
+            <span id="cargaModuleState" class="aj-module-state">listo</span>
+          </button>
+
+          <button class="aj-nav-button" type="button" data-module="ajustes">
+            <span>
+              <strong>Ajustes</strong>
+              <span>Segundo plano, inicio con Windows y actualizaciones.</span>
+            </span>
+            <span id="ajustesModuleState" class="aj-module-state">listo</span>
+          </button>
+        </section>
+
         <section class="aj-sidebar-section">
           <h2>Conexiones</h2>
 
-          <button id="openTelegramBtn" class="aj-module-button" type="button" data-module="telegram">
+          <button class="aj-nav-button" type="button" data-module="telegram">
             <span>
               <strong>Telegram</strong>
               <span>Bot, Chat ID, Firebase, respaldo local y diagnóstico.</span>
             </span>
-            <span id="telegramModuleState" class="aj-module-state">listo</span>
+            <span id="telegramModuleState" class="aj-module-state">ok</span>
           </button>
 
-          <button id="openGoogleCalendarBtn" class="aj-module-button" type="button" data-module="googleCalendar">
+          <button class="aj-nav-button" type="button" data-module="googleCalendar">
             <span>
               <strong>Google Calendar</strong>
               <span>OAuth, Firebase, eventos, diagnóstico y conector.</span>
             </span>
-            <span id="googleCalendarModuleState" class="aj-module-state">listo</span>
+            <span id="googleCalendarModuleState" class="aj-module-state">ok</span>
           </button>
 
-          <button id="openNotificacionesBtn" class="aj-module-button" type="button" data-module="notificaciones">
+          <button class="aj-nav-button" type="button" data-module="notificaciones">
             <span>
               <strong>Notificaciones</strong>
-              <span>Pruebas nativas de escritorio en Windows y diagnóstico.</span>
+              <span>Pruebas nativas de escritorio y avisos internos.</span>
             </span>
-            <span id="notificacionesModuleState" class="aj-module-state">listo</span>
+            <span id="notificacionesModuleState" class="aj-module-state">ok</span>
           </button>
         </section>
 
         <p class="aj-sidebar-note">
-          Cada conexión vive en su propia carpeta. El shell solo abre módulos; no contiene lógica interna de Telegram, Google Calendar ni Notificaciones.
+          Bloque 1: navegación y pantallas base. Los módulos ya funcionales de Telegram, Google Calendar y Notificaciones se conservan sin mezclar su lógica con la agenda.
         </p>
       </aside>
 
       <section class="aj-content-card">
-        <div id="welcomeView" class="aj-welcome">
-          <h1>AgendaJeff modular</h1>
-          <p>
-            Base lista para trabajar con módulos independientes. Telegram, Google Calendar y Notificaciones ya están integrados como módulos separados.
-          </p>
-
-          <div class="aj-status-grid">
-            <article class="aj-status-card">
-              <strong>Electron</strong>
-              <span id="electronStatusText">Pendiente de verificación.</span>
-            </article>
-
-            <article class="aj-status-card">
-              <strong>Preload</strong>
-              <span id="preloadStatusText">Esperando puente seguro.</span>
-            </article>
-
-            <article class="aj-status-card">
-              <strong>Telegram</strong>
-              <span>Módulo disponible en modulos/telegram/tl-module.html.</span>
-            </article>
-
-            <article class="aj-status-card">
-              <strong>Google Calendar</strong>
-              <span>Módulo disponible en modulos/googlecalendar/gc-module.html.</span>
-            </article>
-
-            <article class="aj-status-card">
-              <strong>Notificaciones</strong>
-              <span>Módulo disponible en modulos/notificaciones/nt-module.html.</span>
-            </article>
-          </div>
-
-          <div class="aj-actions">
-            <button id="openTelegramHomeBtn" class="aj-button-primary" type="button">Abrir Telegram</button>
-            <button id="openGoogleCalendarHomeBtn" class="aj-button-primary" type="button">Abrir Google Calendar</button>
-            <button id="openNotificacionesHomeBtn" class="aj-button-primary" type="button">Abrir Notificaciones</button>
-            <button id="checkElectronBtn" class="aj-button-secondary" type="button">Verificar Electron</button>
-            <button id="clearOutputBtn" class="aj-button-secondary" type="button">Limpiar resultado</button>
-          </div>
-
-          <pre id="environmentOutput" class="aj-result">Esperando verificación...</pre>
-        </div>
-
         <iframe id="moduleFrame" class="aj-module-frame" title="Módulo AgendaJeff"></iframe>
       </section>
     </main>
 
     <footer class="aj-footer">
-      <span>AgendaJeff · Reconstrucción modular</span>
-      <span id="footerStatus">Conexiones integradas</span>
+      <span>AgendaJeff · Bloque 1</span>
+      <span id="footerStatus">Inicio · Cargando módulo</span>
     </footer>
   </div>
 
@@ -505,6 +398,30 @@
       "use strict";
 
       const MODULES = Object.freeze({
+        inicio: {
+          key: "inicio",
+          title: "Inicio",
+          src: "modulos/inicio/in-module.html",
+          stateId: "inicioModuleState"
+        },
+        agenda: {
+          key: "agenda",
+          title: "Agenda",
+          src: "modulos/agenda/ag-module.html",
+          stateId: "agendaModuleState"
+        },
+        carga: {
+          key: "carga",
+          title: "Carga Masiva",
+          src: "modulos/carga/cm-module.html",
+          stateId: "cargaModuleState"
+        },
+        ajustes: {
+          key: "ajustes",
+          title: "Ajustes",
+          src: "modulos/ajustes/aj-module.html",
+          stateId: "ajustesModuleState"
+        },
         telegram: {
           key: "telegram",
           title: "Telegram",
@@ -526,32 +443,16 @@
       });
 
       const runtimeBadge = document.getElementById("runtimeBadge");
-      const electronStatusText = document.getElementById("electronStatusText");
-      const preloadStatusText = document.getElementById("preloadStatusText");
-      const environmentOutput = document.getElementById("environmentOutput");
       const checkElectronBtn = document.getElementById("checkElectronBtn");
-      const clearOutputBtn = document.getElementById("clearOutputBtn");
       const footerStatus = document.getElementById("footerStatus");
-      const homeBtn = document.getElementById("homeBtn");
-      const openTelegramBtn = document.getElementById("openTelegramBtn");
-      const openGoogleCalendarBtn = document.getElementById("openGoogleCalendarBtn");
-      const openNotificacionesBtn = document.getElementById("openNotificacionesBtn");
-      const openTelegramHomeBtn = document.getElementById("openTelegramHomeBtn");
-      const openGoogleCalendarHomeBtn = document.getElementById("openGoogleCalendarHomeBtn");
-      const openNotificacionesHomeBtn = document.getElementById("openNotificacionesHomeBtn");
-      const welcomeView = document.getElementById("welcomeView");
       const moduleFrame = document.getElementById("moduleFrame");
-
-      function renderJson(data) {
-        environmentOutput.textContent = JSON.stringify(data, null, 2);
-      }
 
       function setFooter(text) {
         footerStatus.textContent = text || "AgendaJeff";
       }
 
       function setActiveModule(moduleKey) {
-        document.querySelectorAll(".aj-module-button[data-module]").forEach(function eachButton(button) {
+        document.querySelectorAll(".aj-nav-button[data-module]").forEach(function eachButton(button) {
           button.classList.toggle("is-active", button.dataset.module === moduleKey);
         });
       }
@@ -559,27 +460,19 @@
       function setModuleState(moduleKey, text) {
         const moduleConfig = MODULES[moduleKey];
         const stateElement = moduleConfig ? document.getElementById(moduleConfig.stateId) : null;
-
-        if (stateElement) {
-          stateElement.textContent = text;
-        }
+        if (stateElement) stateElement.textContent = text;
       }
 
       function renderWebMode() {
         runtimeBadge.textContent = "Modo navegador";
         runtimeBadge.classList.remove("is-ok");
         runtimeBadge.classList.add("is-warn");
-        electronStatusText.textContent = "La app se está ejecutando como navegador o archivo HTML.";
-        preloadStatusText.textContent = "Puente Electron no detectado.";
       }
 
-      function renderElectronMode(environment) {
+      function renderElectronMode() {
         runtimeBadge.textContent = "Electron activo";
         runtimeBadge.classList.add("is-ok");
         runtimeBadge.classList.remove("is-warn");
-        electronStatusText.textContent = "Electron respondió correctamente.";
-        preloadStatusText.textContent = "Preload seguro disponible.";
-        renderJson(environment || { ok: true, message: "Electron activo." });
       }
 
       async function checkElectron() {
@@ -587,74 +480,46 @@
 
         if (!bridge) {
           renderWebMode();
-          renderJson({
-            ok: false,
-            mode: "browser",
-            message: "No se encontró window.AgendaJeffElectron. Si estás en navegador, esto es normal."
-          });
-          return;
+          return { ok: false, mode: "browser" };
         }
 
         try {
-          const pingResult = typeof bridge.ping === "function" ? await bridge.ping() : { ok: true, message: "Bridge disponible, sin ping()." };
-          const environment = typeof bridge.getEnvironment === "function" ? await bridge.getEnvironment() : { ok: true, message: "Bridge disponible, sin getEnvironment()." };
-
-          renderElectronMode({ ok: true, pingResult, environment });
+          if (typeof bridge.ping === "function") await bridge.ping();
+          renderElectronMode();
+          return { ok: true, mode: "electron" };
         } catch (error) {
           runtimeBadge.textContent = "Electron con error";
           runtimeBadge.classList.remove("is-ok");
           runtimeBadge.classList.add("is-warn");
-          electronStatusText.textContent = "Electron fue detectado, pero falló la verificación.";
-          preloadStatusText.textContent = error && error.message ? error.message : "Error desconocido.";
-          renderJson({
-            ok: false,
-            message: "Falló la verificación de Electron.",
-            error: error && error.message ? error.message : String(error)
-          });
+          return { ok: false, mode: "electron", error: error && error.message ? error.message : String(error) };
         }
-      }
-
-      function clearOutput() {
-        environmentOutput.textContent = "Resultado limpiado.";
-      }
-
-      function showWelcome() {
-        welcomeView.style.display = "block";
-        moduleFrame.classList.remove("is-visible");
-        setActiveModule("");
-        setFooter("Inicio · Conexiones integradas");
       }
 
       function openModule(moduleKey) {
         const moduleConfig = MODULES[moduleKey];
 
         if (!moduleConfig) {
-          renderJson({ ok: false, message: "Módulo no registrado.", moduleKey });
+          setFooter("Módulo no registrado");
           return;
         }
 
-        welcomeView.style.display = "none";
-        moduleFrame.classList.add("is-visible");
         setActiveModule(moduleKey);
         setFooter(`${moduleConfig.title} · Cargando módulo`);
+        setModuleState(moduleKey, "abriendo");
 
         if (!moduleFrame.src || !moduleFrame.src.endsWith(moduleConfig.src)) {
           moduleFrame.src = moduleConfig.src;
         }
-
-        renderJson({ ok: true, message: `Abriendo módulo ${moduleConfig.title}.`, src: moduleConfig.src });
       }
 
       function wireEvents() {
         checkElectronBtn.addEventListener("click", checkElectron);
-        clearOutputBtn.addEventListener("click", clearOutput);
-        homeBtn.addEventListener("click", showWelcome);
-        openTelegramBtn.addEventListener("click", function openTelegramFromMenu() { openModule("telegram"); });
-        openGoogleCalendarBtn.addEventListener("click", function openGoogleCalendarFromMenu() { openModule("googleCalendar"); });
-        openNotificacionesBtn.addEventListener("click", function openNotificacionesFromMenu() { openModule("notificaciones"); });
-        openTelegramHomeBtn.addEventListener("click", function openTelegramFromHome() { openModule("telegram"); });
-        openGoogleCalendarHomeBtn.addEventListener("click", function openGoogleCalendarFromHome() { openModule("googleCalendar"); });
-        openNotificacionesHomeBtn.addEventListener("click", function openNotificacionesFromHome() { openModule("notificaciones"); });
+
+        document.querySelectorAll(".aj-nav-button[data-module]").forEach(function eachButton(button) {
+          button.addEventListener("click", function handleOpenModule() {
+            openModule(button.dataset.module);
+          });
+        });
 
         moduleFrame.addEventListener("load", function handleModuleLoaded() {
           const activeModule = Object.values(MODULES).find(function findModule(moduleConfig) {
@@ -671,7 +536,7 @@
       function init() {
         wireEvents();
         checkElectron();
-        setFooter("Conexiones integradas");
+        openModule("inicio");
       }
 
       init();
