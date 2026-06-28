@@ -31,12 +31,22 @@
     return supported.includes(text) ? text : (types.NORMAL || "normal");
   }
 
+  function normalizeDisplayMode(value) {
+    const config = notificaciones.CONFIG || {};
+    const modes = config.displayModes || {};
+    const defaults = config.defaults || {};
+    const text = asText(value, defaults.displayMode || modes.NATIVE || "native");
+    const supported = Object.keys(modes).map(function mapMode(key) { return modes[key]; });
+    return supported.includes(text) ? text : (defaults.displayMode || modes.NATIVE || "native");
+  }
+
   function normalizePayload(input, options) {
     const config = notificaciones.CONFIG || {};
     const defaults = config.defaults || {};
     const data = input && typeof input === "object" ? input : {};
     const opts = options && typeof options === "object" ? options : {};
     const type = normalizeType(opts.type || data.type);
+    const displayMode = normalizeDisplayMode(opts.displayMode || data.displayMode);
     const title = asText(data.title, defaults.title || "AgendaJeff");
     let body = asText(data.body || data.message, defaults.body || "notificaciones prueba");
 
@@ -51,6 +61,7 @@
       title,
       body,
       type,
+      displayMode,
       silent: Boolean(data.silent),
       delaySeconds,
       delayMs,
@@ -62,6 +73,7 @@
     asText,
     asNumber,
     normalizeType,
+    normalizeDisplayMode,
     normalizePayload
   });
 })(window);
