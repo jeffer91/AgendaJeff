@@ -1,0 +1,240 @@
+:root {
+  --dg-bg: #f4f7fb;
+  --dg-card: #ffffff;
+  --dg-text: #172033;
+  --dg-muted: #667085;
+  --dg-border: #d9e2ec;
+  --dg-primary: #2563eb;
+  --dg-primary-dark: #1d4ed8;
+  --dg-success: #15803d;
+  --dg-success-soft: #ecfdf3;
+  --dg-warning: #b45309;
+  --dg-warning-soft: #fff7ed;
+  --dg-error: #b42318;
+  --dg-error-soft: #fef3f2;
+  --dg-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --dg-radius: 18px;
+  --dg-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--dg-bg);
+  color: var(--dg-text);
+  font-family: var(--dg-font);
+}
+
+button { font: inherit; }
+
+.dg-page {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.dg-hero,
+.dg-grid,
+.dg-stats {
+  display: grid;
+  gap: 18px;
+}
+
+.dg-hero {
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: stretch;
+  padding: 22px;
+}
+
+.dg-grid { grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr); }
+.dg-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+.dg-hero,
+.dg-panel,
+.dg-status-card,
+.dg-stat {
+  background: var(--dg-card);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-radius);
+  box-shadow: var(--dg-shadow);
+}
+
+.dg-panel,
+.dg-status-card,
+.dg-stat { padding: 18px; }
+
+.dg-eyebrow {
+  margin: 0 0 8px;
+  color: var(--dg-primary);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dg-hero h1,
+.dg-panel h2,
+.dg-status-card h2,
+.dg-hero p,
+.dg-status-card p { margin-top: 0; }
+
+.dg-hero h1 {
+  margin-bottom: 8px;
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.dg-hero-text,
+.dg-status-card p,
+.dg-status-card small {
+  color: var(--dg-muted);
+  line-height: 1.55;
+}
+
+.dg-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.dg-btn {
+  min-height: 40px;
+  border: 1px solid var(--dg-border);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--dg-text);
+  cursor: pointer;
+  font-weight: 900;
+  padding: 9px 13px;
+}
+
+.dg-btn-primary {
+  border-color: var(--dg-primary);
+  background: var(--dg-primary);
+  color: #ffffff;
+}
+
+.dg-btn-primary:hover { background: var(--dg-primary-dark); }
+
+.dg-badge,
+.dg-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.dg-badge {
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.dg-badge.is-ok,
+.dg-pill.is-ok { background: var(--dg-success-soft); color: var(--dg-success); }
+.dg-badge.is-warning,
+.dg-pill.is-warning { background: var(--dg-warning-soft); color: var(--dg-warning); }
+.dg-badge.is-error,
+.dg-pill.is-error { background: var(--dg-error-soft); color: var(--dg-error); }
+
+.dg-stat {
+  display: grid;
+  gap: 8px;
+  min-height: 100px;
+}
+
+.dg-stat span {
+  color: var(--dg-muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.dg-stat strong {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.dg-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dg-panel-header h2 { margin: 0; font-size: 18px; }
+
+.dg-list { display: grid; gap: 10px; }
+
+.dg-empty,
+.dg-area,
+.dg-recent-item {
+  padding: 14px;
+  border: 1px solid var(--dg-border);
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.dg-empty {
+  border-style: dashed;
+  color: var(--dg-muted);
+}
+
+.dg-area {
+  display: grid;
+  gap: 8px;
+}
+
+.dg-area-title,
+.dg-recent-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dg-area p,
+.dg-recent-item p {
+  margin: 0;
+  color: var(--dg-muted);
+  line-height: 1.45;
+}
+
+.dg-pill {
+  min-height: 24px;
+  padding: 4px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.dg-output {
+  min-height: 220px;
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  border-radius: 16px;
+  background: #0f172a;
+  color: #dbeafe;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1100px) {
+  .dg-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .dg-hero,
+  .dg-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .dg-page { padding: 14px; }
+  .dg-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
