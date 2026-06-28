@@ -1,0 +1,30 @@
+{
+  "app": "AgendaJeff",
+  "packageName": "agenda-jeff",
+  "version": "0.0.1",
+  "tag": "v0.0.1",
+  "channel": "stable",
+  "generatedAt": "2026-06-28T00:00:00.000Z",
+  "repository": "jeffer91/AgendaJeff",
+  "desktop": {
+    "platform": "windows",
+    "installerName": "AgendaJeff-Setup-0.0.1.exe",
+    "releaseUrl": "https://github.com/jeffer91/AgendaJeff/releases/tag/v0.0.1",
+    "downloadUrl": "https://github.com/jeffer91/AgendaJeff/releases/download/v0.0.1/AgendaJeff-Setup-0.0.1.exe",
+    "autoInstall": false,
+    "requiresUserConfirmation": true
+  },
+  "android": {
+    "platform": "android",
+    "apkName": "AgendaJeff-0.0.1.apk",
+    "releaseUrl": "https://github.com/jeffer91/AgendaJeff/releases/tag/v0.0.1",
+    "downloadUrl": "https://github.com/jeffer91/AgendaJeff/releases/download/v0.0.1/AgendaJeff-0.0.1.apk",
+    "autoInstall": false,
+    "requiresUserConfirmation": true
+  },
+  "rules": {
+    "checkWhenOnline": true,
+    "downloadInBackground": true,
+    "askBeforeInstallOrRestart": true
+  }
+}
