@@ -1,6 +1,11 @@
 /*
   Nombre completo: main.js
   Ruta: electron/main.js
+
+  Función:
+    - Arranque principal de Electron.
+    - Registrar IPC, base local, OAuth local, notificaciones nativas.
+    - Mantener AgendaJeff en segundo plano cuando el usuario cierra con X.
 */
 
 "use strict";
@@ -13,6 +18,8 @@ const { ensureLocalDatabase } = require("./localdb/aj-local-read");
 
 let mainWindow = null;
 let ipcRegistered = false;
+let isQuitting = false;
+let trayNoticeShown = false;
 
 function isHttpUrl(url) {
   return typeof url === "string" && /^https?:\/\//i.test(url);
@@ -30,14 +37,8 @@ function prepareWindowsNotifications() {
 }
 
 function focusMainWindow() {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    return false;
-  }
-
-  if (mainWindow.isMinimized()) {
-    mainWindow.restore();
-  }
-
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
   return true;
@@ -45,7 +46,6 @@ function focusMainWindow() {
 
 function getNotificationDiagnostic() {
   const supported = Notification.isSupported();
-
   return {
     ok: supported,
     supported,
@@ -59,7 +59,6 @@ function getNotificationDiagnostic() {
 
 function buildNativeNotificationPayload(payload) {
   const data = payload && typeof payload === "object" ? payload : {};
-
   return {
     title: normalizeNotificationText(data.title, CONFIG.app.name || "AgendaJeff"),
     body: normalizeNotificationText(data.body || data.message, "notificaciones prueba"),
@@ -73,49 +72,16 @@ function sendNativeNotification(payload) {
   const cleanPayload = buildNativeNotificationPayload(payload);
 
   if (!diagnostic.supported) {
-    return {
-      ok: false,
-      status: "error",
-      action: "ntNotify",
-      source: "electron",
-      message: diagnostic.message,
-      data: { diagnostic, payload: cleanPayload },
-      checkedAt: new Date().toISOString()
-    };
+    return { ok: false, status: "error", action: "ntNotify", source: "electron", message: diagnostic.message, data: { diagnostic, payload: cleanPayload }, checkedAt: new Date().toISOString() };
   }
 
   try {
-    const notification = new Notification({
-      title: cleanPayload.title,
-      body: cleanPayload.body,
-      silent: cleanPayload.silent
-    });
-
-    notification.on("click", function handleNotificationClick() {
-      focusMainWindow();
-    });
-
+    const notification = new Notification({ title: cleanPayload.title, body: cleanPayload.body, silent: cleanPayload.silent });
+    notification.on("click", focusMainWindow);
     notification.show();
-
-    return {
-      ok: true,
-      status: "ready",
-      action: "ntNotify",
-      source: "electron",
-      message: "Notificación de escritorio enviada.",
-      data: { diagnostic, payload: cleanPayload },
-      checkedAt: new Date().toISOString()
-    };
+    return { ok: true, status: "ready", action: "ntNotify", source: "electron", message: "Notificación de escritorio enviada.", data: { diagnostic, payload: cleanPayload }, checkedAt: new Date().toISOString() };
   } catch (error) {
-    return {
-      ok: false,
-      status: "error",
-      action: "ntNotify",
-      source: "electron",
-      message: error && error.message ? error.message : "No se pudo crear la notificación nativa.",
-      data: { diagnostic, payload: cleanPayload },
-      checkedAt: new Date().toISOString()
-    };
+    return { ok: false, status: "error", action: "ntNotify", source: "electron", message: error && error.message ? error.message : "No se pudo crear la notificación nativa.", data: { diagnostic, payload: cleanPayload }, checkedAt: new Date().toISOString() };
   }
 }
 
@@ -123,7 +89,6 @@ async function openExternalUrl(url) {
   if (!isHttpUrl(url)) {
     return { ok: false, message: "Solo se permite abrir URLs http/https externas.", checkedAt: new Date().toISOString() };
   }
-
   await shell.openExternal(url);
   return { ok: true, opened: true, message: "URL externa abierta correctamente.", checkedAt: new Date().toISOString() };
 }
@@ -147,33 +112,13 @@ function registerIpcHandlers() {
     };
   });
 
-  ipcMain.handle("aj:openExternal", async function handleOpenExternal(event, url) {
-    return openExternalUrl(url);
-  });
-
-  ipcMain.handle("aj:ntNotify", function handleNtNotify(event, payload) {
-    return sendNativeNotification(payload);
-  });
-
-  ipcMain.handle("aj:ntDiagnostic", function handleNtDiagnostic() {
-    return getNotificationDiagnostic();
-  });
-
-  ipcMain.handle("aj:gcReturnStart", async function handleReturnStart() {
-    return gcReturn.start();
-  });
-
-  ipcMain.handle("aj:gcReturnGet", function handleReturnGet(event, expectedState) {
-    return gcReturn.getLatest(expectedState);
-  });
-
-  ipcMain.handle("aj:gcReturnClear", function handleReturnClear() {
-    return gcReturn.clear();
-  });
-
-  ipcMain.handle("aj:gcReturnStop", async function handleReturnStop() {
-    return gcReturn.stop();
-  });
+  ipcMain.handle("aj:openExternal", async function handleOpenExternal(event, url) { return openExternalUrl(url); });
+  ipcMain.handle("aj:ntNotify", function handleNtNotify(event, payload) { return sendNativeNotification(payload); });
+  ipcMain.handle("aj:ntDiagnostic", function handleNtDiagnostic() { return getNotificationDiagnostic(); });
+  ipcMain.handle("aj:gcReturnStart", async function handleReturnStart() { return gcReturn.start(); });
+  ipcMain.handle("aj:gcReturnGet", function handleReturnGet(event, expectedState) { return gcReturn.getLatest(expectedState); });
+  ipcMain.handle("aj:gcReturnClear", function handleReturnClear() { return gcReturn.clear(); });
+  ipcMain.handle("aj:gcReturnStop", async function handleReturnStop() { return gcReturn.stop(); });
 
   registerLocalIpc(ipcMain, app);
 }
@@ -193,6 +138,17 @@ function protectExternalNavigation(window) {
   });
 }
 
+function notifyTrayModeOnce() {
+  if (trayNoticeShown) return;
+  trayNoticeShown = true;
+  sendNativeNotification({
+    title: "AgendaJeff sigue activo",
+    body: "La app quedó en segundo plano para avisarte recordatorios. Usa la bandeja del sistema para abrirla o salir.",
+    silent: false,
+    type: "tray"
+  });
+}
+
 function createMainWindow() {
   const window = new BrowserWindow(getWindowOptions());
   mainWindow = window;
@@ -202,14 +158,19 @@ function createMainWindow() {
     if (!window.isDestroyed()) window.show();
   });
 
+  window.on("close", function handleClose(event) {
+    if (isQuitting) return;
+    event.preventDefault();
+    window.hide();
+    notifyTrayModeOnce();
+  });
+
   window.on("closed", function handleClosed() {
     if (mainWindow === window) mainWindow = null;
   });
 
   window.loadFile(CONFIG.paths.indexHtml);
-
   if (CONFIG.dev.openDevTools) window.webContents.openDevTools({ mode: "detach" });
-
   return window;
 }
 
@@ -222,12 +183,18 @@ function bootstrapElectron() {
     ensureLocalDatabase(app);
     createMainWindow();
     app.on("activate", function handleActivate() {
-      if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+      if (!mainWindow || mainWindow.isDestroyed()) createMainWindow();
+      focusMainWindow();
     });
   });
 
+  app.on("before-quit", function handleBeforeQuit() {
+    isQuitting = true;
+  });
+
   app.on("window-all-closed", function handleWindowAllClosed() {
-    if (process.platform !== "darwin") app.quit();
+    if (process.platform === "darwin") return;
+    if (isQuitting) app.quit();
   });
 }
 
