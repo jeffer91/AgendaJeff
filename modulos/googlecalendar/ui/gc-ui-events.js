@@ -5,6 +5,7 @@
   Función:
     - Conectar botones de la pantalla Google Calendar con las capas internas.
     - Mantener eventos UI separados de Firebase, Auth, API, Connection y Connector.
+    - Al conectar o procesar código, unir datos del formulario con la conexión leída desde Firebase.
 
   Se conecta con:
     - modulos/googlecalendar/ui/gc-ui-dom.js
@@ -28,6 +29,58 @@
 
   function getRender() {
     return ui.Render || {};
+  }
+
+  function isUsefulValue(value) {
+    return value !== null && value !== undefined && String(value).trim().length > 0;
+  }
+
+  function mergePreferForm(firebaseData, formData) {
+    const firebaseSource = firebaseData && typeof firebaseData === "object" ? firebaseData : {};
+    const formSource = formData && typeof formData === "object" ? formData : {};
+    const result = { ...firebaseSource };
+
+    Object.keys(formSource).forEach(function eachKey(key) {
+      if (typeof formSource[key] === "boolean") {
+        result[key] = formSource[key];
+        return;
+      }
+
+      if (isUsefulValue(formSource[key])) {
+        result[key] = formSource[key];
+      }
+    });
+
+    return result;
+  }
+
+  async function readFirebaseConnectionForUi() {
+    const connection = googleCalendar.Connection || {};
+
+    if (!connection.readConnection) {
+      return { readResult: null, connectionData: {} };
+    }
+
+    const readResult = await connection.readConnection();
+    const connectionData = readResult && readResult.data && readResult.data.connection
+      ? readResult.data.connection
+      : {};
+
+    return { readResult, connectionData };
+  }
+
+  async function buildAuthInputFromUi() {
+    const dom = getDom();
+    const formInput = dom.readAuthInput ? dom.readAuthInput() : {};
+    const firebaseRead = await readFirebaseConnectionForUi();
+    const authInput = mergePreferForm(firebaseRead.connectionData, formInput);
+    const credentialType = authInput.activeCredentialType || "desktop";
+
+    authInput.clientId = authInput.clientId || (credentialType === "web" ? authInput.clientIdWeb : authInput.clientIdDesktop);
+    authInput.clientSecret = authInput.clientSecret || (credentialType === "web" ? authInput.clientSecretWeb : authInput.clientSecretDesktop);
+    authInput.redirectUri = authInput.redirectUri || (credentialType === "web" ? authInput.redirectUriWeb : authInput.redirectUriDesktop);
+
+    return { authInput, firebaseRead, formInput };
   }
 
   async function runUiAction(label, action) {
@@ -127,7 +180,6 @@
   }
 
   async function handleConnect() {
-    const dom = getDom();
     const auth = googleCalendar.Auth || {};
 
     return runUiAction("Preparando autorización Google Calendar...", async function connectAction() {
@@ -135,12 +187,12 @@
         throw new Error("No está disponible Auth.startDesktopAuth.");
       }
 
-      return auth.startDesktopAuth(dom.readAuthInput ? dom.readAuthInput() : {}, { openExternal: true });
+      const built = await buildAuthInputFromUi();
+      return auth.startDesktopAuth(built.authInput, { openExternal: true, authInputDebug: built });
     });
   }
 
   async function handleExchangeCode() {
-    const dom = getDom();
     const auth = googleCalendar.Auth || {};
 
     return runUiAction("Procesando código Google Calendar...", async function exchangeAction() {
@@ -148,7 +200,8 @@
         throw new Error("No está disponible Auth.exchangeAuthorizationCode.");
       }
 
-      return auth.exchangeAuthorizationCode(dom.readAuthInput ? dom.readAuthInput() : {});
+      const built = await buildAuthInputFromUi();
+      return auth.exchangeAuthorizationCode(built.authInput);
     });
   }
 
@@ -238,6 +291,9 @@
   }
 
   ui.Events = Object.freeze({
+    mergePreferForm,
+    readFirebaseConnectionForUi,
+    buildAuthInputFromUi,
     runUiAction,
     handleSave,
     handleLoad,
