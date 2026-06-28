@@ -1,0 +1,71 @@
+<!--
+  Nombre completo: dg-module.html
+  Ruta: modulos/diagnostico/dg-module.html
+
+  Función:
+    - Pantalla de diagnóstico general de AgendaJeff.
+    - Revisar Electron, base local, segundo plano, notificaciones, módulos y cola de sincronización.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgendaJeff · Diagnóstico</title>
+  <link rel="stylesheet" href="./dg-module.css" />
+</head>
+<body>
+  <main id="dgPageRoot" class="dg-page" aria-labelledby="dgPageTitle">
+    <section class="dg-hero">
+      <div>
+        <p class="dg-eyebrow">AgendaJeff · Diagnóstico</p>
+        <h1 id="dgPageTitle">Centro de control</h1>
+        <p class="dg-hero-text">Revisión general de la app: base local, segundo plano, módulos, notificaciones y sincronización.</p>
+        <div class="dg-actions">
+          <button id="dgBtnRun" class="dg-btn dg-btn-primary" type="button">Ejecutar diagnóstico</button>
+          <button id="dgBtnCopy" class="dg-btn" type="button">Copiar JSON</button>
+          <button id="dgBtnBackup" class="dg-btn" type="button">Crear respaldo</button>
+        </div>
+      </div>
+      <article class="dg-status-card">
+        <span id="dgStatusBadge" class="dg-badge is-warning">Pendiente</span>
+        <h2 id="dgStatusTitle">Sin revisar</h2>
+        <p id="dgStatusDescription">Ejecuta el diagnóstico para ver el estado actual.</p>
+        <small>Última revisión: <strong id="dgLastRun">...</strong></small>
+      </article>
+    </section>
+
+    <section class="dg-stats">
+      <article class="dg-stat"><span>Eventos</span><strong id="dgCountEvents">0</strong></article>
+      <article class="dg-stat"><span>Recordatorios</span><strong id="dgCountReminders">0</strong></article>
+      <article class="dg-stat"><span>Pendientes</span><strong id="dgCountPending">0</strong></article>
+      <article class="dg-stat"><span>Por sincronizar</span><strong id="dgCountSync">0</strong></article>
+      <article class="dg-stat"><span>Errores</span><strong id="dgCountErrors">0</strong></article>
+      <article class="dg-stat"><span>Cola</span><strong id="dgCountQueue">0</strong></article>
+    </section>
+
+    <section class="dg-grid">
+      <article class="dg-panel">
+        <div class="dg-panel-header"><h2>Estado por áreas</h2></div>
+        <div id="dgAreaList" class="dg-list"><div class="dg-empty">Sin datos.</div></div>
+      </article>
+
+      <article class="dg-panel">
+        <div class="dg-panel-header"><h2>Últimos registros</h2></div>
+        <div id="dgRecentList" class="dg-list"><div class="dg-empty">Sin datos.</div></div>
+      </article>
+    </section>
+
+    <section class="dg-panel">
+      <div class="dg-panel-header"><h2>Reporte JSON</h2></div>
+      <pre id="dgOutput" class="dg-output">Diagnóstico pendiente.</pre>
+    </section>
+  </main>
+
+  <script src="./dom/dg-dom.js"></script>
+  <script src="./services/dg-collector.js"></script>
+  <script src="./render/dg-render.js"></script>
+  <script src="./startup/dg-start.js"></script>
+</body>
+</html>
