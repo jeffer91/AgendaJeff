@@ -42,6 +42,32 @@
     }
   }
 
+  async function runDiagnosticAction(label, action) {
+    const render = getRender();
+
+    try {
+      if (render.setBusy) render.setBusy(true, label || "Ejecutando diagnóstico...");
+      const result = await action();
+      if (render.renderDiagnostic) render.renderDiagnostic(result);
+      return result;
+    } catch (error) {
+      const result = nt.createResult({
+        ok: false,
+        status: "error",
+        action: "diagnostic",
+        source: "ui",
+        file: "modulos/notificaciones/ui/nt-ui-events.js",
+        message: "Falló el diagnóstico del módulo Notificaciones.",
+        error: { message: error && error.message ? error.message : String(error), file: "modulos/notificaciones/ui/nt-ui-events.js" }
+      });
+
+      if (render.renderDiagnostic) render.renderDiagnostic(result);
+      return result;
+    } finally {
+      if (render.setBusy) render.setBusy(false);
+    }
+  }
+
   function buildInput() {
     const dom = getDom();
     return dom.readTestForm ? dom.readTestForm() : {};
@@ -58,16 +84,12 @@
   }
 
   function handleDiagnostic() {
-    return runUiAction("Ejecutando diagnóstico...", async function diagnosticAction() {
-      const render = getRender();
-
+    return runDiagnosticAction("Ejecutando diagnóstico...", async function diagnosticAction() {
       if (!nt.Diagnostic || !nt.Diagnostic.runDiagnosticReport) {
         throw new Error("No está disponible Diagnostic.runDiagnosticReport.");
       }
 
-      const result = await nt.Diagnostic.runDiagnosticReport();
-      if (render.renderDiagnostic) render.renderDiagnostic(result);
-      return result;
+      return nt.Diagnostic.runDiagnosticReport();
     });
   }
 
@@ -101,6 +123,7 @@
 
   ui.Events = Object.freeze({
     runUiAction,
+    runDiagnosticAction,
     handleTest,
     handleDiagnostic,
     attachEvents
