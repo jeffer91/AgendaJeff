@@ -4,14 +4,112 @@
 
   Función:
     - Registrar canales IPC seguros para usar la base local JSON desde las pantallas.
+    - Registrar controles de segundo plano sin tocar el archivo principal de Electron.
 */
 
 "use strict";
 
+const { BrowserWindow } = require("electron");
 const localRead = require("./aj-local-read");
 const localSave = require("./aj-local-save");
 const localIndex = require("./aj-local-index");
 const localBackup = require("./aj-local-backup");
+const { createBackgroundRunner } = require("../background/aj-background-runner");
+const { createTrayController } = require("../tray/aj-tray");
+
+let backgroundRunner = null;
+let trayController = null;
+let backgroundRegistered = false;
+
+function getActiveWindow() {
+  const windows = BrowserWindow.getAllWindows().filter(function filterAlive(window) {
+    return window && !window.isDestroyed();
+  });
+  return windows[0] || null;
+}
+
+function showActiveWindow() {
+  const window = getActiveWindow();
+  if (!window) return false;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+  return true;
+}
+
+function sendBackgroundNotification(payload) {
+  const window = getActiveWindow();
+  if (!window || window.isDestroyed()) {
+    return { ok: false, message: "No hay ventana activa para enviar notificación." };
+  }
+
+  try {
+    window.webContents.send("aj:bgNotification", payload || {});
+    return { ok: true, message: "Notificación de segundo plano enviada a la ventana." };
+  } catch (error) {
+    return { ok: false, message: error && error.message ? error.message : "Error enviando notificación." };
+  }
+}
+
+function ensureBackgroundServices(appInstance) {
+  if (backgroundRunner) return backgroundRunner.status();
+
+  backgroundRunner = createBackgroundRunner({
+    app: appInstance,
+    intervalMs: 60000,
+    sendNotification: sendBackgroundNotification
+  });
+
+  backgroundRunner.start();
+
+  trayController = createTrayController({
+    showWindow: showActiveWindow,
+    checkNow: function checkNowFromTray() {
+      if (backgroundRunner) backgroundRunner.checkNow("tray");
+    },
+    pauseBackground: function pauseFromTray() {
+      if (backgroundRunner) backgroundRunner.pause();
+    },
+    resumeBackground: function resumeFromTray() {
+      if (backgroundRunner) backgroundRunner.resume();
+    }
+  });
+  trayController.create();
+
+  return backgroundRunner.status();
+}
+
+function registerBackgroundIpc(ipcMain, appInstance) {
+  if (backgroundRegistered) return;
+  backgroundRegistered = true;
+
+  ipcMain.handle("aj:bgStatus", function handleBgStatus() {
+    return backgroundRunner ? backgroundRunner.status() : { ok: false, message: "Segundo plano no iniciado." };
+  });
+
+  ipcMain.handle("aj:bgStart", function handleBgStart() {
+    return ensureBackgroundServices(appInstance);
+  });
+
+  ipcMain.handle("aj:bgPause", function handleBgPause() {
+    return backgroundRunner ? backgroundRunner.pause() : { ok: false, message: "Segundo plano no iniciado." };
+  });
+
+  ipcMain.handle("aj:bgResume", function handleBgResume() {
+    if (!backgroundRunner) return ensureBackgroundServices(appInstance);
+    return backgroundRunner.resume();
+  });
+
+  ipcMain.handle("aj:bgCheckNow", function handleBgCheckNow() {
+    return backgroundRunner ? backgroundRunner.checkNow("manual") : { ok: false, message: "Segundo plano no iniciado." };
+  });
+
+  if (appInstance && typeof appInstance.whenReady === "function") {
+    appInstance.whenReady().then(function startWhenReady() {
+      ensureBackgroundServices(appInstance);
+    });
+  }
+}
 
 function registerLocalIpc(ipcMain, appInstance) {
   ipcMain.handle("aj:localEnsure", function handleLocalEnsure() {
@@ -50,6 +148,8 @@ function registerLocalIpc(ipcMain, appInstance) {
   ipcMain.handle("aj:settingsSave", function handleSettingsSave(event, settings) {
     return localSave.saveSettings(appInstance, settings);
   });
+
+  registerBackgroundIpc(ipcMain, appInstance);
 }
 
 module.exports = Object.freeze({ registerLocalIpc });
