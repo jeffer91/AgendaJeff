@@ -42,7 +42,16 @@ const electronBridge = Object.freeze({
   startGoogleCalendarReturn: createSafeInvoke("aj:gcReturnStart"),
   getGoogleCalendarReturn: createSafeInvoke("aj:gcReturnGet"),
   clearGoogleCalendarReturn: createSafeInvoke("aj:gcReturnClear"),
-  stopGoogleCalendarReturn: createSafeInvoke("aj:gcReturnStop")
+  stopGoogleCalendarReturn: createSafeInvoke("aj:gcReturnStop"),
+  ensureLocalDatabase: createSafeInvoke("aj:localEnsure"),
+  readAgendaData: createSafeInvoke("aj:localRead"),
+  queryAgendaItems: createSafeInvoke("aj:localQuery"),
+  saveAgendaItem: createSafeInvoke("aj:localUpsert"),
+  completeAgendaItem: createSafeInvoke("aj:localComplete"),
+  removeAgendaItem: createSafeInvoke("aj:localRemove"),
+  createLocalBackup: createSafeInvoke("aj:localBackup"),
+  readAgendaSettings: createSafeInvoke("aj:settingsRead"),
+  saveAgendaSettings: createSafeInvoke("aj:settingsSave")
 });
 
 contextBridge.exposeInMainWorld("AgendaJeffElectron", electronBridge);
