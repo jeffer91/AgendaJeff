@@ -3,21 +3,9 @@
   Ruta: index.html
 
   Función:
-    - Servir como shell raíz de AgendaJeff.
-    - Mostrar navegación principal por pantallas: Inicio, Agenda, Carga Masiva, Ajustes y Conexiones.
+    - Shell raíz de AgendaJeff.
+    - Navegar entre Inicio, Agenda, Carga Masiva, Ajustes, Diagnóstico y Conexiones.
     - Cargar módulos internos mediante iframe sin mezclar su lógica interna.
-    - Conservar Telegram, Google Calendar y Notificaciones como módulos funcionales ya probados.
-
-  Se conecta con:
-    - electron/main.js
-    - electron/preload.js
-    - modulos/inicio/in-module.html
-    - modulos/agenda/ag-module.html
-    - modulos/carga/cm-module.html
-    - modulos/ajustes/aj-module.html
-    - modulos/telegram/tl-module.html
-    - modulos/googlecalendar/gc-module.html
-    - modulos/notificaciones/nt-module.html
 -->
 
 <!DOCTYPE html>
@@ -26,7 +14,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AgendaJeff</title>
-
   <style>
     :root {
       --aj-bg: #f4f7fb;
@@ -34,9 +21,7 @@
       --aj-text: #172033;
       --aj-muted: #667085;
       --aj-border: #d9e2ec;
-      --aj-border-strong: #c7d2e3;
       --aj-primary: #2563eb;
-      --aj-primary-dark: #1d4ed8;
       --aj-primary-soft: #dbeafe;
       --aj-success: #15803d;
       --aj-success-soft: #ecfdf3;
@@ -46,254 +31,37 @@
       --aj-radius: 18px;
       --aj-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-
     * { box-sizing: border-box; }
-
-    html,
-    body {
-      width: 100%;
-      min-height: 100%;
-      margin: 0;
-      font-family: var(--aj-font);
-      background: var(--aj-bg);
-      color: var(--aj-text);
-    }
-
+    html, body { width: 100%; min-height: 100%; margin: 0; font-family: var(--aj-font); background: var(--aj-bg); color: var(--aj-text); }
     button { font: inherit; }
-
-    .aj-shell {
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      width: 100%;
-      min-height: 100vh;
-    }
-
-    .aj-topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 14px 18px;
-      background: var(--aj-card);
-      border-bottom: 1px solid var(--aj-border);
-      box-shadow: var(--aj-shadow);
-      z-index: 2;
-    }
-
-    .aj-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-    }
-
-    .aj-brand-mark {
-      display: inline-flex;
-      width: 42px;
-      height: 42px;
-      align-items: center;
-      justify-content: center;
-      flex: 0 0 auto;
-      border-radius: 14px;
-      background: var(--aj-primary);
-      color: #ffffff;
-      font-weight: 900;
-      letter-spacing: 0.4px;
-    }
-
-    .aj-brand-text { min-width: 0; }
-
-    .aj-brand-text strong {
-      display: block;
-      font-size: 16px;
-      line-height: 1.2;
-    }
-
-    .aj-brand-text span {
-      display: block;
-      color: var(--aj-muted);
-      font-size: 13px;
-      line-height: 1.4;
-    }
-
-    .aj-topbar-actions {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .aj-runtime-badge,
-    .aj-chip {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 34px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--aj-border);
-      background: #ffffff;
-      color: var(--aj-muted);
-      font-size: 13px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .aj-runtime-badge.is-ok {
-      border-color: rgba(21, 128, 61, 0.25);
-      background: rgba(21, 128, 61, 0.08);
-      color: var(--aj-success);
-    }
-
-    .aj-runtime-badge.is-warn {
-      border-color: rgba(180, 83, 9, 0.25);
-      background: var(--aj-warning-soft);
-      color: var(--aj-warning);
-    }
-
-    .aj-layout {
-      display: grid;
-      grid-template-columns: 300px minmax(0, 1fr);
-      gap: 18px;
-      min-height: 0;
-      padding: 18px;
-    }
-
-    .aj-sidebar,
-    .aj-content-card {
-      background: var(--aj-card);
-      border: 1px solid var(--aj-border);
-      border-radius: var(--aj-radius);
-      box-shadow: var(--aj-shadow);
-    }
-
-    .aj-sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      padding: 16px;
-      min-height: 0;
-    }
-
-    .aj-sidebar-section h2 {
-      margin: 0 0 12px;
-      font-size: 15px;
-    }
-
-    .aj-nav-button {
-      display: flex;
-      width: 100%;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin: 0 0 10px;
-      padding: 12px;
-      border: 1px solid var(--aj-border);
-      border-radius: 14px;
-      background: #ffffff;
-      color: var(--aj-text);
-      cursor: pointer;
-      text-align: left;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease;
-    }
-
-    .aj-nav-button:hover {
-      border-color: var(--aj-primary);
-      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
-      transform: translateY(-1px);
-    }
-
-    .aj-nav-button.is-active {
-      border-color: var(--aj-primary);
-      background: var(--aj-primary-soft);
-    }
-
-    .aj-nav-button strong {
-      display: block;
-      font-size: 14px;
-    }
-
-    .aj-nav-button span {
-      display: block;
-      color: var(--aj-muted);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    .aj-module-state {
-      flex: 0 0 auto;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: var(--aj-success-soft);
-      color: var(--aj-success);
-      font-size: 11px;
-      font-weight: 900;
-      text-transform: uppercase;
-    }
-
-    .aj-sidebar-note {
-      margin: auto 0 0;
-      padding: 12px;
-      border: 1px solid var(--aj-border);
-      border-radius: 14px;
-      background: #f8fafc;
-      color: var(--aj-muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .aj-content-card {
-      display: grid;
-      min-width: 0;
-      min-height: calc(100vh - 132px);
-      padding: 0;
-      overflow: hidden;
-    }
-
-    .aj-module-frame {
-      display: block;
-      width: 100%;
-      height: 100%;
-      min-height: calc(100vh - 134px);
-      border: 0;
-      background: #ffffff;
-    }
-
-    .aj-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 10px 16px;
-      background: var(--aj-card);
-      border-top: 1px solid var(--aj-border);
-      color: var(--aj-muted);
-      font-size: 13px;
-    }
-
-    @media (max-width: 940px) {
-      .aj-layout { grid-template-columns: 1fr; }
-      .aj-sidebar { display: block; }
-      .aj-content-card,
-      .aj-module-frame { min-height: 720px; }
-    }
-
-    @media (max-width: 600px) {
-      .aj-layout { padding: 10px; }
-      .aj-topbar,
-      .aj-footer {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .aj-topbar-actions {
-        width: 100%;
-        justify-content: flex-start;
-      }
-    }
+    .aj-shell { display: grid; grid-template-rows: auto 1fr auto; width: 100%; min-height: 100vh; }
+    .aj-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; background: var(--aj-card); border-bottom: 1px solid var(--aj-border); box-shadow: var(--aj-shadow); z-index: 2; }
+    .aj-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .aj-brand-mark { display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center; border-radius: 14px; background: var(--aj-primary); color: #ffffff; font-weight: 900; }
+    .aj-brand-text strong { display: block; font-size: 16px; line-height: 1.2; }
+    .aj-brand-text span { display: block; color: var(--aj-muted); font-size: 13px; line-height: 1.4; }
+    .aj-topbar-actions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .aj-runtime-badge, .aj-chip { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--aj-border); background: #ffffff; color: var(--aj-muted); font-size: 13px; font-weight: 800; white-space: nowrap; }
+    .aj-runtime-badge.is-ok { border-color: rgba(21, 128, 61, 0.25); background: rgba(21, 128, 61, 0.08); color: var(--aj-success); }
+    .aj-runtime-badge.is-warn { border-color: rgba(180, 83, 9, 0.25); background: var(--aj-warning-soft); color: var(--aj-warning); }
+    .aj-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; min-height: 0; padding: 18px; }
+    .aj-sidebar, .aj-content-card { background: var(--aj-card); border: 1px solid var(--aj-border); border-radius: var(--aj-radius); box-shadow: var(--aj-shadow); }
+    .aj-sidebar { display: flex; flex-direction: column; gap: 16px; padding: 16px; min-height: 0; }
+    .aj-sidebar-section h2 { margin: 0 0 12px; font-size: 15px; }
+    .aj-nav-button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; padding: 12px; border: 1px solid var(--aj-border); border-radius: 14px; background: #ffffff; color: var(--aj-text); cursor: pointer; text-align: left; transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease; }
+    .aj-nav-button:hover { border-color: var(--aj-primary); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08); transform: translateY(-1px); }
+    .aj-nav-button.is-active { border-color: var(--aj-primary); background: var(--aj-primary-soft); }
+    .aj-nav-button strong { display: block; font-size: 14px; }
+    .aj-nav-button span { display: block; color: var(--aj-muted); font-size: 12px; line-height: 1.35; }
+    .aj-module-state { flex: 0 0 auto; padding: 4px 8px; border-radius: 999px; background: var(--aj-success-soft); color: var(--aj-success); font-size: 11px; font-weight: 900; text-transform: uppercase; }
+    .aj-sidebar-note { margin: auto 0 0; padding: 12px; border: 1px solid var(--aj-border); border-radius: 14px; background: #f8fafc; color: var(--aj-muted); font-size: 12px; line-height: 1.45; }
+    .aj-content-card { display: grid; min-width: 0; min-height: calc(100vh - 132px); padding: 0; overflow: hidden; }
+    .aj-module-frame { display: block; width: 100%; height: 100%; min-height: calc(100vh - 134px); border: 0; background: #ffffff; }
+    .aj-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--aj-card); border-top: 1px solid var(--aj-border); color: var(--aj-muted); font-size: 13px; }
+    @media (max-width: 940px) { .aj-layout { grid-template-columns: 1fr; } .aj-sidebar { display: block; } .aj-content-card, .aj-module-frame { min-height: 720px; } }
+    @media (max-width: 600px) { .aj-layout { padding: 10px; } .aj-topbar, .aj-footer { align-items: flex-start; flex-direction: column; } .aj-topbar-actions { width: 100%; justify-content: flex-start; } }
   </style>
 </head>
-
 <body>
   <div class="aj-shell">
     <header class="aj-topbar">
@@ -304,7 +72,6 @@
           <span>Agenda modular · Eventos · Recordatorios · Carga masiva</span>
         </div>
       </div>
-
       <div class="aj-topbar-actions">
         <button id="checkElectronBtn" class="aj-chip" type="button">Verificar Electron</button>
         <span id="runtimeBadge" class="aj-runtime-badge">Verificando...</span>
@@ -315,71 +82,21 @@
       <aside class="aj-sidebar" aria-label="Navegación principal de AgendaJeff">
         <section class="aj-sidebar-section">
           <h2>AgendaJeff</h2>
-
-          <button class="aj-nav-button is-active" type="button" data-module="inicio">
-            <span>
-              <strong>Inicio</strong>
-              <span>Eventos de hoy, próximos y pendientes.</span>
-            </span>
-            <span id="inicioModuleState" class="aj-module-state">listo</span>
-          </button>
-
-          <button class="aj-nav-button" type="button" data-module="agenda">
-            <span>
-              <strong>Agenda</strong>
-              <span>Crear evento, recordatorio o pendiente.</span>
-            </span>
-            <span id="agendaModuleState" class="aj-module-state">listo</span>
-          </button>
-
-          <button class="aj-nav-button" type="button" data-module="carga">
-            <span>
-              <strong>Carga Masiva</strong>
-              <span>Texto, tablas, PDF, Word, Excel e imágenes.</span>
-            </span>
-            <span id="cargaModuleState" class="aj-module-state">listo</span>
-          </button>
-
-          <button class="aj-nav-button" type="button" data-module="ajustes">
-            <span>
-              <strong>Ajustes</strong>
-              <span>Segundo plano, inicio con Windows y actualizaciones.</span>
-            </span>
-            <span id="ajustesModuleState" class="aj-module-state">listo</span>
-          </button>
+          <button class="aj-nav-button is-active" type="button" data-module="inicio"><span><strong>Inicio</strong><span>Eventos de hoy, próximos y pendientes.</span></span><span id="inicioModuleState" class="aj-module-state">listo</span></button>
+          <button class="aj-nav-button" type="button" data-module="agenda"><span><strong>Agenda</strong><span>Crear evento, recordatorio o pendiente.</span></span><span id="agendaModuleState" class="aj-module-state">listo</span></button>
+          <button class="aj-nav-button" type="button" data-module="carga"><span><strong>Carga Masiva</strong><span>Texto, tablas, PDF, Word, Excel e imágenes.</span></span><span id="cargaModuleState" class="aj-module-state">listo</span></button>
+          <button class="aj-nav-button" type="button" data-module="ajustes"><span><strong>Ajustes</strong><span>Segundo plano, inicio con Windows y actualizaciones.</span></span><span id="ajustesModuleState" class="aj-module-state">listo</span></button>
+          <button class="aj-nav-button" type="button" data-module="diagnostico"><span><strong>Diagnóstico</strong><span>Centro de control, errores, base local y sincronización.</span></span><span id="diagnosticoModuleState" class="aj-module-state">listo</span></button>
         </section>
 
         <section class="aj-sidebar-section">
           <h2>Conexiones</h2>
-
-          <button class="aj-nav-button" type="button" data-module="telegram">
-            <span>
-              <strong>Telegram</strong>
-              <span>Bot, Chat ID, Firebase, respaldo local y diagnóstico.</span>
-            </span>
-            <span id="telegramModuleState" class="aj-module-state">ok</span>
-          </button>
-
-          <button class="aj-nav-button" type="button" data-module="googleCalendar">
-            <span>
-              <strong>Google Calendar</strong>
-              <span>OAuth, Firebase, eventos, diagnóstico y conector.</span>
-            </span>
-            <span id="googleCalendarModuleState" class="aj-module-state">ok</span>
-          </button>
-
-          <button class="aj-nav-button" type="button" data-module="notificaciones">
-            <span>
-              <strong>Notificaciones</strong>
-              <span>Pruebas nativas de escritorio y avisos internos.</span>
-            </span>
-            <span id="notificacionesModuleState" class="aj-module-state">ok</span>
-          </button>
+          <button class="aj-nav-button" type="button" data-module="telegram"><span><strong>Telegram</strong><span>Bot, Chat ID, Firebase, respaldo local y diagnóstico.</span></span><span id="telegramModuleState" class="aj-module-state">ok</span></button>
+          <button class="aj-nav-button" type="button" data-module="googleCalendar"><span><strong>Google Calendar</strong><span>OAuth, Firebase, eventos, diagnóstico y conector.</span></span><span id="googleCalendarModuleState" class="aj-module-state">ok</span></button>
+          <button class="aj-nav-button" type="button" data-module="notificaciones"><span><strong>Notificaciones</strong><span>Pruebas nativas de escritorio y avisos internos.</span></span><span id="notificacionesModuleState" class="aj-module-state">ok</span></button>
         </section>
 
-        <p class="aj-sidebar-note">
-          Bloque 1: navegación y pantallas base. Los módulos ya funcionales de Telegram, Google Calendar y Notificaciones se conservan sin mezclar su lógica con la agenda.
-        </p>
+        <p class="aj-sidebar-note">AgendaJeff modular. Las conexiones existentes se conservan como módulos separados y la agenda se ancla a ellas por servicios.</p>
       </aside>
 
       <section class="aj-content-card">
@@ -388,7 +105,7 @@
     </main>
 
     <footer class="aj-footer">
-      <span>AgendaJeff · Bloque 1</span>
+      <span>AgendaJeff · Modular</span>
       <span id="footerStatus">Inicio · Cargando módulo</span>
     </footer>
   </div>
@@ -398,48 +115,14 @@
       "use strict";
 
       const MODULES = Object.freeze({
-        inicio: {
-          key: "inicio",
-          title: "Inicio",
-          src: "modulos/inicio/in-module.html",
-          stateId: "inicioModuleState"
-        },
-        agenda: {
-          key: "agenda",
-          title: "Agenda",
-          src: "modulos/agenda/ag-module.html",
-          stateId: "agendaModuleState"
-        },
-        carga: {
-          key: "carga",
-          title: "Carga Masiva",
-          src: "modulos/carga/cm-module.html",
-          stateId: "cargaModuleState"
-        },
-        ajustes: {
-          key: "ajustes",
-          title: "Ajustes",
-          src: "modulos/ajustes/aj-module.html",
-          stateId: "ajustesModuleState"
-        },
-        telegram: {
-          key: "telegram",
-          title: "Telegram",
-          src: "modulos/telegram/tl-module.html",
-          stateId: "telegramModuleState"
-        },
-        googleCalendar: {
-          key: "googleCalendar",
-          title: "Google Calendar",
-          src: "modulos/googlecalendar/gc-module.html",
-          stateId: "googleCalendarModuleState"
-        },
-        notificaciones: {
-          key: "notificaciones",
-          title: "Notificaciones",
-          src: "modulos/notificaciones/nt-module.html",
-          stateId: "notificacionesModuleState"
-        }
+        inicio: { key: "inicio", title: "Inicio", src: "modulos/inicio/in-module.html", stateId: "inicioModuleState" },
+        agenda: { key: "agenda", title: "Agenda", src: "modulos/agenda/ag-module.html", stateId: "agendaModuleState" },
+        carga: { key: "carga", title: "Carga Masiva", src: "modulos/carga/cm-module.html", stateId: "cargaModuleState" },
+        ajustes: { key: "ajustes", title: "Ajustes", src: "modulos/ajustes/aj-module.html", stateId: "ajustesModuleState" },
+        diagnostico: { key: "diagnostico", title: "Diagnóstico", src: "modulos/diagnostico/dg-module.html", stateId: "diagnosticoModuleState" },
+        telegram: { key: "telegram", title: "Telegram", src: "modulos/telegram/tl-module.html", stateId: "telegramModuleState" },
+        googleCalendar: { key: "googleCalendar", title: "Google Calendar", src: "modulos/googlecalendar/gc-module.html", stateId: "googleCalendarModuleState" },
+        notificaciones: { key: "notificaciones", title: "Notificaciones", src: "modulos/notificaciones/nt-module.html", stateId: "notificacionesModuleState" }
       });
 
       const runtimeBadge = document.getElementById("runtimeBadge");
@@ -447,9 +130,7 @@
       const footerStatus = document.getElementById("footerStatus");
       const moduleFrame = document.getElementById("moduleFrame");
 
-      function setFooter(text) {
-        footerStatus.textContent = text || "AgendaJeff";
-      }
+      function setFooter(text) { footerStatus.textContent = text || "AgendaJeff"; }
 
       function setActiveModule(moduleKey) {
         document.querySelectorAll(".aj-nav-button[data-module]").forEach(function eachButton(button) {
@@ -477,12 +158,7 @@
 
       async function checkElectron() {
         const bridge = window.AgendaJeffElectron;
-
-        if (!bridge) {
-          renderWebMode();
-          return { ok: false, mode: "browser" };
-        }
-
+        if (!bridge) { renderWebMode(); return { ok: false, mode: "browser" }; }
         try {
           if (typeof bridge.ping === "function") await bridge.ping();
           renderElectronMode();
@@ -497,43 +173,26 @@
 
       function openModule(moduleKey) {
         const moduleConfig = MODULES[moduleKey];
-
-        if (!moduleConfig) {
-          setFooter("Módulo no registrado");
-          return;
-        }
-
+        if (!moduleConfig) { setFooter("Módulo no registrado"); return; }
         setActiveModule(moduleKey);
         setFooter(`${moduleConfig.title} · Cargando módulo`);
         setModuleState(moduleKey, "abriendo");
-
-        if (!moduleFrame.src || !moduleFrame.src.endsWith(moduleConfig.src)) {
-          moduleFrame.src = moduleConfig.src;
-        }
+        if (!moduleFrame.src || !moduleFrame.src.endsWith(moduleConfig.src)) moduleFrame.src = moduleConfig.src;
       }
 
       function wireEvents() {
         checkElectronBtn.addEventListener("click", checkElectron);
-
         document.querySelectorAll(".aj-nav-button[data-module]").forEach(function eachButton(button) {
-          button.addEventListener("click", function handleOpenModule() {
-            openModule(button.dataset.module);
-          });
+          button.addEventListener("click", function handleOpenModule() { openModule(button.dataset.module); });
         });
-
         moduleFrame.addEventListener("load", function handleModuleLoaded() {
-          const activeModule = Object.values(MODULES).find(function findModule(moduleConfig) {
-            return moduleFrame.src.endsWith(moduleConfig.src);
-          });
-
-          if (activeModule) {
-            setFooter(`${activeModule.title} · Módulo cargado`);
-            setModuleState(activeModule.key, "abierto");
-          }
+          const activeModule = Object.values(MODULES).find(function findModule(moduleConfig) { return moduleFrame.src.endsWith(moduleConfig.src); });
+          if (activeModule) { setFooter(`${activeModule.title} · Módulo cargado`); setModuleState(activeModule.key, "abierto"); }
         });
       }
 
       function init() {
+        window.AgendaJeffShell = { openModule, checkElectron, modules: MODULES };
         wireEvents();
         checkElectron();
         openModule("inicio");
