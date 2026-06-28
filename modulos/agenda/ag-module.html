@@ -5,7 +5,7 @@
   Función:
     - Pantalla para crear, editar, completar y eliminar eventos, recordatorios y pendientes.
     - Guardar registros en base local JSON cuando Electron esté disponible.
-    - Enviar salida hacia Google Calendar, Telegram y Notificaciones usando conectores existentes.
+    - Enviar salida hacia Firebase, Google Calendar, Telegram y Notificaciones usando conectores existentes.
 -->
 
 <!DOCTYPE html>
@@ -28,7 +28,7 @@
       <article class="ag-status-card">
         <span id="agStatusBadge" class="ag-badge is-ready">Integración</span>
         <h2 id="agStatusTitle">Agenda conectada</h2>
-        <p id="agStatusDescription">Local primero; luego Google Calendar, Telegram y Notificaciones según canales activos.</p>
+        <p id="agStatusDescription">Local primero; luego Firebase, Google Calendar, Telegram y Notificaciones según canales activos.</p>
       </article>
     </section>
 
@@ -193,6 +193,7 @@
   </main>
 
   <script src="../../core/integrations/aj-service-bridge.js"></script>
+  <script src="../../core/integrations/aj-firebase-adapter.js"></script>
   <script src="../../core/integrations/aj-telegram-adapter.js"></script>
   <script src="../../core/integrations/aj-google-adapter.js"></script>
   <script src="../../core/integrations/aj-notification-adapter.js"></script>
