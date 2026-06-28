@@ -42,6 +42,13 @@
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 
+  function addMinutes(timeText, minutes) {
+    const parts = asText(timeText).split(":");
+    const date = new Date("2000-01-01T00:00:00");
+    date.setHours(Number(parts[0] || 0), Number(parts[1] || 0) + Number(minutes || 0), 0, 0);
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
   function toDateTime(dateText, timeText) {
     const date = asText(dateText);
     const time = asText(timeText) || "08:00";
@@ -69,7 +76,7 @@
       title: asText(data.titulo) || "Evento AgendaJeff",
       description: descriptionLines.filter(Boolean).join("\n"),
       start: toDateTime(fecha, data.horaInicio),
-      end: toDateTime(endDate, data.horaFin || data.horaInicio),
+      end: toDateTime(endDate, data.horaFin || addMinutes(data.horaInicio, 60)),
       calendarId: "primary"
     };
   }
