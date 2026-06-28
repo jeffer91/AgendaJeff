@@ -1,18 +1,6 @@
 /*
   Nombre completo: preload.js
   Ruta: electron/preload.js
-
-  Función:
-    - Crear un puente seguro entre Electron y la interfaz web.
-    - Exponer solo funciones mínimas y controladas en window.AgendaJeffElectron.
-    - Permitir que index.html y módulos detecten si están corriendo en Electron.
-    - Permitir apertura externa controlada para OAuth de Google Calendar.
-    - Evitar que la UI tenga acceso directo a Node.js.
-
-  Se conecta con:
-    - electron/main.js
-    - index.html
-    - modulos/googlecalendar/auth/gc-auth-desktop.js
 */
 
 "use strict";
@@ -48,7 +36,11 @@ const electronBridge = Object.freeze({
   }),
   ping: createSafeInvoke("aj:ping"),
   getEnvironment: createSafeInvoke("aj:environment"),
-  openExternal
+  openExternal,
+  startGoogleCalendarReturn: createSafeInvoke("aj:gcReturnStart"),
+  getGoogleCalendarReturn: createSafeInvoke("aj:gcReturnGet"),
+  clearGoogleCalendarReturn: createSafeInvoke("aj:gcReturnClear"),
+  stopGoogleCalendarReturn: createSafeInvoke("aj:gcReturnStop")
 });
 
 contextBridge.exposeInMainWorld("AgendaJeffElectron", electronBridge);
