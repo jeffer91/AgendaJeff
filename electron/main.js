@@ -5,7 +5,7 @@
 
 "use strict";
 
-const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, Notification } = require("electron");
 const { CONFIG, getWindowOptions } = require("./electron-config");
 const gcReturn = require("./" + "oauth" + "/" + "gc-local-callback");
 
@@ -14,6 +14,65 @@ let ipcRegistered = false;
 
 function isHttpUrl(url) {
   return typeof url === "string" && /^https?:\/\//i.test(url);
+}
+
+function normalizeNotificationText(value, fallback) {
+  const text = value === null || value === undefined ? "" : String(value).trim();
+  return text || fallback || "";
+}
+
+function prepareWindowsNotifications() {
+  if (process.platform === "win32" && typeof app.setAppUserModelId === "function") {
+    app.setAppUserModelId(CONFIG.app.id || "com.agendajeff.app");
+  }
+}
+
+function getNotificationDiagnostic() {
+  const supported = Notification.isSupported();
+
+  return {
+    ok: supported,
+    supported,
+    platform: process.platform,
+    appReady: app.isReady(),
+    message: supported ? "Notificaciones nativas disponibles." : "Notificaciones nativas no disponibles.",
+    checkedAt: new Date().toISOString()
+  };
+}
+
+function sendNativeNotification(payload) {
+  const diagnostic = getNotificationDiagnostic();
+  const data = payload && typeof payload === "object" ? payload : {};
+
+  if (!diagnostic.supported) {
+    return {
+      ok: false,
+      status: "error",
+      action: "ntNotify",
+      source: "electron",
+      message: diagnostic.message,
+      data: { diagnostic },
+      checkedAt: new Date().toISOString()
+    };
+  }
+
+  const notification = new Notification({
+    title: normalizeNotificationText(data.title, CONFIG.app.name || "AgendaJeff"),
+    body: normalizeNotificationText(data.body || data.message, "notificaciones prueba"),
+    silent: Boolean(data.silent)
+  });
+
+  notification.show();
+
+  return {
+    ok: true,
+    status: "ready",
+    action: "ntNotify",
+    source: "electron",
+    message: "Notificación de escritorio enviada.",
+    data: { diagnostic },
+    checkedAt: new Date().toISOString()
+  };
 }
 
 async function openExternalUrl(url) {
@@ -46,6 +105,14 @@ function registerIpcHandlers() {
 
   ipcMain.handle("aj:openExternal", async function handleOpenExternal(event, url) {
     return openExternalUrl(url);
+  });
+
+  ipcMain.handle("aj:ntNotify", function handleNtNotify(event, payload) {
+    return sendNativeNotification(payload);
+  });
+
+  ipcMain.handle("aj:ntDiagnostic", function handleNtDiagnostic() {
+    return getNotificationDiagnostic();
   });
 
   ipcMain.handle("aj:gcReturnStart", async function handleReturnStart() {
@@ -101,9 +168,11 @@ function createMainWindow() {
 }
 
 function bootstrapElectron() {
+  prepareWindowsNotifications();
   registerIpcHandlers();
 
   app.whenReady().then(function handleReady() {
+    prepareWindowsNotifications();
     createMainWindow();
     app.on("activate", function handleActivate() {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
