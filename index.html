@@ -6,13 +6,14 @@
     - Servir como shell raíz de AgendaJeff.
     - Verificar que Electron, main.js y preload.js funcionen correctamente.
     - Cargar módulos internos de forma modular mediante iframe.
-    - Integrar Telegram y Google Calendar sin mezclar su lógica interna con el shell principal.
+    - Integrar Telegram, Google Calendar y Notificaciones sin mezclar su lógica interna con el shell principal.
 
   Se conecta con:
     - electron/main.js
     - electron/preload.js
     - modulos/telegram/tl-module.html
     - modulos/googlecalendar/gc-module.html
+    - modulos/notificaciones/nt-module.html
 -->
 
 <!DOCTYPE html>
@@ -254,7 +255,7 @@
     }
 
     .aj-welcome {
-      max-width: 980px;
+      max-width: 1120px;
       padding: 24px;
     }
 
@@ -271,7 +272,7 @@
 
     .aj-status-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
       margin: 20px 0;
     }
@@ -364,6 +365,10 @@
       font-size: 13px;
     }
 
+    @media (max-width: 1100px) {
+      .aj-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
     @media (max-width: 940px) {
       .aj-layout { grid-template-columns: 1fr; }
       .aj-sidebar { display: block; }
@@ -425,10 +430,18 @@
             </span>
             <span id="googleCalendarModuleState" class="aj-module-state">listo</span>
           </button>
+
+          <button id="openNotificacionesBtn" class="aj-module-button" type="button" data-module="notificaciones">
+            <span>
+              <strong>Notificaciones</strong>
+              <span>Pruebas nativas de escritorio en Windows y diagnóstico.</span>
+            </span>
+            <span id="notificacionesModuleState" class="aj-module-state">listo</span>
+          </button>
         </section>
 
         <p class="aj-sidebar-note">
-          Cada conexión vive en su propia carpeta. El shell solo abre módulos; no contiene lógica interna de Telegram ni Google Calendar.
+          Cada conexión vive en su propia carpeta. El shell solo abre módulos; no contiene lógica interna de Telegram, Google Calendar ni Notificaciones.
         </p>
       </aside>
 
@@ -436,7 +449,7 @@
         <div id="welcomeView" class="aj-welcome">
           <h1>AgendaJeff modular</h1>
           <p>
-            Base lista para trabajar con módulos independientes. Telegram y Google Calendar ya están integrados como conexiones separadas.
+            Base lista para trabajar con módulos independientes. Telegram, Google Calendar y Notificaciones ya están integrados como módulos separados.
           </p>
 
           <div class="aj-status-grid">
@@ -459,11 +472,17 @@
               <strong>Google Calendar</strong>
               <span>Módulo disponible en modulos/googlecalendar/gc-module.html.</span>
             </article>
+
+            <article class="aj-status-card">
+              <strong>Notificaciones</strong>
+              <span>Módulo disponible en modulos/notificaciones/nt-module.html.</span>
+            </article>
           </div>
 
           <div class="aj-actions">
             <button id="openTelegramHomeBtn" class="aj-button-primary" type="button">Abrir Telegram</button>
             <button id="openGoogleCalendarHomeBtn" class="aj-button-primary" type="button">Abrir Google Calendar</button>
+            <button id="openNotificacionesHomeBtn" class="aj-button-primary" type="button">Abrir Notificaciones</button>
             <button id="checkElectronBtn" class="aj-button-secondary" type="button">Verificar Electron</button>
             <button id="clearOutputBtn" class="aj-button-secondary" type="button">Limpiar resultado</button>
           </div>
@@ -497,6 +516,12 @@
           title: "Google Calendar",
           src: "modulos/googlecalendar/gc-module.html",
           stateId: "googleCalendarModuleState"
+        },
+        notificaciones: {
+          key: "notificaciones",
+          title: "Notificaciones",
+          src: "modulos/notificaciones/nt-module.html",
+          stateId: "notificacionesModuleState"
         }
       });
 
@@ -510,8 +535,10 @@
       const homeBtn = document.getElementById("homeBtn");
       const openTelegramBtn = document.getElementById("openTelegramBtn");
       const openGoogleCalendarBtn = document.getElementById("openGoogleCalendarBtn");
+      const openNotificacionesBtn = document.getElementById("openNotificacionesBtn");
       const openTelegramHomeBtn = document.getElementById("openTelegramHomeBtn");
       const openGoogleCalendarHomeBtn = document.getElementById("openGoogleCalendarHomeBtn");
+      const openNotificacionesHomeBtn = document.getElementById("openNotificacionesHomeBtn");
       const welcomeView = document.getElementById("welcomeView");
       const moduleFrame = document.getElementById("moduleFrame");
 
@@ -624,8 +651,10 @@
         homeBtn.addEventListener("click", showWelcome);
         openTelegramBtn.addEventListener("click", function openTelegramFromMenu() { openModule("telegram"); });
         openGoogleCalendarBtn.addEventListener("click", function openGoogleCalendarFromMenu() { openModule("googleCalendar"); });
+        openNotificacionesBtn.addEventListener("click", function openNotificacionesFromMenu() { openModule("notificaciones"); });
         openTelegramHomeBtn.addEventListener("click", function openTelegramFromHome() { openModule("telegram"); });
         openGoogleCalendarHomeBtn.addEventListener("click", function openGoogleCalendarFromHome() { openModule("googleCalendar"); });
+        openNotificacionesHomeBtn.addEventListener("click", function openNotificacionesFromHome() { openModule("notificaciones"); });
 
         moduleFrame.addEventListener("load", function handleModuleLoaded() {
           const activeModule = Object.values(MODULES).find(function findModule(moduleConfig) {
