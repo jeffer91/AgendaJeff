@@ -4,6 +4,7 @@
 
   Función:
     - Manejar acciones de lista: editar, completar y eliminar registros locales.
+    - Enviar salida a servicios al completar un registro.
 */
 
 (function initAgendaListEvents(global) {
@@ -25,9 +26,22 @@
     }
 
     const result = await bridge.completeAgendaItem(idLocal);
-    agenda.dom.setOutput(result);
+    let serviceResult = null;
+
+    if (result && result.ok && result.data && result.data.item && typeof agenda.sendToServices === "function") {
+      serviceResult = await agenda.sendToServices(result.data.item, "complete");
+    }
+
+    agenda.dom.setOutput({
+      ok: Boolean(result && result.ok),
+      action: "completeAndSend",
+      message: result && result.ok ? "Registro completado y salida a servicios ejecutada." : "No se pudo completar el registro.",
+      localResult: result,
+      serviceResult
+    });
+
     if (agenda.loadItems) await agenda.loadItems();
-    return result;
+    return { localResult: result, serviceResult };
   }
 
   async function removeItem(idLocal) {
