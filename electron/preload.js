@@ -37,6 +37,8 @@ const electronBridge = Object.freeze({
   ping: createSafeInvoke("aj:ping"),
   getEnvironment: createSafeInvoke("aj:environment"),
   openExternal,
+  sendDesktopNotification: createSafeInvoke("aj:ntNotify"),
+  checkDesktopNotifications: createSafeInvoke("aj:ntDiagnostic"),
   startGoogleCalendarReturn: createSafeInvoke("aj:gcReturnStart"),
   getGoogleCalendarReturn: createSafeInvoke("aj:gcReturnGet"),
   clearGoogleCalendarReturn: createSafeInvoke("aj:gcReturnClear"),
