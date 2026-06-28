@@ -4,7 +4,7 @@
 
   Función:
     - Iniciar pantalla Ajustes.
-    - Exponer estado visual de preferencias base sin guardar todavía.
+    - Leer y guardar preferencias base en la base local JSON cuando Electron esté disponible.
 */
 
 (function initAjustesModule(global) {
@@ -15,11 +15,27 @@
 
   const state = {
     started: false,
-    startedAt: ""
+    startedAt: "",
+    lastSettingsResult: null
   };
+
+  function getBridge() {
+    try {
+      if (global.AgendaJeffElectron) return global.AgendaJeffElectron;
+      if (global.parent && global.parent.AgendaJeffElectron) return global.parent.AgendaJeffElectron;
+    } catch (error) {
+      return null;
+    }
+    return null;
+  }
 
   function getElement(id) {
     return global.document ? global.document.getElementById(id) : null;
+  }
+
+  function setChecked(id, value) {
+    const element = getElement(id);
+    if (element) element.checked = Boolean(value);
   }
 
   function readSettingsDraft() {
@@ -32,31 +48,77 @@
     };
   }
 
-  function renderState() {
+  function applySettings(settings) {
+    const data = settings && typeof settings === "object" ? settings : {};
+    setChecked("ajRunInBackground", data.runInBackground !== false);
+    setChecked("ajAskStartWindows", data.askStartWindows !== false);
+    setChecked("ajLowResourceMode", data.lowResourceMode !== false);
+    setChecked("ajAutoUpdate", data.autoUpdate !== false);
+    setChecked("ajConfirmInstall", data.confirmInstall !== false);
+  }
+
+  function renderState(extra) {
     const output = getElement("ajResultBox");
     if (!output) return;
 
     output.textContent = JSON.stringify({
       ok: true,
       module: "ajustes",
-      message: "Pantalla Ajustes base cargada. Persistencia pendiente para bloque de base local.",
+      message: "Ajustes conectados a base local JSON cuando Electron está disponible.",
       settingsDraft: readSettingsDraft(),
+      lastSettingsResult: state.lastSettingsResult,
+      extra: extra || null,
       checkedAt: new Date().toISOString()
     }, null, 2);
+  }
+
+  async function saveSettings() {
+    const bridge = getBridge();
+    const draft = readSettingsDraft();
+
+    if (!bridge || typeof bridge.saveAgendaSettings !== "function") {
+      state.lastSettingsResult = { ok: false, message: "Puente Electron no disponible." };
+      renderState();
+      return state.lastSettingsResult;
+    }
+
+    state.lastSettingsResult = await bridge.saveAgendaSettings(draft);
+    renderState();
+    return state.lastSettingsResult;
+  }
+
+  async function loadSettings() {
+    const bridge = getBridge();
+
+    if (!bridge || typeof bridge.readAgendaSettings !== "function") {
+      state.lastSettingsResult = { ok: false, message: "Puente Electron no disponible." };
+      renderState();
+      return state.lastSettingsResult;
+    }
+
+    const result = await bridge.readAgendaSettings();
+    state.lastSettingsResult = result;
+
+    if (result && result.ok && result.data && result.data.settings) {
+      applySettings(result.data.settings);
+    }
+
+    renderState({ loaded: true });
+    return result;
   }
 
   function attachEvents() {
     ["ajRunInBackground", "ajAskStartWindows", "ajLowResourceMode", "ajAutoUpdate", "ajConfirmInstall"].forEach(function eachId(id) {
       const element = getElement(id);
-      if (element) element.addEventListener("change", renderState);
+      if (element) element.addEventListener("change", saveSettings);
     });
   }
 
-  function start() {
+  async function start() {
     state.started = true;
     state.startedAt = new Date().toISOString();
     attachEvents();
-    renderState();
+    await loadSettings();
     return getState();
   }
 
@@ -64,7 +126,8 @@
     return {
       started: state.started,
       startedAt: state.startedAt,
-      settingsDraft: readSettingsDraft()
+      settingsDraft: readSettingsDraft(),
+      lastSettingsResult: state.lastSettingsResult
     };
   }
 
@@ -80,5 +143,7 @@
   ajustes.start = start;
   ajustes.getState = getState;
   ajustes.readSettingsDraft = readSettingsDraft;
+  ajustes.saveSettings = saveSettings;
+  ajustes.loadSettings = loadSettings;
   autoStart();
 })(window);
