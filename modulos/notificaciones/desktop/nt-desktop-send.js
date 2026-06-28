@@ -12,9 +12,16 @@
       : { ok: Boolean(payload && payload.ok), ...(payload || {}) };
   }
 
+  function pause(milliseconds) {
+    return new Promise(function wait(resolve) {
+      global.setTimeout(resolve, Math.max(0, Number(milliseconds) || 0));
+    });
+  }
+
   async function send(payload) {
     const bridge = desktop.findElectronBridge ? desktop.findElectronBridge() : null;
     const methodName = ["send", "Desktop", "Notification"].join("");
+    const cleanPayload = payload && typeof payload === "object" ? payload : {};
 
     if (!bridge || typeof bridge[methodName] !== "function") {
       return makeResult({
@@ -27,7 +34,11 @@
       });
     }
 
-    const result = await bridge[methodName](payload || {});
+    if (cleanPayload.delayMs > 0) {
+      await pause(cleanPayload.delayMs);
+    }
+
+    const result = await bridge[methodName](cleanPayload);
 
     return makeResult({
       ok: Boolean(result && result.ok),
@@ -36,7 +47,7 @@
       source: "desktop",
       file: "modulos/notificaciones/desktop/nt-desktop-send.js",
       message: result && result.message ? result.message : "Prueba ejecutada.",
-      data: { payload: payload || {}, result }
+      data: { payload: cleanPayload, result }
     });
   }
 
