@@ -1,0 +1,146 @@
+<!--
+  Nombre completo: nt-module.html
+  Ruta: modulos/notificaciones/nt-module.html
+
+  Función:
+    - Mostrar la pantalla independiente del módulo Notificaciones.
+    - Permitir pruebas de notificaciones nativas de escritorio en Windows/Electron.
+    - Cargar configuración, utilidades, desktop bridge, pruebas, diagnóstico, UI y startup.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgendaJeff · Notificaciones</title>
+  <link rel="stylesheet" href="./nt-module.css" />
+</head>
+<body>
+  <main class="nt-page" aria-labelledby="ntPageTitle">
+    <section class="nt-hero">
+      <div>
+        <p class="nt-eyebrow">AgendaJeff · Módulo paralelo</p>
+        <h1 id="ntPageTitle">Notificaciones de escritorio</h1>
+        <p class="nt-hero-text">
+          Pruebas independientes para validar avisos nativos de Windows junto al reloj, sin crear eventos reales todavía.
+        </p>
+      </div>
+
+      <article class="nt-status-card" aria-live="polite">
+        <span id="ntStatusBadge" class="nt-badge is-idle">Iniciando</span>
+        <h2 id="ntStatusTitle">Verificando notificaciones</h2>
+        <p id="ntStatusDescription">El módulo está preparando el diagnóstico inicial.</p>
+        <div class="nt-status-meta">
+          <span>Entorno: <strong id="ntStatusEnvironment">pendiente</strong></span>
+          <span>Actualizado: <strong id="ntStatusUpdatedAt">sin fecha</strong></span>
+        </div>
+      </article>
+    </section>
+
+    <section class="nt-grid">
+      <article class="nt-panel">
+        <div class="nt-panel-header">
+          <div>
+            <h2>Datos de prueba</h2>
+            <p>Texto editable para las notificaciones de prueba.</p>
+          </div>
+        </div>
+
+        <form id="ntTestForm" class="nt-form" autocomplete="off">
+          <label class="nt-field" for="ntTitle">
+            <span>Título</span>
+            <input id="ntTitle" type="text" value="AgendaJeff" />
+          </label>
+
+          <label class="nt-field" for="ntBody">
+            <span>Mensaje</span>
+            <textarea id="ntBody" rows="4">notificaciones prueba</textarea>
+          </label>
+
+          <label class="nt-field" for="ntDelaySeconds">
+            <span>Espera para recordatorio simulado</span>
+            <select id="ntDelaySeconds">
+              <option value="5" selected>5 segundos</option>
+              <option value="10">10 segundos</option>
+              <option value="30">30 segundos</option>
+              <option value="60">1 minuto</option>
+            </select>
+          </label>
+        </form>
+      </article>
+
+      <article class="nt-panel">
+        <div class="nt-panel-header">
+          <div>
+            <h2>Pruebas</h2>
+            <p>Ejecuta pruebas separadas sin afectar Telegram ni Google Calendar.</p>
+          </div>
+        </div>
+
+        <div class="nt-mini-grid">
+          <div class="nt-mini-card"><span>Electron</span><strong id="ntElectronStatus" class="is-idle">Pendiente</strong></div>
+          <div class="nt-mini-card"><span>Puente</span><strong id="ntBridgeStatus" class="is-idle">Pendiente</strong></div>
+          <div class="nt-mini-card"><span>Nativas</span><strong id="ntNativeStatus" class="is-idle">Pendiente</strong></div>
+          <div class="nt-mini-card"><span>Última prueba</span><strong id="ntLastTestStatus" class="is-idle">Sin prueba</strong></div>
+        </div>
+
+        <div class="nt-actions nt-actions-stack">
+          <button id="ntBtnNormal" type="button" class="nt-btn nt-btn-primary">Probar normal</button>
+          <button id="ntBtnSound" type="button" class="nt-btn">Probar con sonido</button>
+          <button id="ntBtnSilent" type="button" class="nt-btn">Probar silenciosa</button>
+          <button id="ntBtnLong" type="button" class="nt-btn">Probar mensaje largo</button>
+          <button id="ntBtnReminder" type="button" class="nt-btn">Probar recordatorio simulado</button>
+          <button id="ntBtnSuccess" type="button" class="nt-btn">Probar éxito</button>
+          <button id="ntBtnError" type="button" class="nt-btn">Probar error</button>
+          <button id="ntBtnDiagnostic" type="button" class="nt-btn nt-btn-secondary">Diagnóstico</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="nt-grid nt-grid-results">
+      <article class="nt-panel">
+        <div class="nt-panel-header">
+          <div>
+            <h2>Resultado</h2>
+            <p>Resumen de la última acción.</p>
+          </div>
+        </div>
+        <pre id="ntResultBox" class="nt-output">Iniciando módulo Notificaciones...</pre>
+      </article>
+
+      <article class="nt-panel">
+        <div class="nt-panel-header">
+          <div>
+            <h2>Diagnóstico</h2>
+            <p>Estado técnico por capas.</p>
+          </div>
+        </div>
+        <pre id="ntDiagnosticBox" class="nt-output">Esperando diagnóstico.</pre>
+      </article>
+    </section>
+
+    <section class="nt-panel">
+      <div class="nt-panel-header">
+        <div>
+          <h2>JSON técnico</h2>
+          <p>Información completa para depuración.</p>
+        </div>
+      </div>
+      <pre id="ntJsonBox" class="nt-output nt-json">{}</pre>
+    </section>
+  </main>
+
+  <script src="./config/nt-config.js"></script>
+  <script src="./utils/nt-normalize.js"></script>
+  <script src="./desktop/nt-desktop-bridge.js"></script>
+  <script src="./desktop/nt-desktop-send.js"></script>
+  <script src="./desktop/nt-desktop-test.js"></script>
+  <script src="./diagnostic/nt-diagnostic-state.js"></script>
+  <script src="./diagnostic/nt-diagnostic-report.js"></script>
+  <script src="./ui/nt-ui-dom.js"></script>
+  <script src="./ui/nt-ui-render.js"></script>
+  <script src="./ui/nt-ui-events.js"></script>
+  <script src="./startup/nt-start.js"></script>
+</body>
+</html>
