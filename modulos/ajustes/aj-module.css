@@ -1,0 +1,145 @@
+:root {
+  --ajx-bg: #f4f7fb;
+  --ajx-card: #ffffff;
+  --ajx-text: #172033;
+  --ajx-muted: #667085;
+  --ajx-border: #d9e2ec;
+  --ajx-primary: #2563eb;
+  --ajx-success: #15803d;
+  --ajx-success-soft: #ecfdf3;
+  --ajx-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --ajx-radius: 18px;
+  --ajx-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--ajx-bg);
+  color: var(--ajx-text);
+  font-family: var(--ajx-font);
+}
+
+button,
+input { font: inherit; }
+
+.ajx-page {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.ajx-hero,
+.ajx-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  gap: 18px;
+}
+
+.ajx-hero,
+.ajx-panel,
+.ajx-status-card {
+  background: var(--ajx-card);
+  border: 1px solid var(--ajx-border);
+  border-radius: var(--ajx-radius);
+  box-shadow: var(--ajx-shadow);
+}
+
+.ajx-hero {
+  align-items: stretch;
+  padding: 22px;
+}
+
+.ajx-panel,
+.ajx-status-card { padding: 18px; }
+
+.ajx-eyebrow {
+  margin: 0 0 8px;
+  color: var(--ajx-primary);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ajx-hero h1,
+.ajx-panel h2,
+.ajx-status-card h2,
+.ajx-hero p,
+.ajx-panel p,
+.ajx-status-card p { margin-top: 0; }
+
+.ajx-hero h1 {
+  margin-bottom: 8px;
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.ajx-hero-text,
+.ajx-panel p,
+.ajx-status-card p {
+  color: var(--ajx-muted);
+  line-height: 1.55;
+}
+
+.ajx-badge {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--ajx-success-soft);
+  color: var(--ajx-success);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ajx-panel-header {
+  margin-bottom: 14px;
+}
+
+.ajx-options,
+.ajx-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ajx-check,
+.ajx-list div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--ajx-border);
+  border-radius: 14px;
+  background: #f8fafc;
+  font-weight: 800;
+}
+
+.ajx-list div {
+  display: block;
+  color: var(--ajx-muted);
+  font-weight: 500;
+}
+
+.ajx-list strong { color: var(--ajx-text); }
+
+.ajx-output {
+  min-height: 120px;
+  margin: 14px 0 0;
+  padding: 14px;
+  overflow: auto;
+  border-radius: 16px;
+  background: #0f172a;
+  color: #dbeafe;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 980px) {
+  .ajx-hero,
+  .ajx-grid { grid-template-columns: 1fr; }
+}
