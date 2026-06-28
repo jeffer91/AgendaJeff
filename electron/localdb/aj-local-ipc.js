@@ -16,6 +16,7 @@ const localIndex = require("./aj-local-index");
 const localBackup = require("./aj-local-backup");
 const { createBackgroundRunner } = require("../background/aj-background-runner");
 const { createTrayController } = require("../tray/aj-tray");
+const { sendNativeBackgroundNotification } = require("../background/aj-background-notify");
 
 let backgroundRunner = null;
 let trayController = null;
@@ -37,27 +38,13 @@ function showActiveWindow() {
   return true;
 }
 
-function sendBackgroundNotification(payload) {
-  const window = getActiveWindow();
-  if (!window || window.isDestroyed()) {
-    return { ok: false, message: "No hay ventana activa para enviar notificación." };
-  }
-
-  try {
-    window.webContents.send("aj:bgNotification", payload || {});
-    return { ok: true, message: "Notificación de segundo plano enviada a la ventana." };
-  } catch (error) {
-    return { ok: false, message: error && error.message ? error.message : "Error enviando notificación." };
-  }
-}
-
 function ensureBackgroundServices(appInstance) {
   if (backgroundRunner) return backgroundRunner.status();
 
   backgroundRunner = createBackgroundRunner({
     app: appInstance,
     intervalMs: 60000,
-    sendNotification: sendBackgroundNotification
+    sendNotification: sendNativeBackgroundNotification
   });
 
   backgroundRunner.start();
