@@ -30,7 +30,7 @@
   function shouldUseGoogle(item, action) {
     if (!item || !item.canales || item.canales.googleCalendar !== true) return false;
     if (item.tipo === "pendiente") return false;
-    return action === "create" || action === "update";
+    return action === "create";
   }
 
   async function runSafely(label, fn) {
@@ -66,7 +66,7 @@
         return integrations.GoogleCalendar.createGoogleEvent(data);
       });
     } else {
-      results.googleCalendar = createResult({ ok: true, status: "skipped", action: "googleCalendar", message: "Google Calendar omitido para este registro." });
+      results.googleCalendar = createResult({ ok: true, status: "skipped", action: "googleCalendar", message: "Google Calendar omitido para este registro o acción." });
     }
 
     if (integrations.Telegram && integrations.Telegram.sendItemMessage) {
