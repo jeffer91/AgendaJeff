@@ -5,6 +5,7 @@
   Función:
     - Centralizar referencias DOM del módulo Google Calendar.
     - Leer y escribir datos del formulario sin mezclar lógica de conexión.
+    - Cargar todos los campos disponibles desde Firebase: desktop, web, redirect y secretos.
     - Preparar datos para guardar, conectar, intercambiar código y crear eventos.
 
   Se conecta con:
@@ -34,6 +35,20 @@
     return element ? Boolean(element.checked) : false;
   }
 
+  function firstText(data, keys, fallback) {
+    const source = data && typeof data === "object" ? data : {};
+
+    for (let index = 0; index < keys.length; index += 1) {
+      const value = source[keys[index]];
+
+      if (value !== null && value !== undefined && String(value).trim()) {
+        return String(value).trim();
+      }
+    }
+
+    return fallback || "";
+  }
+
   function setValue(id, value) {
     const element = byId(id);
 
@@ -47,6 +62,14 @@
 
     if (element) {
       element.checked = Boolean(value);
+    }
+  }
+
+  function setDetailsOpen(id, value) {
+    const element = byId(id);
+
+    if (element && element.tagName && element.tagName.toLowerCase() === "details") {
+      element.open = Boolean(value);
     }
   }
 
@@ -65,6 +88,8 @@
       errorBox: byId("gcErrorBox"),
       diagnosticBox: byId("gcDiagnosticBox"),
       jsonBox: byId("gcJsonBox"),
+      advancedAuthDetails: byId("gcAdvancedAuthDetails"),
+      advancedJsonDetails: byId("gcAdvancedJsonDetails"),
       btnSave: byId("gcBtnSave"),
       btnLoad: byId("gcBtnLoad"),
       btnClear: byId("gcBtnClear"),
@@ -116,16 +141,55 @@
     };
   }
 
+  function getLoadedFields(connection) {
+    const data = connection && typeof connection === "object" ? connection : {};
+    const fields = {
+      activeCredentialType: firstText(data, ["activeCredentialType", "tipoCredencialActiva"]),
+      calendarId: firstText(data, ["calendarId", "idCalendario"], "primary"),
+      clientIdDesktop: firstText(data, ["clientIdDesktop", "desktopClientId"]),
+      clientSecretDesktop: firstText(data, ["clientSecretDesktop", "desktopClientSecret", "clientSecret"]),
+      redirectUriDesktop: firstText(data, ["redirectUriDesktop", "desktopRedirectUri", "redirectUri"]),
+      clientIdWeb: firstText(data, ["clientIdWeb", "webClientId"]),
+      clientSecretWeb: firstText(data, ["clientSecretWeb", "webClientSecret"]),
+      redirectUriWeb: firstText(data, ["redirectUriWeb", "webRedirectUri"])
+    };
+
+    return fields;
+  }
+
   function fillConnectionForm(connection) {
     const data = connection && typeof connection === "object" ? connection : {};
+    const fields = getLoadedFields(data);
+    const hasWebData = Boolean(fields.clientIdWeb || fields.clientSecretWeb || fields.redirectUriWeb);
 
     setChecked("gcEnabled", data.enabled !== false);
-    setValue("gcActiveCredentialType", data.activeCredentialType || "desktop");
-    setValue("gcCalendarId", data.calendarId || "primary");
-    setValue("gcClientIdDesktop", data.clientIdDesktop || "");
-    setValue("gcRedirectUriDesktop", data.redirectUriDesktop || "");
-    setValue("gcClientIdWeb", data.clientIdWeb || "");
-    setValue("gcRedirectUriWeb", data.redirectUriWeb || "");
+    setValue("gcActiveCredentialType", fields.activeCredentialType || "desktop");
+    setValue("gcCalendarId", fields.calendarId || "primary");
+    setValue("gcClientIdDesktop", fields.clientIdDesktop || "");
+    setValue("gcClientSecretDesktop", fields.clientSecretDesktop || "");
+    setValue("gcRedirectUriDesktop", fields.redirectUriDesktop || "");
+    setValue("gcClientIdWeb", fields.clientIdWeb || "");
+    setValue("gcClientSecretWeb", fields.clientSecretWeb || "");
+    setValue("gcRedirectUriWeb", fields.redirectUriWeb || "");
+
+    if (hasWebData) {
+      setDetailsOpen("gcAdvancedAuthDetails", true);
+    }
+
+    return {
+      ok: true,
+      hasWebData,
+      loadedFields: {
+        activeCredentialType: Boolean(fields.activeCredentialType),
+        calendarId: Boolean(fields.calendarId),
+        clientIdDesktop: Boolean(fields.clientIdDesktop),
+        clientSecretDesktop: Boolean(fields.clientSecretDesktop),
+        redirectUriDesktop: Boolean(fields.redirectUriDesktop),
+        clientIdWeb: Boolean(fields.clientIdWeb),
+        clientSecretWeb: Boolean(fields.clientSecretWeb),
+        redirectUriWeb: Boolean(fields.redirectUriWeb)
+      }
+    };
   }
 
   function clearSensitiveFields() {
@@ -138,12 +202,15 @@
     byId,
     valueOf,
     checkedOf,
+    firstText,
     setValue,
     setChecked,
+    setDetailsOpen,
     getElements,
     readConnectionForm,
     readAuthInput,
     readEventDraft,
+    getLoadedFields,
     fillConnectionForm,
     clearSensitiveFields
   });
