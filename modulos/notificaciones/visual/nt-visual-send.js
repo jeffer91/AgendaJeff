@@ -32,17 +32,37 @@
       : { ok: Boolean(payload && payload.ok), ...(payload || {}) };
   }
 
-  function sendVisualNotification(visualType, payload) {
-    const type = normalizeVisualType(visualType);
-    let result = null;
+  function pause(milliseconds) {
+    return new Promise(function wait(resolve) {
+      global.setTimeout(resolve, Math.max(0, Number(milliseconds) || 0));
+    });
+  }
 
+  function showVisual(type, payload) {
     if (type === VISUAL_TYPES.BANNER && visual.Banner && visual.Banner.showBanner) {
-      result = visual.Banner.showBanner(payload);
-    } else if (type === VISUAL_TYPES.CENTER && visual.Center && visual.Center.showCenter) {
-      result = visual.Center.showCenter(payload);
-    } else if (visual.Toast && visual.Toast.showToast) {
-      result = visual.Toast.showToast(payload);
+      return visual.Banner.showBanner(payload);
     }
+
+    if (type === VISUAL_TYPES.CENTER && visual.Center && visual.Center.showCenter) {
+      return visual.Center.showCenter(payload);
+    }
+
+    if (visual.Toast && visual.Toast.showToast) {
+      return visual.Toast.showToast(payload);
+    }
+
+    return null;
+  }
+
+  async function sendVisualNotification(visualType, payload) {
+    const type = normalizeVisualType(visualType);
+    const cleanPayload = payload && typeof payload === "object" ? payload : {};
+
+    if (cleanPayload.delayMs > 0) {
+      await pause(cleanPayload.delayMs);
+    }
+
+    const result = showVisual(type, cleanPayload);
 
     if (!result) {
       return createResult({
@@ -52,7 +72,7 @@
         source: "visual",
         file: "modulos/notificaciones/visual/nt-visual-send.js",
         message: "No hay visualización interna disponible.",
-        data: { visualType: type, payload }
+        data: { visualType: type, payload: cleanPayload }
       });
     }
 
@@ -63,7 +83,7 @@
       source: "visual",
       file: "modulos/notificaciones/visual/nt-visual-send.js",
       message: result.message || "Visualización interna ejecutada.",
-      data: { visualType: type, payload, result }
+      data: { visualType: type, payload: cleanPayload, result }
     });
   }
 
