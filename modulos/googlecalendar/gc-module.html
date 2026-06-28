@@ -59,7 +59,7 @@
         <div class="gc-panel-header">
           <div>
             <h2>Conexión</h2>
-            <p>Los datos se cargan desde Firebase. Ingresa secretos solo cuando conectes o renueves.</p>
+            <p>Los datos se cargan desde Firebase. Desktop y Web se completan automáticamente cuando existan.</p>
           </div>
           <label class="gc-switch" for="gcEnabled">
             <input id="gcEnabled" type="checkbox" checked />
@@ -88,7 +88,7 @@
 
           <label class="gc-field" for="gcClientSecretDesktop">
             <span>Secret Desktop</span>
-            <input id="gcClientSecretDesktop" type="password" placeholder="Solo conectar/renovar" autocomplete="off" />
+            <input id="gcClientSecretDesktop" type="password" placeholder="Se carga desde Firebase si existe" autocomplete="off" />
           </label>
 
           <label class="gc-field" for="gcRedirectUriDesktop">
@@ -97,17 +97,17 @@
           </label>
         </form>
 
-        <details class="gc-advanced">
+        <details id="gcAdvancedAuthDetails" class="gc-advanced">
           <summary>Opciones web y código de autorización</summary>
           <div class="gc-advanced-body gc-form gc-form-compact">
             <label class="gc-field" for="gcClientIdWeb">
               <span>Client ID Web</span>
-              <input id="gcClientIdWeb" type="text" placeholder="Opcional" autocomplete="off" />
+              <input id="gcClientIdWeb" type="text" placeholder="Se carga desde Firebase si existe" autocomplete="off" />
             </label>
 
             <label class="gc-field" for="gcClientSecretWeb">
               <span>Secret Web</span>
-              <input id="gcClientSecretWeb" type="password" placeholder="Opcional" autocomplete="off" />
+              <input id="gcClientSecretWeb" type="password" placeholder="Se carga desde Firebase si existe" autocomplete="off" />
             </label>
 
             <label class="gc-field gc-field-full" for="gcRedirectUriWeb">
@@ -186,7 +186,7 @@
       </article>
     </section>
 
-    <details class="gc-advanced">
+    <details id="gcAdvancedJsonDetails" class="gc-advanced">
       <summary>Evento de prueba y JSON técnico</summary>
       <div class="gc-advanced-body gc-grid gc-grid-results">
         <article class="gc-panel">
