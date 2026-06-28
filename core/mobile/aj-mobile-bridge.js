@@ -5,7 +5,7 @@
   Función:
     - Crear un puente compatible con AgendaJeffElectron cuando la app corre fuera de Electron.
     - Permitir que la versión Android/Capacitor use almacenamiento local del WebView.
-    - Mantener la misma interfaz básica usada por Inicio, Agenda, Carga Masiva, Ajustes y Diagnóstico.
+    - Mantener la misma interfaz básica usada por Inicio, Agenda, Carga Masiva, Ajustes, Diagnóstico y Google Calendar.
 */
 
 (function initAgendaJeffMobileBridge(global) {
@@ -20,11 +20,17 @@
   function now() { return new Date().toISOString(); }
 
   function result(ok, message, data) {
-    return Promise.resolve({ ok: Boolean(ok), message: message || "", data: data || null, checkedAt: now(), source: "mobile-bridge" });
+    return Promise.resolve({
+      ok: Boolean(ok),
+      message: message || "",
+      data: data || null,
+      checkedAt: now(),
+      source: "mobile-bridge"
+    });
   }
 
   function emptyDb() {
-    return { version: 1, createdAt: now(), updatedAt: now(), items: [], syncQueue: [], deletedItems: [] };
+    return { version: 1, createdAt: now(), updatedAt: now(), items: [], syncQueue: [], deletedItems: [], platform: "android-webview" };
   }
 
   function readJson(key, fallback) {
@@ -65,25 +71,38 @@
     return `${date.getFullYear()}-${month}-${day}`;
   }
 
+  function normalizeChannels(channels) {
+    const data = channels && typeof channels === "object" ? channels : {};
+    return {
+      escritorio: typeof data.escritorio === "boolean" ? data.escritorio : true,
+      telegram: typeof data.telegram === "boolean" ? data.telegram : true,
+      googleCalendar: typeof data.googleCalendar === "boolean" ? data.googleCalendar : true
+    };
+  }
+
   function normalizeItem(item) {
     const data = item && typeof item === "object" ? item : {};
+    const horaInicio = data.horaInicio || "";
     return {
       ...data,
       idLocal: data.idLocal || makeId(),
       idFirebase: data.idFirebase || "",
+      idGoogleCalendar: data.idGoogleCalendar || "",
       tipo: data.tipo || "evento",
-      titulo: data.titulo || "Sin título",
-      descripcion: data.descripcion || "",
-      fechaInicio: data.fechaInicio || "",
-      fechaFin: data.fechaFin || "",
-      horaInicio: data.horaInicio || "",
-      horaFin: data.horaFin || "",
-      todoDia: Boolean(data.todoDia || !data.horaInicio),
+      titulo: data.titulo || data.title || "Sin título",
+      descripcion: data.descripcion || data.description || "",
+      fechaInicio: data.fechaInicio || data.startDate || "",
+      fechaFin: data.fechaFin || data.endDate || "",
+      horaInicio,
+      horaFin: data.horaFin || data.endTime || "",
+      todoDia: Boolean(data.todoDia || data.allDay || !horaInicio),
       estado: data.estado || "activo",
       estadoSync: data.estadoSync || "pendiente_sincronizar",
+      categoriaId: data.categoriaId || data.categoria || "otro",
+      categoriaNombre: data.categoriaNombre || "Otro",
       creadoEn: data.creadoEn || now(),
       actualizadoEn: now(),
-      canales: data.canales || { escritorio: true, telegram: true, googleCalendar: true },
+      canales: normalizeChannels(data.canales),
       recordatorios: data.recordatorios || {
         cincoDiasAntes: true,
         tresDiasAntes: true,
@@ -92,7 +111,8 @@
         usarDiasLaborables: false,
         horasSinHora: ["06:00", "13:00", "17:00"],
         horasPendiente: ["06:00", "17:00"]
-      }
+      },
+      origen: data.origen || { tipo: "mobile", archivo: "", textoOriginal: "" }
     };
   }
 
@@ -115,8 +135,7 @@
   }
 
   async function readAgendaData() {
-    const db = readDb();
-    return result(true, "Base móvil leída.", { data: db });
+    return result(true, "Base móvil leída.", { data: readDb() });
   }
 
   async function queryAgendaItems(filters) {
@@ -199,10 +218,10 @@
     isElectron: false,
     isMobileBridge: true,
     platform: "android-web",
-    versions: Object.freeze({ mobileBridge: "1.0.0" }),
+    versions: Object.freeze({ mobileBridge: "1.1.0" }),
     ping: function ping() { return result(true, "Puente móvil responde.", { mode: "mobile" }); },
     getEnvironment,
-    openExternal: function openExternal(url) { global.open(url, "_blank"); return result(true, "URL abierta.", { url }); },
+    openExternal: function openExternal(url) { if (url) global.open(url, "_blank"); return result(true, "URL abierta.", { url }); },
     sendDesktopNotification,
     checkDesktopNotifications,
     ensureLocalDatabase,
@@ -214,11 +233,16 @@
     createLocalBackup,
     readAgendaSettings,
     saveAgendaSettings,
-    getBackgroundStatus: function getBackgroundStatus() { return result(true, "Segundo plano móvil pendiente de capa nativa.", { running: false, paused: false }); },
+    getBackgroundStatus: function getBackgroundStatus() { return result(true, "Segundo plano móvil pendiente de capa nativa.", { running: false, paused: false, platform: "android-web" }); },
     startBackground: function startBackground() { return result(true, "Segundo plano móvil pendiente de capa nativa.", { running: false }); },
     pauseBackground: function pauseBackground() { return result(true, "Segundo plano móvil pausado visualmente.", { paused: true }); },
     resumeBackground: function resumeBackground() { return result(true, "Segundo plano móvil reanudado visualmente.", { paused: false }); },
-    checkBackgroundNow: function checkBackgroundNow() { return result(true, "Revisión móvil manual ejecutada visualmente.", {}); }
+    checkBackgroundNow: function checkBackgroundNow() { return result(true, "Revisión móvil manual ejecutada visualmente.", {}); },
+    startGoogleCalendarReturn: function startGoogleCalendarReturn() { return result(false, "OAuth móvil se implementará con flujo Android nativo posterior."); },
+    getGoogleCalendarReturn: function getGoogleCalendarReturn() { return result(false, "OAuth móvil pendiente."); },
+    clearGoogleCalendarReturn: function clearGoogleCalendarReturn() { return result(true, "OAuth móvil limpiado."); },
+    stopGoogleCalendarReturn: function stopGoogleCalendarReturn() { return result(true, "OAuth móvil detenido."); },
+    onBackgroundNotification: function onBackgroundNotification() { return { ok: true, remove: function remove() {} }; }
   });
 
   global.AgendaJeffElectron = bridge;
