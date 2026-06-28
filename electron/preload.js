@@ -26,6 +26,25 @@ function openExternal(url) {
   return createSafeInvoke("aj:openExternal")(url);
 }
 
+function onBackgroundNotification(callback) {
+  if (typeof callback !== "function") {
+    return { ok: false, message: "Callback inválido." };
+  }
+
+  const listener = function handleBackgroundNotification(event, payload) {
+    callback(payload || {});
+  };
+
+  ipcRenderer.on("aj:bgNotification", listener);
+
+  return {
+    ok: true,
+    remove: function removeListener() {
+      ipcRenderer.removeListener("aj:bgNotification", listener);
+    }
+  };
+}
+
 const electronBridge = Object.freeze({
   isElectron: true,
   platform: process.platform,
@@ -56,7 +75,8 @@ const electronBridge = Object.freeze({
   startBackground: createSafeInvoke("aj:bgStart"),
   pauseBackground: createSafeInvoke("aj:bgPause"),
   resumeBackground: createSafeInvoke("aj:bgResume"),
-  checkBackgroundNow: createSafeInvoke("aj:bgCheckNow")
+  checkBackgroundNow: createSafeInvoke("aj:bgCheckNow"),
+  onBackgroundNotification
 });
 
 contextBridge.exposeInMainWorld("AgendaJeffElectron", electronBridge);
