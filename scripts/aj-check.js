@@ -198,6 +198,15 @@ function validateRequiredCoreFiles() {
     "electron/localdb/aj-local-backup.js",
     "electron/localdb/aj-local-ipc.js"
   ]);
+
+  validateRequiredFiles("Segundo plano", [
+    "electron/background/aj-background-pending.js",
+    "electron/background/aj-background-reminders.js",
+    "electron/background/aj-background-scheduler.js",
+    "electron/background/aj-background-runner.js",
+    "electron/tray/aj-tray-menu.js",
+    "electron/tray/aj-tray.js"
+  ]);
 }
 
 function validateRequiredGoogleCalendarFiles() {
@@ -311,6 +320,8 @@ function validateJavaScriptSyntax() {
 function validatePrefixes() {
   validatePrefix("core", "aj-", []);
   validatePrefix("electron/localdb", "aj-", []);
+  validatePrefix("electron/background", "aj-", []);
+  validatePrefix("electron/tray", "aj-", []);
   validatePrefix("modulos/inicio", "in-", []);
   validatePrefix("modulos/agenda", "ag-", []);
   validatePrefix("modulos/carga", "cm-", []);
