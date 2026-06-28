@@ -27,6 +27,20 @@ function prepareWindowsNotifications() {
   }
 }
 
+function focusMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return false;
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+
+  mainWindow.show();
+  mainWindow.focus();
+  return true;
+}
+
 function getNotificationDiagnostic() {
   const supported = Notification.isSupported();
 
@@ -35,14 +49,26 @@ function getNotificationDiagnostic() {
     supported,
     platform: process.platform,
     appReady: app.isReady(),
+    hasMainWindow: Boolean(mainWindow && !mainWindow.isDestroyed()),
     message: supported ? "Notificaciones nativas disponibles." : "Notificaciones nativas no disponibles.",
     checkedAt: new Date().toISOString()
   };
 }
 
+function buildNativeNotificationPayload(payload) {
+  const data = payload && typeof payload === "object" ? payload : {};
+
+  return {
+    title: normalizeNotificationText(data.title, CONFIG.app.name || "AgendaJeff"),
+    body: normalizeNotificationText(data.body || data.message, "notificaciones prueba"),
+    silent: Boolean(data.silent),
+    type: normalizeNotificationText(data.type, "normal")
+  };
+}
+
 function sendNativeNotification(payload) {
   const diagnostic = getNotificationDiagnostic();
-  const data = payload && typeof payload === "object" ? payload : {};
+  const cleanPayload = buildNativeNotificationPayload(payload);
 
   if (!diagnostic.supported) {
     return {
@@ -51,28 +77,44 @@ function sendNativeNotification(payload) {
       action: "ntNotify",
       source: "electron",
       message: diagnostic.message,
-      data: { diagnostic },
+      data: { diagnostic, payload: cleanPayload },
       checkedAt: new Date().toISOString()
     };
   }
 
-  const notification = new Notification({
-    title: normalizeNotificationText(data.title, CONFIG.app.name || "AgendaJeff"),
-    body: normalizeNotificationText(data.body || data.message, "notificaciones prueba"),
-    silent: Boolean(data.silent)
-  });
+  try {
+    const notification = new Notification({
+      title: cleanPayload.title,
+      body: cleanPayload.body,
+      silent: cleanPayload.silent
+    });
 
-  notification.show();
+    notification.on("click", function handleNotificationClick() {
+      focusMainWindow();
+    });
 
-  return {
-    ok: true,
-    status: "ready",
-    action: "ntNotify",
-    source: "electron",
-    message: "Notificación de escritorio enviada.",
-    data: { diagnostic },
-    checkedAt: new Date().toISOString()
-  };
+    notification.show();
+
+    return {
+      ok: true,
+      status: "ready",
+      action: "ntNotify",
+      source: "electron",
+      message: "Notificación de escritorio enviada.",
+      data: { diagnostic, payload: cleanPayload },
+      checkedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: "error",
+      action: "ntNotify",
+      source: "electron",
+      message: error && error.message ? error.message : "No se pudo crear la notificación nativa.",
+      data: { diagnostic, payload: cleanPayload },
+      checkedAt: new Date().toISOString()
+    };
+  }
 }
 
 async function openExternalUrl(url) {
