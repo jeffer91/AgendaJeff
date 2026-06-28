@@ -27,7 +27,7 @@
     }
 
     if (type === types.LONG) {
-      return withoutDelay({ ...base, type, body: base.body + "\n\nMensaje largo para validar el centro de avisos de Windows." });
+      return withoutDelay({ ...base, type, body: base.body + "\n\nMensaje largo para validar el centro de avisos de Windows y las visualizaciones internas." });
     }
 
     if (type === types.REMINDER) {
