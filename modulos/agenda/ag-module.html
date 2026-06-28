@@ -4,7 +4,7 @@
 
   Función:
     - Pantalla base para crear eventos, recordatorios y pendientes uno por uno.
-    - Preparar formulario visual sin conectar todavía a persistencia.
+    - Guardar registros en base local JSON cuando Electron esté disponible.
     - Mantener separada la pantalla Agenda de Telegram, Google Calendar y Notificaciones.
 -->
 
@@ -22,12 +22,12 @@
       <div>
         <p class="ag-eyebrow">AgendaJeff · Agenda</p>
         <h1 id="agPageTitle">Agendar manualmente</h1>
-        <p class="ag-hero-text">Formulario base para crear eventos, recordatorios y pendientes. La conexión real se hará en los siguientes bloques.</p>
+        <p class="ag-hero-text">Formulario base para crear eventos, recordatorios y pendientes en la base local JSON.</p>
       </div>
       <article class="ag-status-card">
-        <span id="agStatusBadge" class="ag-badge is-ready">Base lista</span>
+        <span id="agStatusBadge" class="ag-badge is-ready">Base local</span>
         <h2 id="agStatusTitle">Agenda preparada</h2>
-        <p id="agStatusDescription">Pendiente de conectar con base local, Firebase y servicios ya probados.</p>
+        <p id="agStatusDescription">Guarda localmente; Firebase, Google Calendar, Telegram y notificaciones se integrarán en los siguientes bloques.</p>
       </article>
     </section>
 
@@ -142,7 +142,7 @@
 
     <section class="ag-panel">
       <div class="ag-actions">
-        <button id="agBtnSaveDraft" class="ag-btn ag-btn-primary" type="button">Guardar borrador visual</button>
+        <button id="agBtnSaveDraft" class="ag-btn ag-btn-primary" type="button">Guardar en base local</button>
         <button id="agBtnClear" class="ag-btn" type="button">Limpiar</button>
       </div>
       <pre id="agResultBox" class="ag-output">Pantalla Agenda cargando...</pre>
