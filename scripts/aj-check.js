@@ -6,14 +6,7 @@
     - Ejecutar una verificación local de estructura para AgendaJeff.
     - Validar que los scripts referenciados por HTML existan.
     - Validar sintaxis básica de archivos JavaScript.
-    - Validar reglas de prefijo para módulos Telegram, Google Calendar y Notificaciones.
-
-  Se conecta con:
-    - package.json
-    - index.html
-    - modulos/telegram/tl-module.html
-    - modulos/googlecalendar/gc-module.html
-    - modulos/notificaciones/nt-module.html
+    - Validar reglas de prefijo para pantallas nuevas y módulos de conexiones.
 */
 
 "use strict";
@@ -35,6 +28,10 @@ function fail(message) {
 
 function warn(message) {
   warnings.push(message);
+}
+
+function exists(relativePath) {
+  return fs.existsSync(path.join(ROOT, relativePath));
 }
 
 function readText(relativePath) {
@@ -90,9 +87,7 @@ function validateHtmlScripts(htmlPath) {
   const sources = extractScriptSources(html);
 
   sources.forEach(function eachSource(src) {
-    if (/^https?:\/\//i.test(src)) {
-      return;
-    }
+    if (/^https?:\/\//i.test(src)) return;
 
     const normalized = path.normalize(path.join(htmlDir, src)).replace(/\\/g, "/");
     const absolutePath = path.join(ROOT, normalized);
@@ -106,9 +101,7 @@ function validateHtmlScripts(htmlPath) {
 function validateJsSyntax(relativePath) {
   const code = readText(relativePath);
 
-  if (!code) {
-    return;
-  }
+  if (!code) return;
 
   try {
     new Function(code);
@@ -125,13 +118,8 @@ function validatePrefix(directory, prefix, allowedRootFiles) {
     const fileName = path.basename(relativePath);
     const extension = path.extname(fileName);
 
-    if (![".js", ".css", ".html", ".md"].includes(extension)) {
-      return;
-    }
-
-    if (allowed.includes(fileName)) {
-      return;
-    }
+    if (![".js", ".css", ".html", ".md"].includes(extension)) return;
+    if (allowed.includes(fileName)) return;
 
     if (!fileName.startsWith(prefix)) {
       fail(`${relativePath} no cumple el prefijo requerido ${prefix}`);
@@ -139,8 +127,40 @@ function validatePrefix(directory, prefix, allowedRootFiles) {
   });
 }
 
+function validateRequiredFiles(label, required) {
+  required.forEach(function eachRequired(relativePath) {
+    if (!exists(relativePath)) fail(`Falta archivo ${label}: ${relativePath}`);
+  });
+}
+
+function validateRequiredAgendaScreens() {
+  validateRequiredFiles("Inicio", [
+    "modulos/inicio/in-module.html",
+    "modulos/inicio/in-module.css",
+    "modulos/inicio/startup/in-start.js"
+  ]);
+
+  validateRequiredFiles("Agenda", [
+    "modulos/agenda/ag-module.html",
+    "modulos/agenda/ag-module.css",
+    "modulos/agenda/startup/ag-start.js"
+  ]);
+
+  validateRequiredFiles("Carga Masiva", [
+    "modulos/carga/cm-module.html",
+    "modulos/carga/cm-module.css",
+    "modulos/carga/startup/cm-start.js"
+  ]);
+
+  validateRequiredFiles("Ajustes", [
+    "modulos/ajustes/aj-module.html",
+    "modulos/ajustes/aj-module.css",
+    "modulos/ajustes/startup/aj-start.js"
+  ]);
+}
+
 function validateRequiredGoogleCalendarFiles() {
-  const required = [
+  validateRequiredFiles("Google Calendar", [
     "modulos/googlecalendar/gc-module.html",
     "modulos/googlecalendar/gc-module.css",
     "modulos/googlecalendar/config/gc-config.js",
@@ -180,17 +200,11 @@ function validateRequiredGoogleCalendarFiles() {
     "modulos/googlecalendar/ui/gc-ui-events.js",
     "modulos/googlecalendar/startup/gc-start.js",
     "modulos/googlecalendar/tests/gc-test-checklist.md"
-  ];
-
-  required.forEach(function eachRequired(relativePath) {
-    if (!fs.existsSync(path.join(ROOT, relativePath))) {
-      fail(`Falta archivo Google Calendar: ${relativePath}`);
-    }
-  });
+  ]);
 }
 
 function validateRequiredNotificationFiles() {
-  const required = [
+  validateRequiredFiles("Notificaciones", [
     "modulos/notificaciones/nt-module.html",
     "modulos/notificaciones/nt-module.css",
     "modulos/notificaciones/config/nt-config.js",
@@ -209,13 +223,7 @@ function validateRequiredNotificationFiles() {
     "modulos/notificaciones/ui/nt-ui-render.js",
     "modulos/notificaciones/ui/nt-ui-events.js",
     "modulos/notificaciones/startup/nt-start.js"
-  ];
-
-  required.forEach(function eachRequired(relativePath) {
-    if (!fs.existsSync(path.join(ROOT, relativePath))) {
-      fail(`Falta archivo Notificaciones: ${relativePath}`);
-    }
-  });
+  ]);
 }
 
 function validateFirebaseConfigWarning() {
@@ -230,20 +238,49 @@ function validateFirebaseConfigWarning() {
   }
 }
 
-function run() {
-  validateHtmlScripts("index.html");
-  validateHtmlScripts("modulos/telegram/tl-module.html");
-  validateHtmlScripts("modulos/googlecalendar/gc-module.html");
-  validateHtmlScripts("modulos/notificaciones/nt-module.html");
+function validateHtmlReferences() {
+  [
+    "index.html",
+    "modulos/inicio/in-module.html",
+    "modulos/agenda/ag-module.html",
+    "modulos/carga/cm-module.html",
+    "modulos/ajustes/aj-module.html",
+    "modulos/telegram/tl-module.html",
+    "modulos/googlecalendar/gc-module.html",
+    "modulos/notificaciones/nt-module.html"
+  ].forEach(validateHtmlScripts);
+}
 
-  walkFiles("electron", []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(validateJsSyntax);
-  walkFiles("modulos/telegram", []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(validateJsSyntax);
-  walkFiles("modulos/googlecalendar", []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(validateJsSyntax);
-  walkFiles("modulos/notificaciones", []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(validateJsSyntax);
+function validateJavaScriptSyntax() {
+  [
+    "electron",
+    "modulos/inicio",
+    "modulos/agenda",
+    "modulos/carga",
+    "modulos/ajustes",
+    "modulos/telegram",
+    "modulos/googlecalendar",
+    "modulos/notificaciones"
+  ].forEach(function eachDirectory(directory) {
+    walkFiles(directory, []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(validateJsSyntax);
+  });
+}
 
+function validatePrefixes() {
+  validatePrefix("modulos/inicio", "in-", []);
+  validatePrefix("modulos/agenda", "ag-", []);
+  validatePrefix("modulos/carga", "cm-", []);
+  validatePrefix("modulos/ajustes", "aj-", []);
   validatePrefix("modulos/telegram", "tl-", []);
   validatePrefix("modulos/googlecalendar", "gc-", []);
   validatePrefix("modulos/notificaciones", "nt-", []);
+}
+
+function run() {
+  validateHtmlReferences();
+  validateJavaScriptSyntax();
+  validatePrefixes();
+  validateRequiredAgendaScreens();
   validateRequiredGoogleCalendarFiles();
   validateRequiredNotificationFiles();
   validateFirebaseConfigWarning();
