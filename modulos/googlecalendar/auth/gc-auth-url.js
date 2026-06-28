@@ -5,6 +5,7 @@
   Función:
     - Construir URLs de autorización Google Calendar sin usar popup.
     - Centralizar scopes, redirectUri, estado de seguridad y parámetros OAuth.
+    - Aplicar respaldo automático de Redirect URI para credenciales desktop.
     - No abrir ventanas ni guardar datos: solo prepara URL y metadatos.
 
   Se conecta con:
@@ -19,6 +20,7 @@
   const root = global.AgendaJeffModules = global.AgendaJeffModules || {};
   const googleCalendar = root.GoogleCalendar = root.GoogleCalendar || {};
   const auth = googleCalendar.Auth = googleCalendar.Auth || {};
+  const DEFAULT_DESKTOP_REDIRECT_URI = "http://localhost";
 
   function getConfig() {
     return googleCalendar.CONFIG || {};
@@ -35,6 +37,7 @@
       oauthBaseUrl: "https://accounts.google.com/o/oauth2/v2/auth",
       defaultCalendarId: "primary",
       defaultCredentialType: "desktop",
+      defaultDesktopRedirectUri: DEFAULT_DESKTOP_REDIRECT_URI,
       scopes: ["https://www.googleapis.com/auth/calendar.events"]
     };
   }
@@ -71,16 +74,82 @@
       .filter(function uniqueScope(scope, index, array) { return array.indexOf(scope) === index; });
   }
 
+  function normalizeCredentialType(input) {
+    const runtime = getGoogleRuntimeConfig();
+    const data = input && typeof input === "object" ? input : {};
+    const rawType = asText(data.activeCredentialType || data.credentialType || data.runtimeMode || runtime.defaultCredentialType);
+
+    return rawType === "web" ? "web" : "desktop";
+  }
+
+  function pickClientId(input) {
+    const data = input && typeof input === "object" ? input : {};
+    const credentialType = normalizeCredentialType(data);
+
+    if (credentialType === "web") {
+      return asText(data.clientIdWeb || data.clientId || data.clientIdDesktop);
+    }
+
+    return asText(data.clientIdDesktop || data.clientId || data.clientIdWeb);
+  }
+
+  function pickRedirectUri(input) {
+    const runtime = getGoogleRuntimeConfig();
+    const data = input && typeof input === "object" ? input : {};
+    const credentialType = normalizeCredentialType(data);
+
+    if (credentialType === "web") {
+      return asText(data.redirectUriWeb || data.redirectUri || data.redirectUriDesktop);
+    }
+
+    return asText(
+      data.redirectUriDesktop ||
+      data.redirectUri ||
+      data.redirectUriWeb ||
+      runtime.defaultDesktopRedirectUri ||
+      DEFAULT_DESKTOP_REDIRECT_URI
+    );
+  }
+
+  function buildMissingMap(clientId, redirectUri, scopes) {
+    return {
+      clientId: !clientId,
+      redirectUri: !redirectUri,
+      scopes: scopes.length === 0
+    };
+  }
+
+  function buildMissingMessage(missing) {
+    const parts = [];
+
+    if (missing.clientId) {
+      parts.push("Client ID");
+    }
+
+    if (missing.redirectUri) {
+      parts.push("Redirect URI");
+    }
+
+    if (missing.scopes) {
+      parts.push("scopes");
+    }
+
+    return parts.length ? `Faltan datos para OAuth: ${parts.join(", ")}.` : "Datos OAuth completos.";
+  }
+
   function buildAuthorizationParams(input) {
     const runtime = getGoogleRuntimeConfig();
     const data = input && typeof input === "object" ? input : {};
-    const clientId = asText(data.clientId || data.clientIdDesktop || data.clientIdWeb);
-    const redirectUri = asText(data.redirectUri || data.redirectUriDesktop || data.redirectUriWeb);
+    const credentialType = normalizeCredentialType(data);
+    const clientId = pickClientId(data);
+    const redirectUri = pickRedirectUri(data);
     const scopes = normalizeScopes(data.scopes);
     const state = asText(data.state) || generateState("gc-auth");
+    const missing = buildMissingMap(clientId, redirectUri, scopes);
+    const ok = Boolean(clientId && redirectUri && scopes.length);
 
     return {
-      ok: Boolean(clientId && redirectUri && scopes.length),
+      ok,
       params: {
         client_id: clientId,
         redirect_uri: redirectUri,
@@ -95,14 +164,12 @@
         state,
         scopes,
         oauthBaseUrl: runtime.oauthBaseUrl,
-        credentialType: data.activeCredentialType || runtime.defaultCredentialType,
-        calendarId: data.calendarId || runtime.defaultCalendarId
+        credentialType,
+        calendarId: data.calendarId || runtime.defaultCalendarId,
+        defaultDesktopRedirectUri: runtime.defaultDesktopRedirectUri || DEFAULT_DESKTOP_REDIRECT_URI,
+        missingMessage: buildMissingMessage(missing)
       },
-      missing: {
-        clientId: !clientId,
-        redirectUri: !redirectUri,
-        scopes: scopes.length === 0
-      }
+      missing
     };
   }
 
@@ -125,6 +192,7 @@
       params: authParams.params,
       meta: authParams.meta,
       missing: authParams.missing,
+      message: authParams.meta.missingMessage,
       checkedAt: new Date().toISOString()
     };
   }
@@ -161,8 +229,12 @@
     });
   }
 
+  auth.DEFAULT_DESKTOP_REDIRECT_URI = DEFAULT_DESKTOP_REDIRECT_URI;
   auth.generateState = generateState;
   auth.normalizeScopes = normalizeScopes;
+  auth.normalizeCredentialType = normalizeCredentialType;
+  auth.pickClientId = pickClientId;
+  auth.pickRedirectUri = pickRedirectUri;
   auth.buildAuthorizationParams = buildAuthorizationParams;
   auth.buildAuthorizationUrl = buildAuthorizationUrl;
   auth.createAuthResult = createAuthResult;
