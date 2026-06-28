@@ -51,7 +51,12 @@ const electronBridge = Object.freeze({
   removeAgendaItem: createSafeInvoke("aj:localRemove"),
   createLocalBackup: createSafeInvoke("aj:localBackup"),
   readAgendaSettings: createSafeInvoke("aj:settingsRead"),
-  saveAgendaSettings: createSafeInvoke("aj:settingsSave")
+  saveAgendaSettings: createSafeInvoke("aj:settingsSave"),
+  getBackgroundStatus: createSafeInvoke("aj:bgStatus"),
+  startBackground: createSafeInvoke("aj:bgStart"),
+  pauseBackground: createSafeInvoke("aj:bgPause"),
+  resumeBackground: createSafeInvoke("aj:bgResume"),
+  checkBackgroundNow: createSafeInvoke("aj:bgCheckNow")
 });
 
 contextBridge.exposeInMainWorld("AgendaJeffElectron", electronBridge);
