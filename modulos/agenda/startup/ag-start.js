@@ -4,7 +4,7 @@
 
   Función:
     - Iniciar la pantalla Agenda.
-    - Capturar datos del formulario como borrador visual sin persistencia real todavía.
+    - Guardar eventos, recordatorios y pendientes en la base local JSON cuando Electron esté disponible.
 */
 
 (function initAgendaModule(global) {
@@ -16,11 +16,22 @@
   const state = {
     started: false,
     startedAt: "",
-    lastDraft: null
+    lastDraft: null,
+    lastSavedResult: null
   };
 
   function getElement(id) {
     return global.document ? global.document.getElementById(id) : null;
+  }
+
+  function getBridge() {
+    try {
+      if (global.AgendaJeffElectron) return global.AgendaJeffElectron;
+      if (global.parent && global.parent.AgendaJeffElectron) return global.parent.AgendaJeffElectron;
+    } catch (error) {
+      return null;
+    }
+    return null;
   }
 
   function setOutput(data) {
@@ -39,46 +50,89 @@
       horaFin: getElement("agEndTime") ? getElement("agEndTime").value : "",
       todoDia: getElement("agAllDay") ? getElement("agAllDay").checked : false,
       categoria: getElement("agCategory") ? getElement("agCategory").value : "otro",
-      repeticion: getElement("agRepeat") ? getElement("agRepeat").value : "none",
-      estado: "borrador_visual",
+      repeticion: {
+        tipo: getElement("agRepeat") ? getElement("agRepeat").value : "none"
+      },
+      canales: {
+        escritorio: true,
+        telegram: true,
+        googleCalendar: true
+      },
+      recordatorios: {
+        cincoDiasAntes: true,
+        tresDiasAntes: true,
+        unDiaAntes: true,
+        mismoDia: true,
+        usarDiasLaborables: false,
+        horasSinHora: ["06:00", "13:00", "17:00"],
+        horasPendiente: ["06:00", "17:00"]
+      },
+      origen: {
+        tipo: "manual",
+        archivo: "",
+        textoOriginal: ""
+      },
       creadoEn: new Date().toISOString()
     };
   }
 
-  function saveVisualDraft() {
+  async function saveVisualDraft() {
+    const bridge = getBridge();
     state.lastDraft = readFormDraft();
-    setOutput({
-      ok: true,
-      action: "saveVisualDraft",
-      message: "Borrador visual generado. La persistencia real se conectará en el bloque de base local.",
-      data: state.lastDraft
-    });
-    return state.lastDraft;
+
+    if (!bridge || typeof bridge.saveAgendaItem !== "function") {
+      setOutput({
+        ok: false,
+        action: "saveAgendaItem",
+        message: "No se detectó el puente Electron. Se muestra solo el borrador visual.",
+        data: state.lastDraft
+      });
+      return state.lastDraft;
+    }
+
+    const result = await bridge.saveAgendaItem(state.lastDraft);
+    state.lastSavedResult = result;
+    setOutput(result);
+
+    if (result && result.ok) {
+      clearForm(false);
+    }
+
+    return result;
   }
 
-  function clearForm() {
+  function clearForm(renderMessage) {
     const form = getElement("agEventForm");
     if (form && typeof form.reset === "function") form.reset();
     state.lastDraft = null;
-    setOutput({ ok: true, action: "clear", message: "Formulario limpiado." });
+
+    if (renderMessage !== false) {
+      setOutput({ ok: true, action: "clear", message: "Formulario limpiado." });
+    }
   }
 
   function attachEvents() {
     const saveButton = getElement("agBtnSaveDraft");
     const clearButton = getElement("agBtnClear");
     if (saveButton) saveButton.addEventListener("click", saveVisualDraft);
-    if (clearButton) clearButton.addEventListener("click", clearForm);
+    if (clearButton) clearButton.addEventListener("click", function handleClear() { clearForm(true); });
   }
 
-  function start() {
+  async function start() {
     state.started = true;
     state.startedAt = new Date().toISOString();
     attachEvents();
+
+    const bridge = getBridge();
+    const ensureResult = bridge && typeof bridge.ensureLocalDatabase === "function"
+      ? await bridge.ensureLocalDatabase()
+      : { ok: false, message: "Puente Electron no disponible." };
+
     setOutput({
       ok: true,
       module: "agenda",
-      message: "Pantalla Agenda base cargada.",
-      next: "Bloque 2 conectará modelo y base local JSON.",
+      message: "Pantalla Agenda conectada a base local JSON cuando Electron está disponible.",
+      localDatabase: ensureResult,
       checkedAt: state.startedAt
     });
     return getState();
@@ -88,7 +142,8 @@
     return {
       started: state.started,
       startedAt: state.startedAt,
-      lastDraft: state.lastDraft
+      lastDraft: state.lastDraft,
+      lastSavedResult: state.lastSavedResult
     };
   }
 
