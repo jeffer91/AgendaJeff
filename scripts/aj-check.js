@@ -6,13 +6,14 @@
     - Ejecutar una verificación local de estructura para AgendaJeff.
     - Validar que los scripts referenciados por HTML existan.
     - Validar sintaxis básica de archivos JavaScript.
-    - Validar reglas de prefijo para módulos Telegram y Google Calendar.
+    - Validar reglas de prefijo para módulos Telegram, Google Calendar y Notificaciones.
 
   Se conecta con:
     - package.json
     - index.html
     - modulos/telegram/tl-module.html
     - modulos/googlecalendar/gc-module.html
+    - modulos/notificaciones/nt-module.html
 */
 
 "use strict";
@@ -188,6 +189,30 @@ function validateRequiredGoogleCalendarFiles() {
   });
 }
 
+function validateRequiredNotificationFiles() {
+  const required = [
+    "modulos/notificaciones/nt-module.html",
+    "modulos/notificaciones/nt-module.css",
+    "modulos/notificaciones/config/nt-config.js",
+    "modulos/notificaciones/utils/nt-normalize.js",
+    "modulos/notificaciones/desktop/nt-desktop-bridge.js",
+    "modulos/notificaciones/desktop/nt-desktop-send.js",
+    "modulos/notificaciones/desktop/nt-desktop-test.js",
+    "modulos/notificaciones/diagnostic/nt-diagnostic-state.js",
+    "modulos/notificaciones/diagnostic/nt-diagnostic-report.js",
+    "modulos/notificaciones/ui/nt-ui-dom.js",
+    "modulos/notificaciones/ui/nt-ui-render.js",
+    "modulos/notificaciones/ui/nt-ui-events.js",
+    "modulos/notificaciones/startup/nt-start.js"
+  ];
+
+  required.forEach(function eachRequired(relativePath) {
+    if (!fs.existsSync(path.join(ROOT, relativePath))) {
+      fail(`Falta archivo Notificaciones: ${relativePath}`);
+    }
+  });
+}
+
 function validateFirebaseConfigWarning() {
   const content = readText("modulos/googlecalendar/config/gc-firebase-config.js");
   const emptyRequired = ["apiKey", "authDomain", "projectId", "storageBucket", "messagingSenderId", "appId"].filter(function isEmptyField(field) {
@@ -204,14 +229,18 @@ function run() {
   validateHtmlScripts("index.html");
   validateHtmlScripts("modulos/telegram/tl-module.html");
   validateHtmlScripts("modulos/googlecalendar/gc-module.html");
+  validateHtmlScripts("modulos/notificaciones/nt-module.html");
 
   walkFiles("electron", []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(validateJsSyntax);
   walkFiles("modulos/telegram", []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(validateJsSyntax);
   walkFiles("modulos/googlecalendar", []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(validateJsSyntax);
+  walkFiles("modulos/notificaciones", []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(validateJsSyntax);
 
   validatePrefix("modulos/telegram", "tl-", []);
   validatePrefix("modulos/googlecalendar", "gc-", []);
+  validatePrefix("modulos/notificaciones", "nt-", []);
   validateRequiredGoogleCalendarFiles();
+  validateRequiredNotificationFiles();
   validateFirebaseConfigWarning();
 
   if (warnings.length) {
