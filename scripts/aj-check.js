@@ -137,13 +137,24 @@ function validateRequiredAgendaScreens() {
   validateRequiredFiles("Inicio", [
     "modulos/inicio/in-module.html",
     "modulos/inicio/in-module.css",
+    "modulos/inicio/dom/in-dom.js",
+    "modulos/inicio/render/in-summary.js",
+    "modulos/inicio/render/in-render.js",
+    "modulos/inicio/actions/in-actions.js",
     "modulos/inicio/startup/in-start.js"
   ]);
 
   validateRequiredFiles("Agenda", [
     "modulos/agenda/ag-module.html",
     "modulos/agenda/ag-module.css",
-    "modulos/agenda/startup/ag-start.js"
+    "modulos/agenda/ag-crud.css",
+    "modulos/agenda/form/ag-form-dom.js",
+    "modulos/agenda/form/ag-form-read.js",
+    "modulos/agenda/form/ag-form-fill.js",
+    "modulos/agenda/list/ag-list-render.js",
+    "modulos/agenda/list/ag-list-events.js",
+    "modulos/agenda/startup/ag-start.js",
+    "modulos/agenda/startup/ag-start-v2.js"
   ]);
 
   validateRequiredFiles("Carga Masiva", [
@@ -169,7 +180,13 @@ function validateRequiredCoreFiles() {
     "core/models/aj-sync-model.js",
     "core/utils/aj-id.js",
     "core/utils/aj-date.js",
-    "core/utils/aj-result.js"
+    "core/utils/aj-result.js",
+    "core/integrations/aj-service-bridge.js",
+    "core/integrations/aj-firebase-adapter.js",
+    "core/integrations/aj-telegram-adapter.js",
+    "core/integrations/aj-google-adapter.js",
+    "core/integrations/aj-notification-adapter.js",
+    "core/sync/aj-sync-orchestrator.js"
   ]);
 
   validateRequiredFiles("Base local", [
