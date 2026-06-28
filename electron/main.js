@@ -8,6 +8,8 @@
 const { app, BrowserWindow, ipcMain, shell, Notification } = require("electron");
 const { CONFIG, getWindowOptions } = require("./electron-config");
 const gcReturn = require("./" + "oauth" + "/" + "gc-local-callback");
+const { registerLocalIpc } = require("./localdb/aj-local-ipc");
+const { ensureLocalDatabase } = require("./localdb/aj-local-read");
 
 let mainWindow = null;
 let ipcRegistered = false;
@@ -172,6 +174,8 @@ function registerIpcHandlers() {
   ipcMain.handle("aj:gcReturnStop", async function handleReturnStop() {
     return gcReturn.stop();
   });
+
+  registerLocalIpc(ipcMain, app);
 }
 
 function protectExternalNavigation(window) {
@@ -215,6 +219,7 @@ function bootstrapElectron() {
 
   app.whenReady().then(function handleReady() {
     prepareWindowsNotifications();
+    ensureLocalDatabase(app);
     createMainWindow();
     app.on("activate", function handleActivate() {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
