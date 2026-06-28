@@ -63,6 +63,19 @@
         global.parent.AgendaJeffShell.openModule("agenda");
         return true;
       }
+
+      if (global.parent && global.parent.document) {
+        const frame = global.parent.document.getElementById("moduleFrame");
+        if (frame) frame.src = "modulos/agenda/ag-module.html";
+
+        global.parent.document.querySelectorAll(".aj-nav-button[data-module]").forEach(function eachButton(button) {
+          button.classList.toggle("is-active", button.dataset.module === "agenda");
+        });
+
+        const footer = global.parent.document.getElementById("footerStatus");
+        if (footer) footer.textContent = "Agenda · Cargando módulo";
+        return Boolean(frame);
+      }
     } catch (error) {
       return false;
     }
