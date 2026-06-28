@@ -4,7 +4,7 @@
 
   Función:
     - Registrar canales IPC seguros para usar la base local JSON desde las pantallas.
-    - Registrar controles de segundo plano sin tocar el archivo principal de Electron.
+    - Registrar controles de segundo plano y bandeja.
 */
 
 "use strict";
@@ -38,6 +38,19 @@ function showActiveWindow() {
   return true;
 }
 
+function hideActiveWindow() {
+  const window = getActiveWindow();
+  if (!window) return false;
+  window.hide();
+  return true;
+}
+
+function quitApplication(appInstance) {
+  if (!appInstance || typeof appInstance.quit !== "function") return false;
+  appInstance.quit();
+  return true;
+}
+
 function ensureBackgroundServices(appInstance) {
   if (backgroundRunner) return backgroundRunner.status();
 
@@ -46,11 +59,11 @@ function ensureBackgroundServices(appInstance) {
     intervalMs: 60000,
     sendNotification: sendNativeBackgroundNotification
   });
-
   backgroundRunner.start();
 
   trayController = createTrayController({
     showWindow: showActiveWindow,
+    hideWindow: hideActiveWindow,
     checkNow: function checkNowFromTray() {
       if (backgroundRunner) backgroundRunner.checkNow("tray");
     },
@@ -59,6 +72,9 @@ function ensureBackgroundServices(appInstance) {
     },
     resumeBackground: function resumeFromTray() {
       if (backgroundRunner) backgroundRunner.resume();
+    },
+    quitApp: function quitFromTray() {
+      quitApplication(appInstance);
     }
   });
   trayController.create();
