@@ -1,0 +1,80 @@
+<!--
+  Nombre completo: aj-module.html
+  Ruta: modulos/ajustes/aj-module.html
+
+  Función:
+    - Pantalla base de ajustes de AgendaJeff.
+    - Preparar preferencias de inicio con Windows, segundo plano, recordatorios y actualizaciones.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgendaJeff · Ajustes</title>
+  <link rel="stylesheet" href="./aj-module.css" />
+</head>
+<body>
+  <main class="ajx-page" aria-labelledby="ajPageTitle">
+    <section class="ajx-hero">
+      <div>
+        <p class="ajx-eyebrow">AgendaJeff · Ajustes</p>
+        <h1 id="ajPageTitle">Configuración general</h1>
+        <p class="ajx-hero-text">Base para preferencias de segundo plano, inicio con Windows, recordatorios y actualizaciones.</p>
+      </div>
+      <article class="ajx-status-card">
+        <span id="ajStatusBadge" class="ajx-badge is-ready">Base lista</span>
+        <h2 id="ajStatusTitle">Ajustes preparados</h2>
+        <p id="ajStatusDescription">La persistencia se conectará en el bloque de base local.</p>
+      </article>
+    </section>
+
+    <section class="ajx-grid">
+      <article class="ajx-panel">
+        <div class="ajx-panel-header">
+          <div>
+            <h2>Segundo plano</h2>
+            <p>La app se ocultará en bandeja y seguirá activa con bajo consumo.</p>
+          </div>
+        </div>
+        <div class="ajx-options">
+          <label class="ajx-check"><input id="ajRunInBackground" type="checkbox" checked /> <span>Trabajar en segundo plano</span></label>
+          <label class="ajx-check"><input id="ajAskStartWindows" type="checkbox" checked /> <span>Preguntar primera vez si inicia con Windows</span></label>
+          <label class="ajx-check"><input id="ajLowResourceMode" type="checkbox" checked /> <span>Modo bajo consumo</span></label>
+        </div>
+      </article>
+
+      <article class="ajx-panel">
+        <div class="ajx-panel-header">
+          <div>
+            <h2>Recordatorios base</h2>
+            <p>Reglas iniciales confirmadas para eventos y pendientes.</p>
+          </div>
+        </div>
+        <div class="ajx-list">
+          <div><strong>Evento sin hora:</strong> 06:00, 13:00, 17:00.</div>
+          <div><strong>Pendiente:</strong> 06:00 y 17:00 hasta completarse.</div>
+          <div><strong>Evento normal:</strong> 5 días, 3 días, 1 día y mismo día.</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="ajx-panel">
+      <div class="ajx-panel-header">
+        <div>
+          <h2>Actualizaciones</h2>
+          <p>Base para descargar en segundo plano y pedir confirmación antes de instalar.</p>
+        </div>
+      </div>
+      <div class="ajx-options">
+        <label class="ajx-check"><input id="ajAutoUpdate" type="checkbox" checked /> <span>Buscar actualizaciones con internet</span></label>
+        <label class="ajx-check"><input id="ajConfirmInstall" type="checkbox" checked /> <span>Pedir confirmación para instalar/reiniciar</span></label>
+      </div>
+      <pre id="ajResultBox" class="ajx-output">Pantalla Ajustes cargando...</pre>
+    </section>
+  </main>
+
+  <script src="./startup/aj-start.js"></script>
+</body>
+</html>
