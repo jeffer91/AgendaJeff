@@ -3,9 +3,9 @@
   Ruta: modulos/inicio/in-module.html
 
   Función:
-    - Pantalla inicial de AgendaJeff.
-    - Mostrar estructura base para eventos de hoy, próximos eventos y pendientes.
-    - Preparar la vista para conectarse luego al core de agenda sin tocar módulos de conexiones.
+    - Pantalla principal de AgendaJeff.
+    - Mostrar resumen del día, próximos 7 días, pendientes, vencidos y estado de sincronización.
+    - Permitir acciones rápidas sin tocar los módulos de conexiones.
 -->
 
 <!DOCTYPE html>
@@ -17,17 +17,50 @@
   <link rel="stylesheet" href="./in-module.css" />
 </head>
 <body>
-  <main class="in-page" aria-labelledby="inPageTitle">
+  <main id="inPageRoot" class="in-page" aria-labelledby="inPageTitle">
     <section class="in-hero">
       <div>
         <p class="in-eyebrow">AgendaJeff · Inicio</p>
         <h1 id="inPageTitle">Resumen del día</h1>
-        <p class="in-hero-text">Vista principal para revisar eventos de hoy, próximos eventos y pendientes activos.</p>
+        <p class="in-hero-text">Vista principal para revisar lo importante: hoy, próximos 7 días, pendientes, vencidos y sincronización.</p>
+        <div class="in-hero-actions">
+          <button class="in-btn in-btn-primary" type="button" data-action="refresh">Actualizar</button>
+          <button class="in-btn" type="button" data-action="openAgenda">Abrir Agenda</button>
+          <span id="inActionStatus" class="in-action-status">Listo</span>
+        </div>
       </div>
       <article class="in-status-card" aria-live="polite">
-        <span id="inStatusBadge" class="in-badge is-ready">Base lista</span>
-        <h2 id="inStatusTitle">Inicio preparado</h2>
-        <p id="inStatusDescription">En el siguiente bloque se conectará con la base local JSON.</p>
+        <span id="inStatusBadge" class="in-badge is-ready">Verificando</span>
+        <h2 id="inStatusTitle">Inicio cargando</h2>
+        <p id="inStatusDescription">Leyendo base local JSON.</p>
+        <small>Última actualización: <strong id="inLastUpdated">...</strong></small>
+      </article>
+    </section>
+
+    <section class="in-stats" aria-label="Resumen rápido">
+      <article class="in-stat-card">
+        <span>Hoy</span>
+        <strong id="inStatToday">0</strong>
+      </article>
+      <article class="in-stat-card">
+        <span>Próximos 7 días</span>
+        <strong id="inStatUpcoming">0</strong>
+      </article>
+      <article class="in-stat-card">
+        <span>Pendientes</span>
+        <strong id="inStatPending">0</strong>
+      </article>
+      <article class="in-stat-card">
+        <span>Vencidos</span>
+        <strong id="inStatOverdue">0</strong>
+      </article>
+      <article class="in-stat-card">
+        <span>Por sincronizar</span>
+        <strong id="inStatSync">0</strong>
+      </article>
+      <article class="in-stat-card">
+        <span>Errores</span>
+        <strong id="inStatErrors">0</strong>
       </article>
     </section>
 
@@ -36,43 +69,62 @@
         <div class="in-panel-header">
           <div>
             <h2>Eventos de hoy</h2>
-            <p>Mostrará eventos, recordatorios y pendientes programados para el día actual.</p>
+            <p>Eventos, recordatorios y pendientes programados para hoy.</p>
           </div>
           <span class="in-counter" id="inTodayCount">0</span>
         </div>
         <div id="inTodayList" class="in-list">
-          <div class="in-empty">Sin datos conectados todavía.</div>
+          <div class="in-empty">Cargando datos locales.</div>
         </div>
       </article>
 
       <article class="in-panel">
         <div class="in-panel-header">
           <div>
-            <h2>Próximos</h2>
-            <p>Mostrará eventos próximos por fecha y prioridad.</p>
+            <h2>Próximos 7 días</h2>
+            <p>Agenda cercana para anticipar trabajo y recordatorios.</p>
           </div>
           <span class="in-counter" id="inUpcomingCount">0</span>
         </div>
         <div id="inUpcomingList" class="in-list">
-          <div class="in-empty">Pendiente de conexión con agenda.</div>
+          <div class="in-empty">Cargando próximos eventos.</div>
         </div>
       </article>
     </section>
 
-    <section class="in-panel">
-      <div class="in-panel-header">
-        <div>
-          <h2>Pendientes activos</h2>
-          <p>Los pendientes se avisarán a las 06:00 y 17:00 hasta marcarse como completados.</p>
+    <section class="in-grid">
+      <article class="in-panel">
+        <div class="in-panel-header">
+          <div>
+            <h2>Pendientes activos</h2>
+            <p>Se mantienen hasta completarse. Avisos base: 06:00 y 17:00.</p>
+          </div>
+          <span class="in-counter" id="inPendingCount">0</span>
         </div>
-        <span class="in-counter" id="inPendingCount">0</span>
-      </div>
-      <div id="inPendingList" class="in-list in-list-horizontal">
-        <div class="in-empty">Aquí aparecerán los pendientes cuando exista base local.</div>
-      </div>
+        <div id="inPendingList" class="in-list">
+          <div class="in-empty">Cargando pendientes.</div>
+        </div>
+      </article>
+
+      <article class="in-panel">
+        <div class="in-panel-header">
+          <div>
+            <h2>Vencidos</h2>
+            <p>Registros activos con fecha anterior a hoy.</p>
+          </div>
+          <span class="in-counter is-alert" id="inOverdueCount">0</span>
+        </div>
+        <div id="inOverdueList" class="in-list">
+          <div class="in-empty">Cargando vencidos.</div>
+        </div>
+      </article>
     </section>
   </main>
 
+  <script src="./dom/in-dom.js"></script>
+  <script src="./render/in-summary.js"></script>
+  <script src="./render/in-render.js"></script>
+  <script src="./actions/in-actions.js"></script>
   <script src="./startup/in-start.js"></script>
 </body>
 </html>
