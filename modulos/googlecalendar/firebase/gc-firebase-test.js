@@ -5,12 +5,12 @@
   Función:
     - Probar SDK Firebase, configuración, inicialización, lectura y escritura mínima.
     - Confirmar acceso al documento conexiones/googleCalendar.
+    - Escribir solo campos de diagnóstico para no pisar configuración OAuth ni estado principal.
     - Devolver diagnóstico claro para UI y próximos bloques.
 
   Se conecta con:
     - modulos/googlecalendar/firebase/gc-firebase-init.js
     - modulos/googlecalendar/firebase/gc-firebase-read.js
-    - modulos/googlecalendar/firebase/gc-firebase-save.js
 */
 
 (function initGoogleCalendarFirebaseTest(global) {
@@ -41,6 +41,43 @@
             checkedAt: data.checkedAt || new Date().toISOString()
           };
         };
+  }
+
+  async function writeDiagnosticOnly(refResult, checkedAt) {
+    if (!refResult || !refResult.ref || typeof refResult.ref.set !== "function") {
+      return {
+        ok: false,
+        message: "Referencia Firestore no disponible para escritura de diagnóstico."
+      };
+    }
+
+    try {
+      const payload = {
+        firebaseConnectionOk: true,
+        firebaseConexionOk: true,
+        firebaseLastCheckAt: checkedAt,
+        firebaseUltimaRevisionEn: checkedAt,
+        diagnostic: {
+          googleCalendarFirebaseTestOk: true,
+          googleCalendarFirebaseTestAt: checkedAt,
+          googleCalendarFirebaseTestFile: "modulos/googlecalendar/firebase/gc-firebase-test.js"
+        }
+      };
+
+      await refResult.ref.set(payload, { merge: true });
+
+      return {
+        ok: true,
+        message: "Escritura mínima de diagnóstico Firebase correcta.",
+        payload
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error && error.message ? error.message : "No se pudo escribir diagnóstico Firebase.",
+        error: { message: error && error.message ? error.message : "Error desconocido." }
+      };
+    }
   }
 
   async function testFirebaseConnection() {
@@ -123,27 +160,8 @@
       checks.readOk = Boolean(readResult && (readResult.ok || readResult.status === "idle"));
     }
 
-    if (firebaseLayer.saveFirebaseConnection && typeof firebaseLayer.saveFirebaseConnection === "function") {
-      writeResult = await firebaseLayer.saveFirebaseConnection({
-        configured: false,
-        configurado: false,
-        status: config.status ? config.status.PARTIAL : "partial",
-        estado: config.status ? config.status.PARTIAL : "partial",
-        lastAction: config.action ? config.action.TEST_FIREBASE : "testFirebase",
-        ultimaAccion: config.action ? config.action.TEST_FIREBASE : "testFirebase",
-        firebaseConnectionOk: true,
-        firebaseConexionOk: true,
-        firebaseLastCheckAt: checkedAt,
-        firebaseUltimaRevisionEn: checkedAt,
-        updatedAt: checkedAt,
-        actualizadoEn: checkedAt
-      }, {
-        status: config.status ? config.status.PARTIAL : "partial",
-        action: config.action ? config.action.TEST_FIREBASE : "testFirebase",
-        source: config.source ? config.source.FIREBASE : "firebase"
-      });
-      checks.writeOk = Boolean(writeResult && writeResult.ok);
-    }
+    writeResult = await writeDiagnosticOnly(refResult, checkedAt);
+    checks.writeOk = Boolean(writeResult && writeResult.ok);
 
     const ok = checks.sdkLoaded && checks.configValid && checks.initialized && checks.docRefOk && checks.writeOk;
 
@@ -156,10 +174,7 @@
       message: ok
         ? "Firebase Google Calendar funciona correctamente."
         : "Firebase Google Calendar respondió parcialmente; revisa JSON técnico.",
-      error: ok ? null : {
-        message: "Una o más pruebas Firebase no pasaron.",
-        file
-      },
+      error: ok ? null : { message: "Una o más pruebas Firebase no pasaron.", file },
       data: {
         checks,
         configValidation,
@@ -171,5 +186,6 @@
     });
   }
 
+  firebaseLayer.writeDiagnosticOnly = writeDiagnosticOnly;
   firebaseLayer.testFirebaseConnection = testFirebaseConnection;
 })(window);
