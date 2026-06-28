@@ -6,6 +6,7 @@
     - Centralizar referencias DOM del módulo Google Calendar.
     - Leer y escribir datos del formulario sin mezclar lógica de conexión.
     - Cargar todos los campos disponibles desde Firebase: desktop, web, redirect y secretos.
+    - Aplicar Redirect Desktop por defecto para evitar bloqueo OAuth.
     - Preparar datos para guardar, conectar, intercambiar código y crear eventos.
 
   Se conecta con:
@@ -20,6 +21,7 @@
   const root = global.AgendaJeffModules = global.AgendaJeffModules || {};
   const googleCalendar = root.GoogleCalendar = root.GoogleCalendar || {};
   const ui = googleCalendar.UI = googleCalendar.UI || {};
+  const DEFAULT_DESKTOP_REDIRECT_URI = "http://localhost";
 
   function byId(id) {
     return document.getElementById(id);
@@ -102,14 +104,25 @@
     };
   }
 
+  function getDefaultDesktopRedirectUri() {
+    return DEFAULT_DESKTOP_REDIRECT_URI;
+  }
+
+  function normalizeDesktopRedirectUri(value) {
+    return value && String(value).trim() ? String(value).trim() : DEFAULT_DESKTOP_REDIRECT_URI;
+  }
+
   function readConnectionForm() {
+    const activeCredentialType = valueOf("gcActiveCredentialType") || "desktop";
+    const redirectUriDesktop = normalizeDesktopRedirectUri(valueOf("gcRedirectUriDesktop"));
+
     return {
       enabled: checkedOf("gcEnabled"),
-      activeCredentialType: valueOf("gcActiveCredentialType") || "desktop",
+      activeCredentialType,
       calendarId: valueOf("gcCalendarId") || "primary",
       clientIdDesktop: valueOf("gcClientIdDesktop"),
       clientSecretDesktop: valueOf("gcClientSecretDesktop"),
-      redirectUriDesktop: valueOf("gcRedirectUriDesktop"),
+      redirectUriDesktop,
       clientIdWeb: valueOf("gcClientIdWeb"),
       clientSecretWeb: valueOf("gcClientSecretWeb"),
       redirectUriWeb: valueOf("gcRedirectUriWeb"),
@@ -148,7 +161,7 @@
       calendarId: firstText(data, ["calendarId", "idCalendario"], "primary"),
       clientIdDesktop: firstText(data, ["clientIdDesktop", "desktopClientId"]),
       clientSecretDesktop: firstText(data, ["clientSecretDesktop", "desktopClientSecret", "clientSecret"]),
-      redirectUriDesktop: firstText(data, ["redirectUriDesktop", "desktopRedirectUri", "redirectUri"]),
+      redirectUriDesktop: firstText(data, ["redirectUriDesktop", "desktopRedirectUri", "redirectUri"], DEFAULT_DESKTOP_REDIRECT_URI),
       clientIdWeb: firstText(data, ["clientIdWeb", "webClientId"]),
       clientSecretWeb: firstText(data, ["clientSecretWeb", "webClientSecret"]),
       redirectUriWeb: firstText(data, ["redirectUriWeb", "webRedirectUri"])
@@ -167,7 +180,7 @@
     setValue("gcCalendarId", fields.calendarId || "primary");
     setValue("gcClientIdDesktop", fields.clientIdDesktop || "");
     setValue("gcClientSecretDesktop", fields.clientSecretDesktop || "");
-    setValue("gcRedirectUriDesktop", fields.redirectUriDesktop || "");
+    setValue("gcRedirectUriDesktop", normalizeDesktopRedirectUri(fields.redirectUriDesktop));
     setValue("gcClientIdWeb", fields.clientIdWeb || "");
     setValue("gcClientSecretWeb", fields.clientSecretWeb || "");
     setValue("gcRedirectUriWeb", fields.redirectUriWeb || "");
@@ -199,6 +212,7 @@
   }
 
   ui.Dom = Object.freeze({
+    DEFAULT_DESKTOP_REDIRECT_URI,
     byId,
     valueOf,
     checkedOf,
@@ -207,6 +221,8 @@
     setChecked,
     setDetailsOpen,
     getElements,
+    getDefaultDesktopRedirectUri,
+    normalizeDesktopRedirectUri,
     readConnectionForm,
     readAuthInput,
     readEventDraft,
