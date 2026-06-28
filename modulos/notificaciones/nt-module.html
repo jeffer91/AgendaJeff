@@ -5,7 +5,8 @@
   Función:
     - Mostrar la pantalla independiente del módulo Notificaciones.
     - Permitir pruebas de notificaciones nativas de escritorio en Windows/Electron.
-    - Cargar configuración, utilidades, desktop bridge, pruebas, diagnóstico, UI y startup.
+    - Permitir pruebas de notificaciones visuales internas: toast, banner y alerta central.
+    - Cargar configuración, utilidades, desktop bridge, visual, pruebas, diagnóstico, UI y startup.
 -->
 
 <!DOCTYPE html>
@@ -23,7 +24,7 @@
         <p class="nt-eyebrow">AgendaJeff · Módulo paralelo</p>
         <h1 id="ntPageTitle">Notificaciones de escritorio</h1>
         <p class="nt-hero-text">
-          Pruebas independientes para validar avisos nativos de Windows junto al reloj, sin crear eventos reales todavía.
+          Pruebas independientes para validar avisos nativos de Windows y avisos visuales internos dentro de AgendaJeff.
         </p>
       </div>
 
@@ -43,7 +44,7 @@
         <div class="nt-panel-header">
           <div>
             <h2>Datos de prueba</h2>
-            <p>Texto editable para las notificaciones de prueba.</p>
+            <p>Texto editable y tipo de visualización para las notificaciones de prueba.</p>
           </div>
         </div>
 
@@ -56,6 +57,16 @@
           <label class="nt-field" for="ntBody">
             <span>Mensaje</span>
             <textarea id="ntBody" rows="4">notificaciones prueba</textarea>
+          </label>
+
+          <label class="nt-field" for="ntDisplayMode">
+            <span>Tipo de visualización</span>
+            <select id="ntDisplayMode">
+              <option value="native" selected>Nativa Windows</option>
+              <option value="toast">Toast interno arriba derecha</option>
+              <option value="banner">Banner superior interno</option>
+              <option value="center">Alerta central interna</option>
+            </select>
           </label>
 
           <label class="nt-field" for="ntDelaySeconds">
@@ -136,6 +147,11 @@
   <script src="./desktop/nt-desktop-bridge.js"></script>
   <script src="./desktop/nt-desktop-send.js"></script>
   <script src="./desktop/nt-desktop-test.js"></script>
+  <script src="./visual/nt-visual-container.js"></script>
+  <script src="./visual/nt-visual-toast.js"></script>
+  <script src="./visual/nt-visual-banner.js"></script>
+  <script src="./visual/nt-visual-center.js"></script>
+  <script src="./visual/nt-visual-send.js"></script>
   <script src="./diagnostic/nt-diagnostic-state.js"></script>
   <script src="./diagnostic/nt-diagnostic-report.js"></script>
   <script src="./ui/nt-ui-dom.js"></script>
