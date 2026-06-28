@@ -6,7 +6,7 @@
     - Ejecutar una verificación local de estructura para AgendaJeff.
     - Validar que los scripts referenciados por HTML existan.
     - Validar sintaxis básica de archivos JavaScript.
-    - Validar reglas de prefijo para pantallas nuevas y módulos de conexiones.
+    - Validar reglas de prefijo para pantallas nuevas, core y módulos de conexiones.
 */
 
 "use strict";
@@ -159,6 +159,30 @@ function validateRequiredAgendaScreens() {
   ]);
 }
 
+function validateRequiredCoreFiles() {
+  validateRequiredFiles("Core", [
+    "core/config/aj-core-config.js",
+    "core/models/aj-event-model.js",
+    "core/models/aj-reminder-model.js",
+    "core/models/aj-pending-model.js",
+    "core/models/aj-category-model.js",
+    "core/models/aj-sync-model.js",
+    "core/utils/aj-id.js",
+    "core/utils/aj-date.js",
+    "core/utils/aj-result.js"
+  ]);
+
+  validateRequiredFiles("Base local", [
+    "electron/localdb/aj-local-paths.js",
+    "electron/localdb/aj-local-defaults.js",
+    "electron/localdb/aj-local-read.js",
+    "electron/localdb/aj-local-save.js",
+    "electron/localdb/aj-local-index.js",
+    "electron/localdb/aj-local-backup.js",
+    "electron/localdb/aj-local-ipc.js"
+  ]);
+}
+
 function validateRequiredGoogleCalendarFiles() {
   validateRequiredFiles("Google Calendar", [
     "modulos/googlecalendar/gc-module.html",
@@ -253,6 +277,7 @@ function validateHtmlReferences() {
 
 function validateJavaScriptSyntax() {
   [
+    "core",
     "electron",
     "modulos/inicio",
     "modulos/agenda",
@@ -267,6 +292,8 @@ function validateJavaScriptSyntax() {
 }
 
 function validatePrefixes() {
+  validatePrefix("core", "aj-", []);
+  validatePrefix("electron/localdb", "aj-", []);
   validatePrefix("modulos/inicio", "in-", []);
   validatePrefix("modulos/agenda", "ag-", []);
   validatePrefix("modulos/carga", "cm-", []);
@@ -281,6 +308,7 @@ function run() {
   validateJavaScriptSyntax();
   validatePrefixes();
   validateRequiredAgendaScreens();
+  validateRequiredCoreFiles();
   validateRequiredGoogleCalendarFiles();
   validateRequiredNotificationFiles();
   validateFirebaseConfigWarning();
