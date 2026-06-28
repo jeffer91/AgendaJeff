@@ -82,10 +82,9 @@
     }
   }
 
-  function renderInfo(message, data) {
+  function renderInfo(message) {
     const elements = getElements();
     setText(elements.resultBox, message || "Módulo Notificaciones listo.");
-    renderJson(data || {});
   }
 
   ui.Render = Object.freeze({
