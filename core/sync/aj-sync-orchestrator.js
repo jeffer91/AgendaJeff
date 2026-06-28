@@ -4,7 +4,7 @@
 
   Función:
     - Orquestar sincronización después de crear, editar o completar un registro.
-    - Ejecutar salida hacia Google Calendar, Telegram y Notificaciones usando adaptadores.
+    - Ejecutar salida hacia Firebase, Google Calendar, Telegram y Notificaciones usando adaptadores.
 */
 
 (function initAgendaJeffSyncOrchestrator(global) {
@@ -52,6 +52,7 @@
     const actionName = action || "create";
     const integrations = core.Integrations || {};
     const results = {
+      firebase: null,
       googleCalendar: null,
       telegram: null,
       notificaciones: null
@@ -59,6 +60,12 @@
 
     if (core.Services && typeof core.Services.start === "function") {
       core.Services.start();
+    }
+
+    if (integrations.Firebase && integrations.Firebase.saveItem) {
+      results.firebase = await runSafely("firebase", function saveFirebase() {
+        return integrations.Firebase.saveItem(data, actionName);
+      });
     }
 
     if (shouldUseGoogle(data, actionName) && integrations.GoogleCalendar && integrations.GoogleCalendar.createGoogleEvent) {
