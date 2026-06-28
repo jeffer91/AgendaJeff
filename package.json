@@ -14,12 +14,19 @@
     "release:prepare": "node scripts/release/aj-release-prepare.js",
     "build:guard": "node scripts/build/aj-build-guard.js",
     "build:win": "npm run build:guard && electron-builder --win nsis",
-    "release:win": "scripts\\windows\\aj-release.bat patch"
+    "release:win": "scripts\\windows\\aj-release.bat patch",
+    "android:prepare": "node scripts/android/aj-android-prepare.js",
+    "android:check": "node scripts/android/aj-android-check.js",
+    "android:sync": "npm run android:prepare && npx cap sync android",
+    "android:open": "npm run android:sync && npx cap open android",
+    "android:apk": "scripts\\windows\\aj-android-apk.bat"
   },
   "keywords": [
     "agenda",
     "electron",
-    "modular"
+    "modular",
+    "android",
+    "capacitor"
   ],
   "author": "Jefferson Villarreal",
   "license": "MIT",
@@ -52,18 +59,26 @@
   "agendaJeff": {
     "nombreCompleto": "package.json",
     "ruta": "package.json",
-    "funcion": "Define el proyecto Electron, scripts de ejecución, verificación, versionado y build para AgendaJeff.",
+    "funcion": "Define el proyecto Electron, scripts de ejecución, verificación, versionado, build y preparación Android para AgendaJeff.",
     "seConectaCon": [
       "electron/main.js",
       "index.html",
       "scripts/aj-check.js",
       "scripts/version/aj-version-bump.js",
       "scripts/release/aj-release-prepare.js",
-      "scripts/windows/aj-release.bat"
+      "scripts/windows/aj-release.bat",
+      "scripts/android/aj-android-prepare.js",
+      "scripts/windows/aj-android-apk.bat",
+      "capacitor.config.json"
     ],
     "nota": "JSON no permite comentarios. Por eso esta metadata queda dentro de agendaJeff para conservar el archivo válido."
   },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
   "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3"
   }
