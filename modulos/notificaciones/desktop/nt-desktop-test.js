@@ -13,17 +13,21 @@
       : (input && typeof input === "object" ? input : {});
   }
 
+  function withoutDelay(payload) {
+    return { ...payload, delayMs: 0, delaySeconds: 0 };
+  }
+
   function buildPayload(type, input) {
     const config = nt.CONFIG || {};
     const types = config.types || {};
     const base = normalize(input || {}, { type });
 
     if (type === types.SILENT) {
-      return { ...base, type, silent: true };
+      return withoutDelay({ ...base, type, silent: true });
     }
 
     if (type === types.LONG) {
-      return { ...base, type, body: base.body + "\n\nMensaje largo para validar el centro de avisos de Windows." };
+      return withoutDelay({ ...base, type, body: base.body + "\n\nMensaje largo para validar el centro de avisos de Windows." });
     }
 
     if (type === types.REMINDER) {
@@ -31,14 +35,14 @@
     }
 
     if (type === types.SUCCESS) {
-      return { ...base, type, title: "AgendaJeff - Éxito", body: base.body + "\n\nPrueba completada correctamente." };
+      return withoutDelay({ ...base, type, title: "AgendaJeff - Éxito", body: base.body + "\n\nPrueba completada correctamente." });
     }
 
     if (type === types.ERROR) {
-      return { ...base, type, title: "AgendaJeff - Aviso", body: base.body + "\n\nPrueba de aviso tipo error." };
+      return withoutDelay({ ...base, type, title: "AgendaJeff - Aviso", body: base.body + "\n\nPrueba de aviso tipo error." });
     }
 
-    return { ...base, type: type || types.NORMAL || "normal" };
+    return withoutDelay({ ...base, type: type || types.NORMAL || "normal" });
   }
 
   async function runTest(type, input) {
