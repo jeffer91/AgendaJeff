@@ -339,7 +339,7 @@
         <button class="aj-menu-item" type="button" data-module="agenda">Agenda</button>
         <button class="aj-menu-item" type="button" data-module="carga">Masivo</button>
         <div class="aj-menu-group" id="ajSettingsMenuGroup">
-          <button class="aj-menu-item" id="ajSettingsMenuButton" type="button" data-module="ajustes" aria-haspopup="true" aria-expanded="false">Ajustes ▾</button>
+          <button class="aj-menu-item" id="ajSettingsMenuButton" type="button" data-menu-toggle="ajustes" aria-haspopup="true" aria-expanded="false">Ajustes ▾</button>
           <div class="aj-submenu" role="menu" aria-label="Submenú de Ajustes">
             <span class="aj-submenu-title">Conexiones</span>
             <button class="aj-submenu-item" type="button" data-module="googleCalendar" role="menuitem">Google Calendar</button>
@@ -375,8 +375,6 @@
         inicio: { key: "inicio", title: "Inicio", src: "modulos/inicio/in-module.html" },
         agenda: { key: "agenda", title: "Agenda", src: "modulos/agenda/ag-module.html" },
         carga: { key: "carga", title: "Masivo", src: "modulos/carga/cm-module.html" },
-        ajustes: { key: "ajustes", title: "Ajustes", src: "modulos/ajustes/aj-module.html" },
-        diagnostico: { key: "diagnostico", title: "Diagnóstico", src: "modulos/diagnostico/dg-module.html" },
         telegram: { key: "telegram", title: "Telegram", src: "modulos/telegram/tl-module.html" },
         googleCalendar: { key: "googleCalendar", title: "Google Calendar", src: "modulos/googlecalendar/gc-module.html" },
         notificaciones: { key: "notificaciones", title: "Notificaciones de escritorio", src: "modulos/notificaciones/nt-module.html" }
@@ -392,7 +390,7 @@
       function setFooter(text) { footerStatus.textContent = text || "AgendaJeff"; }
 
       function isSettingsArea(moduleKey) {
-        return ["ajustes", "googleCalendar", "telegram", "notificaciones"].includes(moduleKey);
+        return ["googleCalendar", "telegram", "notificaciones"].includes(moduleKey);
       }
 
       function setActiveModule(moduleKey) {
@@ -454,12 +452,17 @@
       function wireEvents() {
         checkElectronBtn.addEventListener("click", checkElectron);
 
+        if (settingsMenuButton) {
+          settingsMenuButton.addEventListener("click", function handleSettingsMenuClick(event) {
+            toggleSettingsMenu();
+            event.stopPropagation();
+          });
+        }
+
         document.querySelectorAll(".aj-menu-item[data-module], .aj-submenu-item[data-module]").forEach(function eachButton(button) {
           button.addEventListener("click", function handleOpenModule(event) {
-            const moduleKey = button.dataset.module;
-            openModule(moduleKey);
-            if (moduleKey === "ajustes") toggleSettingsMenu();
-            else closeSettingsMenu();
+            openModule(button.dataset.module);
+            closeSettingsMenu();
             event.stopPropagation();
           });
         });
