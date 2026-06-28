@@ -1,0 +1,78 @@
+<!--
+  Nombre completo: in-module.html
+  Ruta: modulos/inicio/in-module.html
+
+  Función:
+    - Pantalla inicial de AgendaJeff.
+    - Mostrar estructura base para eventos de hoy, próximos eventos y pendientes.
+    - Preparar la vista para conectarse luego al core de agenda sin tocar módulos de conexiones.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgendaJeff · Inicio</title>
+  <link rel="stylesheet" href="./in-module.css" />
+</head>
+<body>
+  <main class="in-page" aria-labelledby="inPageTitle">
+    <section class="in-hero">
+      <div>
+        <p class="in-eyebrow">AgendaJeff · Inicio</p>
+        <h1 id="inPageTitle">Resumen del día</h1>
+        <p class="in-hero-text">Vista principal para revisar eventos de hoy, próximos eventos y pendientes activos.</p>
+      </div>
+      <article class="in-status-card" aria-live="polite">
+        <span id="inStatusBadge" class="in-badge is-ready">Base lista</span>
+        <h2 id="inStatusTitle">Inicio preparado</h2>
+        <p id="inStatusDescription">En el siguiente bloque se conectará con la base local JSON.</p>
+      </article>
+    </section>
+
+    <section class="in-grid">
+      <article class="in-panel">
+        <div class="in-panel-header">
+          <div>
+            <h2>Eventos de hoy</h2>
+            <p>Mostrará eventos, recordatorios y pendientes programados para el día actual.</p>
+          </div>
+          <span class="in-counter" id="inTodayCount">0</span>
+        </div>
+        <div id="inTodayList" class="in-list">
+          <div class="in-empty">Sin datos conectados todavía.</div>
+        </div>
+      </article>
+
+      <article class="in-panel">
+        <div class="in-panel-header">
+          <div>
+            <h2>Próximos</h2>
+            <p>Mostrará eventos próximos por fecha y prioridad.</p>
+          </div>
+          <span class="in-counter" id="inUpcomingCount">0</span>
+        </div>
+        <div id="inUpcomingList" class="in-list">
+          <div class="in-empty">Pendiente de conexión con agenda.</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="in-panel">
+      <div class="in-panel-header">
+        <div>
+          <h2>Pendientes activos</h2>
+          <p>Los pendientes se avisarán a las 06:00 y 17:00 hasta marcarse como completados.</p>
+        </div>
+        <span class="in-counter" id="inPendingCount">0</span>
+      </div>
+      <div id="inPendingList" class="in-list in-list-horizontal">
+        <div class="in-empty">Aquí aparecerán los pendientes cuando exista base local.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./startup/in-start.js"></script>
+</body>
+</html>
