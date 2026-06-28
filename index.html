@@ -4,7 +4,8 @@
 
   Función:
     - Shell raíz de AgendaJeff.
-    - Navegar entre Inicio, Agenda, Carga Masiva, Ajustes, Diagnóstico y Conexiones.
+    - Navegar entre Inicio, Agenda, Masivo y Ajustes desde un menú superior.
+    - Mantener Google Calendar, Telegram y Notificaciones como submenú de Ajustes.
     - Cargar módulos internos mediante iframe sin mezclar su lógica interna.
 -->
 
@@ -31,35 +32,294 @@
       --aj-radius: 18px;
       --aj-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+
     * { box-sizing: border-box; }
-    html, body { width: 100%; min-height: 100%; margin: 0; font-family: var(--aj-font); background: var(--aj-bg); color: var(--aj-text); }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      font-family: var(--aj-font);
+      background: var(--aj-bg);
+      color: var(--aj-text);
+    }
+
     button { font: inherit; }
-    .aj-shell { display: grid; grid-template-rows: auto 1fr auto; width: 100%; min-height: 100vh; }
-    .aj-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; background: var(--aj-card); border-bottom: 1px solid var(--aj-border); box-shadow: var(--aj-shadow); z-index: 2; }
-    .aj-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .aj-brand-mark { display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center; border-radius: 14px; background: var(--aj-primary); color: #ffffff; font-weight: 900; }
-    .aj-brand-text strong { display: block; font-size: 16px; line-height: 1.2; }
-    .aj-brand-text span { display: block; color: var(--aj-muted); font-size: 13px; line-height: 1.4; }
-    .aj-topbar-actions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-    .aj-runtime-badge, .aj-chip { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--aj-border); background: #ffffff; color: var(--aj-muted); font-size: 13px; font-weight: 800; white-space: nowrap; }
-    .aj-runtime-badge.is-ok { border-color: rgba(21, 128, 61, 0.25); background: rgba(21, 128, 61, 0.08); color: var(--aj-success); }
-    .aj-runtime-badge.is-warn { border-color: rgba(180, 83, 9, 0.25); background: var(--aj-warning-soft); color: var(--aj-warning); }
-    .aj-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; min-height: 0; padding: 18px; }
-    .aj-sidebar, .aj-content-card { background: var(--aj-card); border: 1px solid var(--aj-border); border-radius: var(--aj-radius); box-shadow: var(--aj-shadow); }
-    .aj-sidebar { display: flex; flex-direction: column; gap: 16px; padding: 16px; min-height: 0; }
-    .aj-sidebar-section h2 { margin: 0 0 12px; font-size: 15px; }
-    .aj-nav-button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; padding: 12px; border: 1px solid var(--aj-border); border-radius: 14px; background: #ffffff; color: var(--aj-text); cursor: pointer; text-align: left; transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease; }
-    .aj-nav-button:hover { border-color: var(--aj-primary); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08); transform: translateY(-1px); }
-    .aj-nav-button.is-active { border-color: var(--aj-primary); background: var(--aj-primary-soft); }
-    .aj-nav-button strong { display: block; font-size: 14px; }
-    .aj-nav-button span { display: block; color: var(--aj-muted); font-size: 12px; line-height: 1.35; }
-    .aj-module-state { flex: 0 0 auto; padding: 4px 8px; border-radius: 999px; background: var(--aj-success-soft); color: var(--aj-success); font-size: 11px; font-weight: 900; text-transform: uppercase; }
-    .aj-sidebar-note { margin: auto 0 0; padding: 12px; border: 1px solid var(--aj-border); border-radius: 14px; background: #f8fafc; color: var(--aj-muted); font-size: 12px; line-height: 1.45; }
-    .aj-content-card { display: grid; min-width: 0; min-height: calc(100vh - 132px); padding: 0; overflow: hidden; }
-    .aj-module-frame { display: block; width: 100%; height: 100%; min-height: calc(100vh - 134px); border: 0; background: #ffffff; }
-    .aj-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--aj-card); border-top: 1px solid var(--aj-border); color: var(--aj-muted); font-size: 13px; }
-    @media (max-width: 940px) { .aj-layout { grid-template-columns: 1fr; } .aj-sidebar { display: block; } .aj-content-card, .aj-module-frame { min-height: 720px; } }
-    @media (max-width: 600px) { .aj-layout { padding: 10px; } .aj-topbar, .aj-footer { align-items: flex-start; flex-direction: column; } .aj-topbar-actions { width: 100%; justify-content: flex-start; } }
+
+    .aj-shell {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      width: 100%;
+      min-height: 100vh;
+    }
+
+    .aj-topbar {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 18px;
+      background: var(--aj-card);
+      border-bottom: 1px solid var(--aj-border);
+      box-shadow: var(--aj-shadow);
+      z-index: 10;
+    }
+
+    .aj-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .aj-brand-mark {
+      display: inline-flex;
+      width: 42px;
+      height: 42px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      background: var(--aj-primary);
+      color: #ffffff;
+      font-weight: 900;
+    }
+
+    .aj-brand-text strong {
+      display: block;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .aj-brand-text span {
+      display: block;
+      color: var(--aj-muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .aj-main-menu {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .aj-menu-item,
+    .aj-submenu-item,
+    .aj-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      border: 1px solid var(--aj-border);
+      background: #ffffff;
+      color: var(--aj-text);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 800;
+      text-decoration: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+
+    .aj-menu-item {
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .aj-menu-item:hover,
+    .aj-submenu-item:hover,
+    .aj-chip:hover {
+      border-color: var(--aj-primary);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .aj-menu-item.is-active {
+      border-color: var(--aj-primary);
+      background: var(--aj-primary-soft);
+      color: var(--aj-primary);
+    }
+
+    .aj-menu-group {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .aj-submenu {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      display: grid;
+      min-width: 260px;
+      padding: 8px;
+      border: 1px solid var(--aj-border);
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: var(--aj-shadow);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-6px);
+      transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+      z-index: 20;
+    }
+
+    .aj-menu-group:hover .aj-submenu,
+    .aj-menu-group:focus-within .aj-submenu,
+    .aj-menu-group.is-open .aj-submenu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .aj-submenu::before {
+      content: "";
+      position: absolute;
+      top: -11px;
+      right: 22px;
+      width: 20px;
+      height: 20px;
+      background: #ffffff;
+      border-left: 1px solid var(--aj-border);
+      border-top: 1px solid var(--aj-border);
+      transform: rotate(45deg);
+    }
+
+    .aj-submenu-title {
+      margin: 2px 6px 8px;
+      color: var(--aj-muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .aj-submenu-item {
+      position: relative;
+      justify-content: flex-start;
+      width: 100%;
+      margin: 0 0 6px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      text-align: left;
+    }
+
+    .aj-submenu-item:last-child { margin-bottom: 0; }
+
+    .aj-topbar-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .aj-runtime-badge,
+    .aj-chip {
+      min-height: 34px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: var(--aj-muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .aj-chip {
+      font-weight: 800;
+    }
+
+    .aj-runtime-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--aj-border);
+      background: #ffffff;
+      font-weight: 800;
+    }
+
+    .aj-runtime-badge.is-ok {
+      border-color: rgba(21, 128, 61, 0.25);
+      background: rgba(21, 128, 61, 0.08);
+      color: var(--aj-success);
+    }
+
+    .aj-runtime-badge.is-warn {
+      border-color: rgba(180, 83, 9, 0.25);
+      background: var(--aj-warning-soft);
+      color: var(--aj-warning);
+    }
+
+    .aj-layout {
+      display: grid;
+      min-height: 0;
+      padding: 18px;
+    }
+
+    .aj-content-card {
+      display: grid;
+      min-width: 0;
+      min-height: calc(100vh - 132px);
+      padding: 0;
+      overflow: hidden;
+      background: var(--aj-card);
+      border: 1px solid var(--aj-border);
+      border-radius: var(--aj-radius);
+      box-shadow: var(--aj-shadow);
+    }
+
+    .aj-module-frame {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: calc(100vh - 134px);
+      border: 0;
+      background: #ffffff;
+    }
+
+    .aj-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--aj-card);
+      border-top: 1px solid var(--aj-border);
+      color: var(--aj-muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 1080px) {
+      .aj-topbar {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+      }
+
+      .aj-main-menu {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
+
+      .aj-topbar-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .aj-layout { padding: 10px; }
+      .aj-footer { align-items: flex-start; flex-direction: column; }
+      .aj-main-menu { display: grid; grid-template-columns: 1fr 1fr; }
+      .aj-menu-group { display: grid; }
+      .aj-menu-item { width: 100%; }
+      .aj-submenu { left: 0; right: auto; min-width: min(320px, calc(100vw - 20px)); }
+      .aj-content-card,
+      .aj-module-frame { min-height: 720px; }
+    }
   </style>
 </head>
 <body>
@@ -72,6 +332,22 @@
           <span>Agenda modular · Eventos · Recordatorios · Carga masiva</span>
         </div>
       </div>
+
+      <nav class="aj-main-menu" aria-label="Menú superior de AgendaJeff">
+        <button class="aj-menu-item is-active" type="button" data-module="inicio">Inicio</button>
+        <button class="aj-menu-item" type="button" data-module="agenda">Agenda</button>
+        <button class="aj-menu-item" type="button" data-module="carga">Masivo</button>
+        <div class="aj-menu-group" id="ajSettingsMenuGroup">
+          <button class="aj-menu-item" id="ajSettingsMenuButton" type="button" data-module="ajustes" aria-haspopup="true" aria-expanded="false">Ajustes ▾</button>
+          <div class="aj-submenu" role="menu" aria-label="Submenú de Ajustes">
+            <span class="aj-submenu-title">Conexiones</span>
+            <button class="aj-submenu-item" type="button" data-module="googleCalendar" role="menuitem">Google Calendar</button>
+            <button class="aj-submenu-item" type="button" data-module="telegram" role="menuitem">Telegram</button>
+            <button class="aj-submenu-item" type="button" data-module="notificaciones" role="menuitem">Notificaciones de escritorio</button>
+          </div>
+        </div>
+      </nav>
+
       <div class="aj-topbar-actions">
         <button id="checkElectronBtn" class="aj-chip" type="button">Verificar Electron</button>
         <span id="runtimeBadge" class="aj-runtime-badge">Verificando...</span>
@@ -79,26 +355,6 @@
     </header>
 
     <main class="aj-layout">
-      <aside class="aj-sidebar" aria-label="Navegación principal de AgendaJeff">
-        <section class="aj-sidebar-section">
-          <h2>AgendaJeff</h2>
-          <button class="aj-nav-button is-active" type="button" data-module="inicio"><span><strong>Inicio</strong><span>Eventos de hoy, próximos y pendientes.</span></span><span id="inicioModuleState" class="aj-module-state">listo</span></button>
-          <button class="aj-nav-button" type="button" data-module="agenda"><span><strong>Agenda</strong><span>Crear evento, recordatorio o pendiente.</span></span><span id="agendaModuleState" class="aj-module-state">listo</span></button>
-          <button class="aj-nav-button" type="button" data-module="carga"><span><strong>Carga Masiva</strong><span>Texto, tablas, PDF, Word, Excel e imágenes.</span></span><span id="cargaModuleState" class="aj-module-state">listo</span></button>
-          <button class="aj-nav-button" type="button" data-module="ajustes"><span><strong>Ajustes</strong><span>Segundo plano, inicio con Windows y actualizaciones.</span></span><span id="ajustesModuleState" class="aj-module-state">listo</span></button>
-          <button class="aj-nav-button" type="button" data-module="diagnostico"><span><strong>Diagnóstico</strong><span>Centro de control, errores, base local y sincronización.</span></span><span id="diagnosticoModuleState" class="aj-module-state">listo</span></button>
-        </section>
-
-        <section class="aj-sidebar-section">
-          <h2>Conexiones</h2>
-          <button class="aj-nav-button" type="button" data-module="telegram"><span><strong>Telegram</strong><span>Bot, Chat ID, Firebase, respaldo local y diagnóstico.</span></span><span id="telegramModuleState" class="aj-module-state">ok</span></button>
-          <button class="aj-nav-button" type="button" data-module="googleCalendar"><span><strong>Google Calendar</strong><span>OAuth, Firebase, eventos, diagnóstico y conector.</span></span><span id="googleCalendarModuleState" class="aj-module-state">ok</span></button>
-          <button class="aj-nav-button" type="button" data-module="notificaciones"><span><strong>Notificaciones</strong><span>Pruebas nativas de escritorio y avisos internos.</span></span><span id="notificacionesModuleState" class="aj-module-state">ok</span></button>
-        </section>
-
-        <p class="aj-sidebar-note">AgendaJeff modular. Las conexiones existentes se conservan como módulos separados y la agenda se ancla a ellas por servicios.</p>
-      </aside>
-
       <section class="aj-content-card">
         <iframe id="moduleFrame" class="aj-module-frame" title="Módulo AgendaJeff"></iframe>
       </section>
@@ -115,33 +371,35 @@
       "use strict";
 
       const MODULES = Object.freeze({
-        inicio: { key: "inicio", title: "Inicio", src: "modulos/inicio/in-module.html", stateId: "inicioModuleState" },
-        agenda: { key: "agenda", title: "Agenda", src: "modulos/agenda/ag-module.html", stateId: "agendaModuleState" },
-        carga: { key: "carga", title: "Carga Masiva", src: "modulos/carga/cm-module.html", stateId: "cargaModuleState" },
-        ajustes: { key: "ajustes", title: "Ajustes", src: "modulos/ajustes/aj-module.html", stateId: "ajustesModuleState" },
-        diagnostico: { key: "diagnostico", title: "Diagnóstico", src: "modulos/diagnostico/dg-module.html", stateId: "diagnosticoModuleState" },
-        telegram: { key: "telegram", title: "Telegram", src: "modulos/telegram/tl-module.html", stateId: "telegramModuleState" },
-        googleCalendar: { key: "googleCalendar", title: "Google Calendar", src: "modulos/googlecalendar/gc-module.html", stateId: "googleCalendarModuleState" },
-        notificaciones: { key: "notificaciones", title: "Notificaciones", src: "modulos/notificaciones/nt-module.html", stateId: "notificacionesModuleState" }
+        inicio: { key: "inicio", title: "Inicio", src: "modulos/inicio/in-module.html" },
+        agenda: { key: "agenda", title: "Agenda", src: "modulos/agenda/ag-module.html" },
+        carga: { key: "carga", title: "Masivo", src: "modulos/carga/cm-module.html" },
+        ajustes: { key: "ajustes", title: "Ajustes", src: "modulos/ajustes/aj-module.html" },
+        diagnostico: { key: "diagnostico", title: "Diagnóstico", src: "modulos/diagnostico/dg-module.html" },
+        telegram: { key: "telegram", title: "Telegram", src: "modulos/telegram/tl-module.html" },
+        googleCalendar: { key: "googleCalendar", title: "Google Calendar", src: "modulos/googlecalendar/gc-module.html" },
+        notificaciones: { key: "notificaciones", title: "Notificaciones de escritorio", src: "modulos/notificaciones/nt-module.html" }
       });
 
       const runtimeBadge = document.getElementById("runtimeBadge");
       const checkElectronBtn = document.getElementById("checkElectronBtn");
       const footerStatus = document.getElementById("footerStatus");
       const moduleFrame = document.getElementById("moduleFrame");
+      const settingsMenuGroup = document.getElementById("ajSettingsMenuGroup");
+      const settingsMenuButton = document.getElementById("ajSettingsMenuButton");
 
       function setFooter(text) { footerStatus.textContent = text || "AgendaJeff"; }
 
-      function setActiveModule(moduleKey) {
-        document.querySelectorAll(".aj-nav-button[data-module]").forEach(function eachButton(button) {
-          button.classList.toggle("is-active", button.dataset.module === moduleKey);
-        });
+      function isSettingsArea(moduleKey) {
+        return ["ajustes", "googleCalendar", "telegram", "notificaciones"].includes(moduleKey);
       }
 
-      function setModuleState(moduleKey, text) {
-        const moduleConfig = MODULES[moduleKey];
-        const stateElement = moduleConfig ? document.getElementById(moduleConfig.stateId) : null;
-        if (stateElement) stateElement.textContent = text;
+      function setActiveModule(moduleKey) {
+        document.querySelectorAll(".aj-menu-item[data-module], .aj-submenu-item[data-module]").forEach(function eachButton(button) {
+          button.classList.toggle("is-active", button.dataset.module === moduleKey);
+        });
+
+        if (settingsMenuButton) settingsMenuButton.classList.toggle("is-active", isSettingsArea(moduleKey));
       }
 
       function renderWebMode() {
@@ -171,23 +429,48 @@
         }
       }
 
+      function closeSettingsMenu() {
+        if (!settingsMenuGroup || !settingsMenuButton) return;
+        settingsMenuGroup.classList.remove("is-open");
+        settingsMenuButton.setAttribute("aria-expanded", "false");
+      }
+
+      function toggleSettingsMenu() {
+        if (!settingsMenuGroup || !settingsMenuButton) return;
+        const willOpen = !settingsMenuGroup.classList.contains("is-open");
+        settingsMenuGroup.classList.toggle("is-open", willOpen);
+        settingsMenuButton.setAttribute("aria-expanded", willOpen ? "true" : "false");
+      }
+
       function openModule(moduleKey) {
         const moduleConfig = MODULES[moduleKey];
         if (!moduleConfig) { setFooter("Módulo no registrado"); return; }
         setActiveModule(moduleKey);
         setFooter(`${moduleConfig.title} · Cargando módulo`);
-        setModuleState(moduleKey, "abriendo");
         if (!moduleFrame.src || !moduleFrame.src.endsWith(moduleConfig.src)) moduleFrame.src = moduleConfig.src;
       }
 
       function wireEvents() {
         checkElectronBtn.addEventListener("click", checkElectron);
-        document.querySelectorAll(".aj-nav-button[data-module]").forEach(function eachButton(button) {
-          button.addEventListener("click", function handleOpenModule() { openModule(button.dataset.module); });
+
+        document.querySelectorAll(".aj-menu-item[data-module], .aj-submenu-item[data-module]").forEach(function eachButton(button) {
+          button.addEventListener("click", function handleOpenModule(event) {
+            const moduleKey = button.dataset.module;
+            openModule(moduleKey);
+            if (moduleKey === "ajustes") toggleSettingsMenu();
+            else closeSettingsMenu();
+            event.stopPropagation();
+          });
         });
+
+        document.addEventListener("click", function handleDocumentClick(event) {
+          if (!settingsMenuGroup || settingsMenuGroup.contains(event.target)) return;
+          closeSettingsMenu();
+        });
+
         moduleFrame.addEventListener("load", function handleModuleLoaded() {
           const activeModule = Object.values(MODULES).find(function findModule(moduleConfig) { return moduleFrame.src.endsWith(moduleConfig.src); });
-          if (activeModule) { setFooter(`${activeModule.title} · Módulo cargado`); setModuleState(activeModule.key, "abierto"); }
+          if (activeModule) setFooter(`${activeModule.title} · Módulo cargado`);
         });
       }
 
