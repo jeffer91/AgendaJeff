@@ -4,7 +4,7 @@
 
   Función:
     - Iniciar la pantalla Inicio.
-    - Leer eventos de hoy, próximos y pendientes desde la base local JSON cuando Electron esté disponible.
+    - Leer toda la base local y construir resumen principal de AgendaJeff.
 */
 
 (function initInicioModule(global) {
@@ -18,86 +18,40 @@
     startedAt: "",
     module: "inicio",
     pendingCoreConnection: false,
-    lastLoadResult: null
+    lastLoadResult: null,
+    allItems: [],
+    summary: null
   };
 
-  function getBridge() {
-    try {
-      if (global.AgendaJeffElectron) return global.AgendaJeffElectron;
-      if (global.parent && global.parent.AgendaJeffElectron) return global.parent.AgendaJeffElectron;
-    } catch (error) {
-      return null;
-    }
-    return null;
-  }
-
-  function setText(id, value) {
-    const element = global.document ? global.document.getElementById(id) : null;
-    if (element) element.textContent = value;
-  }
-
-  function getList(id) {
-    return global.document ? global.document.getElementById(id) : null;
-  }
-
-  function escapeHtml(value) {
-    return String(value || "").replace(/[&<>"]/g, function replaceChar(char) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char];
-    });
-  }
-
-  function renderList(id, items, emptyText) {
-    const list = getList(id);
-    if (!list) return;
-
-    if (!items || !items.length) {
-      list.innerHTML = `<div class="in-empty">${escapeHtml(emptyText)}</div>`;
-      return;
-    }
-
-    list.innerHTML = items.slice(0, 8).map(function mapItem(item) {
-      const time = item.todoDia || !item.horaInicio ? "Todo el día" : item.horaInicio;
-      return `<div class="in-empty"><strong>${escapeHtml(item.titulo || "Sin título")}</strong><br><span>${escapeHtml(item.tipo)} · ${escapeHtml(item.fechaInicio)} · ${escapeHtml(time)}</span></div>`;
-    }).join("");
-  }
-
   async function loadDashboard() {
-    const bridge = getBridge();
+    const bridge = inicio.dom.getBridge();
 
     if (!bridge || typeof bridge.queryAgendaItems !== "function") {
       state.pendingCoreConnection = true;
-      setText("inStatusTitle", "Modo visual");
-      setText("inStatusDescription", "Abre la app con Electron para leer la base local JSON.");
+      inicio.render.renderDisconnected("Abre la app con Electron para leer la base local JSON.");
       return { ok: false, message: "Puente Electron no disponible." };
     }
 
-    await bridge.ensureLocalDatabase();
-    const todayResult = await bridge.queryAgendaItems({ view: "today" });
-    const upcomingResult = await bridge.queryAgendaItems({ view: "upcoming" });
-    const pendingResult = await bridge.queryAgendaItems({ view: "pending" });
+    state.pendingCoreConnection = false;
+    if (typeof bridge.ensureLocalDatabase === "function") await bridge.ensureLocalDatabase();
 
-    const todayItems = todayResult && todayResult.data ? todayResult.data.items || [] : [];
-    const upcomingItems = upcomingResult && upcomingResult.data ? upcomingResult.data.items || [] : [];
-    const pendingItems = pendingResult && pendingResult.data ? pendingResult.data.items || [] : [];
+    const allResult = await bridge.queryAgendaItems({});
+    const items = allResult && allResult.ok && allResult.data && Array.isArray(allResult.data.items) ? allResult.data.items : [];
+    const summary = inicio.summary.buildSummary(items);
 
-    setText("inTodayCount", String(todayItems.length));
-    setText("inUpcomingCount", String(upcomingItems.length));
-    setText("inPendingCount", String(pendingItems.length));
+    state.allItems = items;
+    state.summary = summary;
+    state.lastLoadResult = allResult;
 
-    renderList("inTodayList", todayItems, "No hay eventos para hoy.");
-    renderList("inUpcomingList", upcomingItems, "No hay próximos eventos registrados.");
-    renderList("inPendingList", pendingItems, "No hay pendientes activos.");
-
-    setText("inStatusTitle", "Inicio conectado");
-    setText("inStatusDescription", "Datos cargados desde la base local JSON.");
-
-    state.lastLoadResult = { todayResult, upcomingResult, pendingResult };
-    return state.lastLoadResult;
+    inicio.render.renderDashboard(summary);
+    return { ok: true, allResult, summary };
   }
 
   async function start() {
     state.started = true;
     state.startedAt = new Date().toISOString();
+
+    if (inicio.actions && typeof inicio.actions.attach === "function") inicio.actions.attach();
     await loadDashboard();
     return getState();
   }
@@ -108,7 +62,9 @@
       startedAt: state.startedAt,
       module: state.module,
       pendingCoreConnection: state.pendingCoreConnection,
-      lastLoadResult: state.lastLoadResult
+      lastLoadResult: state.lastLoadResult,
+      allItems: state.allItems.slice(),
+      summary: state.summary
     };
   }
 
