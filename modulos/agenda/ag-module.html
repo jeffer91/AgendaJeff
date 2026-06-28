@@ -1,0 +1,154 @@
+<!--
+  Nombre completo: ag-module.html
+  Ruta: modulos/agenda/ag-module.html
+
+  Función:
+    - Pantalla base para crear eventos, recordatorios y pendientes uno por uno.
+    - Preparar formulario visual sin conectar todavía a persistencia.
+    - Mantener separada la pantalla Agenda de Telegram, Google Calendar y Notificaciones.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgendaJeff · Agenda</title>
+  <link rel="stylesheet" href="./ag-module.css" />
+</head>
+<body>
+  <main class="ag-page" aria-labelledby="agPageTitle">
+    <section class="ag-hero">
+      <div>
+        <p class="ag-eyebrow">AgendaJeff · Agenda</p>
+        <h1 id="agPageTitle">Agendar manualmente</h1>
+        <p class="ag-hero-text">Formulario base para crear eventos, recordatorios y pendientes. La conexión real se hará en los siguientes bloques.</p>
+      </div>
+      <article class="ag-status-card">
+        <span id="agStatusBadge" class="ag-badge is-ready">Base lista</span>
+        <h2 id="agStatusTitle">Agenda preparada</h2>
+        <p id="agStatusDescription">Pendiente de conectar con base local, Firebase y servicios ya probados.</p>
+      </article>
+    </section>
+
+    <section class="ag-grid">
+      <article class="ag-panel ag-panel-main">
+        <div class="ag-panel-header">
+          <div>
+            <h2>Nuevo registro</h2>
+            <p>Un solo modelo para evento, recordatorio o pendiente.</p>
+          </div>
+        </div>
+
+        <form id="agEventForm" class="ag-form" autocomplete="off">
+          <label class="ag-field" for="agType">
+            <span>Tipo</span>
+            <select id="agType">
+              <option value="evento">Evento</option>
+              <option value="recordatorio">Recordatorio</option>
+              <option value="pendiente">Pendiente</option>
+            </select>
+          </label>
+
+          <label class="ag-field ag-field-full" for="agTitle">
+            <span>Actividad</span>
+            <input id="agTitle" type="text" placeholder="Ejemplo: Defensa de titulación" />
+          </label>
+
+          <label class="ag-field ag-field-full" for="agDescription">
+            <span>Descripción</span>
+            <textarea id="agDescription" rows="3" placeholder="Detalles del evento, pendiente o recordatorio."></textarea>
+          </label>
+
+          <label class="ag-field" for="agStartDate">
+            <span>Fecha inicio</span>
+            <input id="agStartDate" type="date" />
+          </label>
+
+          <label class="ag-field" for="agEndDate">
+            <span>Fecha fin</span>
+            <input id="agEndDate" type="date" />
+          </label>
+
+          <label class="ag-field" for="agStartTime">
+            <span>Hora inicio</span>
+            <input id="agStartTime" type="time" />
+          </label>
+
+          <label class="ag-field" for="agEndTime">
+            <span>Hora fin</span>
+            <input id="agEndTime" type="time" />
+          </label>
+
+          <label class="ag-check ag-field-full" for="agAllDay">
+            <input id="agAllDay" type="checkbox" />
+            <span>Evento sin hora / todo el día</span>
+          </label>
+
+          <label class="ag-field" for="agCategory">
+            <span>Categoría</span>
+            <select id="agCategory">
+              <option value="trabajo">Trabajo</option>
+              <option value="titulacion">Titulación</option>
+              <option value="personal">Personal</option>
+              <option value="clases">Clases</option>
+              <option value="otro">Otro</option>
+            </select>
+          </label>
+
+          <label class="ag-field" for="agRepeat">
+            <span>Repetición</span>
+            <select id="agRepeat">
+              <option value="none">No repetir</option>
+              <option value="daily">Diario</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+              <option value="yearly">Anual</option>
+            </select>
+          </label>
+        </form>
+      </article>
+
+      <aside class="ag-panel">
+        <div class="ag-panel-header">
+          <div>
+            <h2>Recordatorios</h2>
+            <p>Reglas base decididas para AgendaJeff.</p>
+          </div>
+        </div>
+
+        <div class="ag-options">
+          <label class="ag-check"><input type="checkbox" checked /> <span>5 días antes</span></label>
+          <label class="ag-check"><input type="checkbox" checked /> <span>3 días antes</span></label>
+          <label class="ag-check"><input type="checkbox" checked /> <span>1 día antes</span></label>
+          <label class="ag-check"><input type="checkbox" checked /> <span>Mismo día</span></label>
+          <label class="ag-check"><input type="checkbox" /> <span>Usar días laborables</span></label>
+        </div>
+
+        <div class="ag-panel-header ag-panel-subheader">
+          <div>
+            <h2>Canales</h2>
+            <p>Los conectores actuales se usarán en bloques posteriores.</p>
+          </div>
+        </div>
+
+        <div class="ag-options">
+          <label class="ag-check"><input type="checkbox" checked /> <span>Escritorio</span></label>
+          <label class="ag-check"><input type="checkbox" checked /> <span>Telegram</span></label>
+          <label class="ag-check"><input type="checkbox" checked /> <span>Google Calendar</span></label>
+        </div>
+      </aside>
+    </section>
+
+    <section class="ag-panel">
+      <div class="ag-actions">
+        <button id="agBtnSaveDraft" class="ag-btn ag-btn-primary" type="button">Guardar borrador visual</button>
+        <button id="agBtnClear" class="ag-btn" type="button">Limpiar</button>
+      </div>
+      <pre id="agResultBox" class="ag-output">Pantalla Agenda cargando...</pre>
+    </section>
+  </main>
+
+  <script src="./startup/ag-start.js"></script>
+</body>
+</html>
