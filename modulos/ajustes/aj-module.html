@@ -4,7 +4,7 @@
 
   Función:
     - Pantalla base de ajustes de AgendaJeff.
-    - Preparar preferencias de inicio con Windows, segundo plano, recordatorios y actualizaciones.
+    - Configurar segundo plano, recordatorios y actualizaciones.
 -->
 
 <!DOCTYPE html>
@@ -21,12 +21,12 @@
       <div>
         <p class="ajx-eyebrow">AgendaJeff · Ajustes</p>
         <h1 id="ajPageTitle">Configuración general</h1>
-        <p class="ajx-hero-text">Base para preferencias de segundo plano, inicio con Windows, recordatorios y actualizaciones.</p>
+        <p class="ajx-hero-text">Preferencias de segundo plano, recordatorios, inicio con Windows y actualizaciones.</p>
       </div>
       <article class="ajx-status-card">
-        <span id="ajStatusBadge" class="ajx-badge is-ready">Base lista</span>
+        <span id="ajStatusBadge" class="ajx-badge is-ready">Conectado</span>
         <h2 id="ajStatusTitle">Ajustes preparados</h2>
-        <p id="ajStatusDescription">La persistencia se conectará en el bloque de base local.</p>
+        <p id="ajStatusDescription">Ajustes con base local y controles de segundo plano.</p>
       </article>
     </section>
 
@@ -35,7 +35,7 @@
         <div class="ajx-panel-header">
           <div>
             <h2>Segundo plano</h2>
-            <p>La app se ocultará en bandeja y seguirá activa con bajo consumo.</p>
+            <p>Motor de bajo consumo para revisar recordatorios y pendientes.</p>
           </div>
         </div>
         <div class="ajx-options">
@@ -45,6 +45,30 @@
         </div>
       </article>
 
+      <article class="ajx-panel">
+        <div class="ajx-panel-header">
+          <div>
+            <h2>Estado del motor</h2>
+            <p>Consulta y controla el servicio local de recordatorios.</p>
+          </div>
+        </div>
+        <div class="ajx-bg-status">
+          <div><strong>Estado:</strong> <span id="ajBgRunning">...</span></div>
+          <div><strong>Pausado:</strong> <span id="ajBgPaused">...</span></div>
+          <div><strong>Última revisión:</strong> <span id="ajBgLastRun">...</span></div>
+          <div><strong>Próxima revisión:</strong> <span id="ajBgNextRun">...</span></div>
+        </div>
+        <div class="ajx-actions">
+          <button id="ajBtnBgStatus" class="ajx-btn" type="button">Ver estado</button>
+          <button id="ajBtnBgStart" class="ajx-btn ajx-btn-primary" type="button">Iniciar</button>
+          <button id="ajBtnBgPause" class="ajx-btn" type="button">Pausar</button>
+          <button id="ajBtnBgResume" class="ajx-btn" type="button">Reanudar</button>
+          <button id="ajBtnBgCheck" class="ajx-btn" type="button">Revisar ahora</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="ajx-grid">
       <article class="ajx-panel">
         <div class="ajx-panel-header">
           <div>
@@ -58,18 +82,27 @@
           <div><strong>Evento normal:</strong> 5 días, 3 días, 1 día y mismo día.</div>
         </div>
       </article>
+
+      <article class="ajx-panel">
+        <div class="ajx-panel-header">
+          <div>
+            <h2>Actualizaciones</h2>
+            <p>Base para descargar en segundo plano y pedir confirmación antes de instalar.</p>
+          </div>
+        </div>
+        <div class="ajx-options">
+          <label class="ajx-check"><input id="ajAutoUpdate" type="checkbox" checked /> <span>Buscar actualizaciones con internet</span></label>
+          <label class="ajx-check"><input id="ajConfirmInstall" type="checkbox" checked /> <span>Pedir confirmación para instalar/reiniciar</span></label>
+        </div>
+      </article>
     </section>
 
     <section class="ajx-panel">
       <div class="ajx-panel-header">
         <div>
-          <h2>Actualizaciones</h2>
-          <p>Base para descargar en segundo plano y pedir confirmación antes de instalar.</p>
+          <h2>Diagnóstico</h2>
+          <p>Resultado de ajustes, base local y segundo plano.</p>
         </div>
-      </div>
-      <div class="ajx-options">
-        <label class="ajx-check"><input id="ajAutoUpdate" type="checkbox" checked /> <span>Buscar actualizaciones con internet</span></label>
-        <label class="ajx-check"><input id="ajConfirmInstall" type="checkbox" checked /> <span>Pedir confirmación para instalar/reiniciar</span></label>
       </div>
       <pre id="ajResultBox" class="ajx-output">Pantalla Ajustes cargando...</pre>
     </section>
