@@ -79,7 +79,7 @@ function validateCore() {
   required("Base local", ["electron/localdb/aj-local-paths.js", "electron/localdb/aj-local-defaults.js", "electron/localdb/aj-local-read.js", "electron/localdb/aj-local-save.js", "electron/localdb/aj-local-index.js", "electron/localdb/aj-local-backup.js", "electron/localdb/aj-local-ipc.js"]);
   required("Segundo plano", ["electron/background/aj-background-pending.js", "electron/background/aj-background-reminders.js", "electron/background/aj-background-scheduler.js", "electron/background/aj-background-runner.js", "electron/background/aj-background-notify.js", "electron/tray/aj-tray-menu.js", "electron/tray/aj-tray.js"]);
   required("Release", ["release/agenda-jeff-version.json", "release/notes/v0.0.1.md", "scripts/version/aj-version-tools.js", "scripts/version/aj-version-bump.js", "scripts/release/aj-release-prepare.js", "scripts/build/aj-build-guard.js", "scripts/windows/aj-release.bat"]);
-  required("Android", ["capacitor.config.json", "scripts/android/aj-android-prepare.js", "scripts/android/aj-android-check.js", "scripts/windows/aj-android-apk.bat", "docs/android/aj-android-guia.md"]);
+  required("Android", ["capacitor.config.json", "scripts/android/aj-android-prepare.js", "scripts/android/aj-android-check.js", "scripts/windows/aj-android-apk.bat", "docs/android/aj-android-guia.md", "mobile/android/README.md", "mobile/android/bridge/aj-android-bridge.js"]);
 }
 
 function validateConnections() {
@@ -92,7 +92,7 @@ function validateHtml() {
   ["index.html", "modulos/inicio/in-module.html", "modulos/agenda/ag-module.html", "modulos/carga/cm-module.html", "modulos/ajustes/aj-module.html", "modulos/diagnostico/dg-module.html", "modulos/telegram/tl-module.html", "modulos/googlecalendar/gc-module.html", "modulos/notificaciones/nt-module.html"].forEach(htmlScripts);
 }
 function validateSyntax() {
-  ["core", "electron", "modulos/inicio", "modulos/agenda", "modulos/carga", "modulos/ajustes", "modulos/diagnostico", "modulos/telegram", "modulos/googlecalendar", "modulos/notificaciones", "scripts"].forEach(function each(dir) {
+  ["core", "electron", "modulos/inicio", "modulos/agenda", "modulos/carga", "modulos/ajustes", "modulos/diagnostico", "modulos/telegram", "modulos/googlecalendar", "modulos/notificaciones", "scripts", "mobile/android/bridge"].forEach(function each(dir) {
     walk(dir, []).filter(function isJs(file) { return file.endsWith(".js"); }).forEach(jsSyntax);
   });
 }
@@ -109,6 +109,7 @@ function validatePrefixes() {
   prefix("modulos/telegram", "tl-");
   prefix("modulos/googlecalendar", "gc-");
   prefix("modulos/notificaciones", "nt-");
+  prefix("mobile/android/bridge", "aj-");
 }
 function validateFirebaseWarning() {
   const content = read("modulos/googlecalendar/config/gc-firebase-config.js");
