@@ -5,12 +5,14 @@
   Función:
     - Iniciar autorización Google Calendar en modo escritorio sin usar popup.
     - Preparar URL de autorización y guardarla como sesión pendiente.
-    - Usar puente Electron si existe; si no existe, devolver URL para apertura manual.
+    - Abrir Google en navegador externo desde Electron, incluso cuando el módulo vive dentro de un iframe.
+    - Si no existe puente Electron, devolver URL para apertura manual.
 
   Se conecta con:
     - modulos/googlecalendar/auth/gc-auth-url.js
     - modulos/googlecalendar/storage/gc-local-save.js
     - modulos/googlecalendar/config/gc-config.js
+    - electron/preload.js
 */
 
 (function initGoogleCalendarAuthDesktop(global) {
@@ -98,14 +100,67 @@
     }
   }
 
-  async function openAuthUrlWithoutPopup(url) {
-    const electronBridge = global.AgendaJeffElectron || null;
+  function getFrameBridge(candidateWindow) {
+    try {
+      if (candidateWindow && candidateWindow.AgendaJeffElectron && typeof candidateWindow.AgendaJeffElectron.openExternal === "function") {
+        return candidateWindow.AgendaJeffElectron;
+      }
+    } catch (error) {
+      return null;
+    }
 
-    if (electronBridge && typeof electronBridge.openExternal === "function") {
-      const result = await electronBridge.openExternal(url);
+    return null;
+  }
+
+  function findElectronBridge() {
+    const candidates = [];
+
+    candidates.push(global);
+
+    try {
+      if (global.parent && global.parent !== global) {
+        candidates.push(global.parent);
+      }
+    } catch (error) {
+      // Ignorar acceso bloqueado entre frames.
+    }
+
+    try {
+      if (global.top && global.top !== global && global.top !== global.parent) {
+        candidates.push(global.top);
+      }
+    } catch (error) {
+      // Ignorar acceso bloqueado entre frames.
+    }
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const bridge = getFrameBridge(candidates[index]);
+
+      if (bridge) {
+        return {
+          ok: true,
+          bridge,
+          source: index === 0 ? "module-frame" : index === 1 ? "parent-frame" : "top-frame"
+        };
+      }
+    }
+
+    return {
+      ok: false,
+      bridge: null,
+      source: "none"
+    };
+  }
+
+  async function openAuthUrlWithoutPopup(url) {
+    const bridgeResult = findElectronBridge();
+
+    if (bridgeResult.ok && bridgeResult.bridge) {
+      const result = await bridgeResult.bridge.openExternal(url);
       return {
         ok: Boolean(result && result.ok !== false),
         mode: "electron-open-external",
+        bridgeSource: bridgeResult.source,
         result: result || null
       };
     }
@@ -113,8 +168,9 @@
     return {
       ok: false,
       mode: "manual-url",
+      bridgeSource: bridgeResult.source,
       result: null,
-      message: "No existe puente Electron openExternal; se devuelve URL para apertura manual."
+      message: "No existe puente Electron openExternal en el iframe ni en la ventana principal; se devuelve URL para apertura manual."
     };
   }
 
@@ -149,7 +205,7 @@
         source: config.source ? config.source.AUTH : "google-calendar-auth",
         file,
         message: "No se pudo construir la URL de autorización Google Calendar.",
-        error: { message: "Faltan datos para iniciar autorización.", file },
+        error: { message: urlResult.message || "Faltan datos para iniciar autorización.", file },
         data: urlResult
       });
     }
@@ -179,7 +235,7 @@
       source: config.source ? config.source.AUTH : "google-calendar-auth",
       file,
       message: openResult.ok
-        ? "Autorización Google Calendar abierta sin popup."
+        ? "Autorización Google Calendar abierta en navegador externo."
         : "URL de autorización Google Calendar preparada para apertura manual.",
       data: {
         authSession,
@@ -210,6 +266,8 @@
 
   auth.savePendingAuth = savePendingAuth;
   auth.readPendingAuth = readPendingAuth;
+  auth.getFrameBridge = getFrameBridge;
+  auth.findElectronBridge = findElectronBridge;
   auth.openAuthUrlWithoutPopup = openAuthUrlWithoutPopup;
   auth.startDesktopAuth = startDesktopAuth;
   auth.clearPendingAuth = clearPendingAuth;
