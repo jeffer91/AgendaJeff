@@ -5,12 +5,12 @@
   Función:
     - Procesar el código de autorización recibido desde Google.
     - Intercambiar el código por credenciales de acceso usando datos entregados en tiempo de ejecución.
-    - Guardar únicamente el resultado normalizado en localStorage cuando corresponda.
+    - Guardar autorización local junto con datos necesarios para renovación.
 
   Se conecta con:
     - modulos/googlecalendar/auth/gc-auth-desktop.js
+    - modulos/googlecalendar/auth/gc-auth-refresh.js
     - modulos/googlecalendar/config/gc-config.js
-    - modulos/googlecalendar/storage/gc-local-save.js
 */
 
 (function initGoogleCalendarAuthToken(global) {
@@ -104,9 +104,28 @@
     };
   }
 
+  function pickRuntimeAuthFields(input) {
+    const source = input && typeof input === "object" ? input : {};
+    const activeCredentialType = asText(source.activeCredentialType) || "desktop";
+
+    return {
+      activeCredentialType,
+      calendarId: asText(source.calendarId) || "primary",
+      clientId: asText(source.clientId || (activeCredentialType === "web" ? source.clientIdWeb : source.clientIdDesktop)),
+      clientSecret: asText(source.clientSecret || (activeCredentialType === "web" ? source.clientSecretWeb : source.clientSecretDesktop)),
+      redirectUri: asText(source.redirectUri || (activeCredentialType === "web" ? source.redirectUriWeb : source.redirectUriDesktop)),
+      clientIdDesktop: asText(source.clientIdDesktop),
+      clientSecretDesktop: asText(source.clientSecretDesktop),
+      redirectUriDesktop: asText(source.redirectUriDesktop),
+      clientIdWeb: asText(source.clientIdWeb),
+      clientSecretWeb: asText(source.clientSecretWeb),
+      redirectUriWeb: asText(source.redirectUriWeb)
+    };
+  }
+
   function normalizeTokenResponse(json, input) {
     const data = json && typeof json === "object" ? json : {};
-    const source = input && typeof input === "object" ? input : {};
+    const runtimeFields = pickRuntimeAuthFields(input);
     const issuedAt = new Date().toISOString();
     const expiresIn = Number(data.expires_in || 0);
     const expiresAt = expiresIn > 0
@@ -116,10 +135,9 @@
     return {
       provider: "googleCalendar",
       status: "authorized",
-      activeCredentialType: source.activeCredentialType || "desktop",
-      calendarId: source.calendarId || "primary",
+      ...runtimeFields,
       accessToken: data.access_token || "",
-      refreshToken: data.refresh_token || source.refreshToken || "",
+      refreshToken: data.refresh_token || (input && input.refreshToken) || "",
       tokenType: data.token_type || "Bearer",
       scope: data.scope || "",
       expiresIn,
@@ -148,6 +166,19 @@
         error: { message: error && error.message ? error.message : "No se pudo guardar autorización." }
       };
     }
+  }
+
+  function maskAuthData(authData) {
+    const data = authData && typeof authData === "object" ? authData : {};
+
+    return {
+      ...data,
+      clientSecret: data.clientSecret ? "***" : "",
+      clientSecretDesktop: data.clientSecretDesktop ? "***" : "",
+      clientSecretWeb: data.clientSecretWeb ? "***" : "",
+      accessToken: data.accessToken ? "***" : "",
+      refreshToken: data.refreshToken ? "***" : ""
+    };
   }
 
   async function exchangeAuthorizationCode(input, options) {
@@ -208,14 +239,7 @@
         source: config.source ? config.source.AUTH : "google-calendar-auth",
         file,
         message: "Autorización Google Calendar guardada correctamente.",
-        data: {
-          authData: {
-            ...authData,
-            accessToken: authData.accessToken ? "***" : "",
-            refreshToken: authData.refreshToken ? "***" : ""
-          },
-          localResult
-        }
+        data: { authData: maskAuthData(authData), localResult }
       });
     } catch (error) {
       return createResult({
@@ -232,7 +256,9 @@
   }
 
   auth.buildExchangePayload = buildExchangePayload;
+  auth.pickRuntimeAuthFields = pickRuntimeAuthFields;
   auth.normalizeTokenResponse = normalizeTokenResponse;
   auth.saveAuthData = saveAuthData;
+  auth.maskAuthData = maskAuthData;
   auth.exchangeAuthorizationCode = exchangeAuthorizationCode;
 })(window);
