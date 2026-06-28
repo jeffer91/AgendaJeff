@@ -24,7 +24,12 @@
       layer("Desktop.findElectronBridge", nt.Desktop && nt.Desktop.findElectronBridge),
       layer("Desktop.getBridgeStatus", nt.Desktop && nt.Desktop.getBridgeStatus),
       layer("Desktop.send", nt.Desktop && nt.Desktop.send),
-      layer("Desktop.runTest", nt.Desktop && nt.Desktop.runTest),
+      layer("Desktop.buildPayload", nt.Desktop && nt.Desktop.buildPayload),
+      layer("Visual.Container", nt.Visual && nt.Visual.Container),
+      layer("Visual.Toast", nt.Visual && nt.Visual.Toast),
+      layer("Visual.Banner", nt.Visual && nt.Visual.Banner),
+      layer("Visual.Center", nt.Visual && nt.Visual.Center),
+      layer("Visual.sendVisualNotification", nt.Visual && nt.Visual.sendVisualNotification),
       layer("UI.Dom", nt.UI && nt.UI.Dom),
       layer("UI.Render", nt.UI && nt.UI.Render),
       layer("UI.Events", nt.UI && nt.UI.Events)
