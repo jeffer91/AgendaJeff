@@ -6,7 +6,7 @@
     - Probar la conexión Google Calendar completa.
     - Leer conexión, probar Firebase, autorización y API Calendar.
     - Pasar a Auth/API los datos cargados desde Firebase para que no falte Client ID.
-    - Crear evento de prueba solo si se solicita explícitamente.
+    - Crear un evento de prueba cuando se ejecute Probar Google desde la conexión.
 
   Se conecta con:
     - modulos/googlecalendar/connection/gc-connection-read.js
@@ -81,7 +81,7 @@
           calendarId: opts.calendarId || loadedConnection.calendarId || "primary",
           auth: authForApi,
           readEvents: opts.readEvents !== false,
-          createTestEvent: opts.createTestEvent === true
+          createTestEvent: true
         })
       : null;
     checks.apiOk = Boolean(apiResult && apiResult.ok);
@@ -104,7 +104,7 @@
       source: "connection",
       file,
       message: ok
-        ? "Conexión Google Calendar probada correctamente."
+        ? "Conexión Google Calendar probada correctamente y evento de prueba creado."
         : "Google Calendar respondió parcialmente; revisa diagnóstico técnico.",
       error: ok ? null : { message: "Una o más pruebas de conexión no pasaron.", file },
       data: { checks, readResult, firebaseResult, apiResult, statusResult }
