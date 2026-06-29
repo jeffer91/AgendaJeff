@@ -1,4 +1,4 @@
-/* cm-start-v2.js · Carga Masiva funcional con revisión en subpantalla */
+/* cm-start-v2.js · Carga Masiva funcional con revisión en pantalla completa */
 (function (global) {
   "use strict";
   const root = global.AgendaJeffModules = global.AgendaJeffModules || {};
@@ -16,10 +16,17 @@
     carga.dom.html("cmSourceList", sources.length ? sources.map(sourceCard).join("") : '<div class="cm-empty">Todavía no hay fuentes registradas.</div>');
   }
 
+  function setReviewMode(active) {
+    const page = carga.dom.el("cmPage");
+    if (page) page.classList.toggle("is-review-mode", Boolean(active));
+    document.body.classList.toggle("is-review-mode", Boolean(active));
+  }
+
   function showReviewStep() {
     const step = carga.dom.el("cmReviewStep");
     if (step) {
       step.hidden = false;
+      setReviewMode(true);
       setTimeout(function scrollLater() { step.scrollIntoView({ behavior: "smooth", block: "start" }); }, 50);
     }
   }
@@ -27,6 +34,7 @@
   function hideReviewStep() {
     const step = carga.dom.el("cmReviewStep");
     if (step) step.hidden = true;
+    setReviewMode(false);
   }
 
   function addText() {
@@ -68,7 +76,7 @@
     state.selectedCandidateId = candidates[0] ? candidates[0].id : "";
     carga.reviewRender.renderReview();
     showReviewStep();
-    carga.dom.status("Tabla generada", `${candidates.length} registro(s) listos para editar en el paso 2.`, "Revisión");
+    carga.dom.status("Tabla generada", `${candidates.length} registro(s) listos para editar en pantalla completa.`, "Revisión");
     return candidates;
   }
 
@@ -106,6 +114,7 @@
     if (bText) bText.addEventListener("click", addText);
     if (bProcess) bProcess.addEventListener("click", process);
     if (bBack) bBack.addEventListener("click", function backToSources() {
+      setReviewMode(false);
       const step = carga.dom.el("cmStepOne");
       if (step) step.scrollIntoView({ behavior: "smooth", block: "start" });
     });
