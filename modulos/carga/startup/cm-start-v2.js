@@ -1,4 +1,4 @@
-/* cm-start-v2.js · Carga Masiva funcional */
+/* cm-start-v2.js · Carga Masiva funcional con revisión en subpantalla */
 (function (global) {
   "use strict";
   const root = global.AgendaJeffModules = global.AgendaJeffModules || {};
@@ -16,8 +16,18 @@
     carga.dom.html("cmSourceList", sources.length ? sources.map(sourceCard).join("") : '<div class="cm-empty">Todavía no hay fuentes registradas.</div>');
   }
 
-  function openModal() { const modal = carga.dom.el("cmReviewModal"); if (modal) modal.hidden = false; }
-  function closeModal() { const modal = carga.dom.el("cmReviewModal"); if (modal) modal.hidden = true; }
+  function showReviewStep() {
+    const step = carga.dom.el("cmReviewStep");
+    if (step) {
+      step.hidden = false;
+      setTimeout(function scrollLater() { step.scrollIntoView({ behavior: "smooth", block: "start" }); }, 50);
+    }
+  }
+
+  function hideReviewStep() {
+    const step = carga.dom.el("cmReviewStep");
+    if (step) step.hidden = true;
+  }
 
   function addText() {
     const paste = carga.dom.el("cmPasteBox");
@@ -39,7 +49,15 @@
     return added;
   }
 
+  function autoRegisterPastedTextIfNeeded() {
+    const paste = carga.dom.el("cmPasteBox");
+    const value = paste ? String(paste.value || "").trim() : "";
+    if (!state.sources.length && value) return addText();
+    return null;
+  }
+
   async function process() {
+    autoRegisterPastedTextIfNeeded();
     if (!state.sources.length) {
       carga.dom.status("Sin fuentes", "Registra texto o archivos antes de procesar.", "Pendiente");
       return [];
@@ -49,8 +67,8 @@
     state.candidates = candidates;
     state.selectedCandidateId = candidates[0] ? candidates[0].id : "";
     carga.reviewRender.renderReview();
-    openModal();
-    carga.dom.status("Eventos detectados", `${candidates.length} registro(s) enviados a revisión.`, "Revisión");
+    showReviewStep();
+    carga.dom.status("Tabla generada", `${candidates.length} registro(s) listos para editar en el paso 2.`, "Revisión");
     return candidates;
   }
 
@@ -62,6 +80,7 @@
     carga.sources.clearSources();
     renderSources();
     if (carga.reviewRender) carga.reviewRender.renderReview();
+    hideReviewStep();
     carga.dom.status("Carga limpia", "Se borraron fuentes y eventos detectados.", "Listo");
   }
 
@@ -81,12 +100,15 @@
   function attach() {
     const bText = carga.dom.el("cmBtnRegisterText");
     const bProcess = carga.dom.el("cmBtnProcess");
-    const bClose = carga.dom.el("cmBtnCloseModal");
+    const bBack = carga.dom.el("cmBtnBackToSources");
     const bClear = carga.dom.el("cmBtnClear");
     const input = carga.dom.el("cmFileInput");
     if (bText) bText.addEventListener("click", addText);
     if (bProcess) bProcess.addEventListener("click", process);
-    if (bClose) bClose.addEventListener("click", closeModal);
+    if (bBack) bBack.addEventListener("click", function backToSources() {
+      const step = carga.dom.el("cmStepOne");
+      if (step) step.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     if (bClear) bClear.addEventListener("click", clearAll);
     if (input) input.addEventListener("change", addFiles);
     if (carga.reviewActions) carga.reviewActions.attach();
@@ -98,7 +120,8 @@
     state.startedAt = new Date().toISOString();
     attach();
     renderSources();
-    carga.dom.status("Carga lista", "Parser local preparado para texto, TXT y CSV. Otros archivos quedan para revisión.", "Listo");
+    hideReviewStep();
+    carga.dom.status("Carga lista", "Parser local preparado para cronogramas, defensas y tablas copiadas.", "Listo");
   }
 
   if (!global.document || global.document.readyState !== "loading") start();
