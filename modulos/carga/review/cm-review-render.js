@@ -7,6 +7,7 @@
   function label(status) {
     return {
       listo: "Listo",
+      guardado: "Guardado",
       falta_fecha: "Falta fecha",
       falta_actividad: "Falta actividad",
       posible_duplicado: "Posible duplicado",
@@ -52,7 +53,7 @@
     const row = document.createElement("tr");
     row.dataset.id = item.id;
     if (!item.selected) row.classList.add("is-muted");
-    if (item.status !== "listo") row.classList.add("needs-review");
+    if (!["listo", "guardado"].includes(item.status)) row.classList.add("needs-review");
 
     const selected = document.createElement("input");
     selected.type = "checkbox";
@@ -123,7 +124,7 @@
     if (!items.length) {
       const empty = document.createElement("div");
       empty.className = "cm-empty";
-      empty.textContent = "No hay eventos detectados.";
+      empty.textContent = "No hay eventos detectados. Puede que todos ya existan o hayan sido depurados como duplicados.";
       target.appendChild(empty);
       renderDetail(null);
       return;
