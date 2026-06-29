@@ -3,7 +3,7 @@
   Ruta: modulos/inicio/actions/in-actions.js
 
   Función:
-    - Acciones rápidas de Inicio: actualizar, completar, abrir Agenda y ver detalle.
+    - Acciones rápidas de Inicio: actualizar, completar, abrir Agenda, filtrar tarjetas y ver detalle.
 */
 
 (function initInicioActions(global) {
@@ -45,6 +45,11 @@
     return { ok: closed, action: "closePopup", message: "Detalle cerrado." };
   }
 
+  function filterDashboard(filterKey) {
+    if (!inicio.render || typeof inicio.render.filterDashboard !== "function") return { ok: false, action: "filterDashboard", message: "Filtro no disponible." };
+    return inicio.render.filterDashboard(filterKey);
+  }
+
   async function handleClick(event) {
     const button = event.target && event.target.closest ? event.target.closest("button[data-action], .in-popup-backdrop[data-action]") : null;
     if (!button) return;
@@ -59,6 +64,7 @@
     if (action === "openAgenda") result = openAgenda();
     if (action === "view") result = viewItem(idLocal);
     if (action === "closePopup") result = closePopup();
+    if (action === "filterDashboard") result = filterDashboard(button.dataset.filter || "today");
 
     if (result && inicio.dom && inicio.dom.setText) {
       inicio.dom.setText("inActionStatus", result.message || "Acción ejecutada.");
@@ -71,5 +77,5 @@
     if (global.document) global.document.addEventListener("click", handleClick);
   }
 
-  inicio.actions = Object.freeze({ attach, completeItem, refresh, openAgenda, viewItem, closePopup });
+  inicio.actions = Object.freeze({ attach, completeItem, refresh, openAgenda, viewItem, closePopup, filterDashboard });
 })(window);
