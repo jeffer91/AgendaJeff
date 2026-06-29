@@ -83,6 +83,60 @@
     return bridge.saveAgendaItem(candidateToAgendaItem(candidate));
   }
 
+  function exportRows(rows, filename) {
+    const headers = ["Actividad", "Fecha inicio", "Fecha fin", "Hora inicio", "Hora fin"];
+    const escapeCsv = function escapeCsv(value) {
+      const clean = String(value == null ? "" : value).replace(/\r?\n/g, " ");
+      return /[",;\n]/.test(clean) ? `"${clean.replace(/"/g, '""')}"` : clean;
+    };
+    const body = rows.map(function mapRow(item) {
+      refreshStatus(item);
+      return [
+        item.actividad || item.titulo || "",
+        item.fechaInicio || "",
+        item.fechaFin || item.fechaInicio || "",
+        item.horaInicio || "",
+        item.horaFin || ""
+      ].map(escapeCsv).join(";");
+    });
+    const csv = [headers.join(";"), ...body].join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename || "agendaJeff-carga-masiva.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function revoke() { URL.revokeObjectURL(url); }, 1500);
+  }
+
+  function safeFilename(text) {
+    return String(text || "registro")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "registro";
+  }
+
+  function exportAll() {
+    const rows = candidates();
+    if (!rows.length) {
+      carga.dom.status("Sin registros", "No hay filas para exportar.", "Revisión");
+      return;
+    }
+    exportRows(rows, `agendaJeff-carga-masiva-${new Date().toISOString().slice(0, 10)}.csv`);
+    carga.dom.status("Exportación lista", `${rows.length} fila(s) exportadas en CSV.`, "Exportado");
+  }
+
+  function exportOne(candidate) {
+    if (!candidate) return;
+    exportRows([candidate], `agendaJeff-${safeFilename(candidate.actividad || candidate.titulo)}.csv`);
+    carga.dom.status("Fila exportada", "Se exportó la fila seleccionada en CSV.", "Exportado");
+  }
+
   async function handleClick(event) {
     const target = event.target && event.target.closest ? event.target.closest("button[data-action]") : null;
     if (!target) return;
@@ -99,6 +153,11 @@
     if (action === "remove") {
       carga.state.candidates = candidates().filter(function (candidate) { return candidate.id !== id; });
       carga.reviewRender.renderReview();
+      return;
+    }
+
+    if (action === "export-row" && item) {
+      exportOne(item);
       return;
     }
 
@@ -178,7 +237,10 @@
 
     const add = carga.dom.el("cmBtnAddReviewRow");
     if (add) add.addEventListener("click", addManualRow);
+
+    const exportButton = carga.dom.el("cmBtnExportAll");
+    if (exportButton) exportButton.addEventListener("click", exportAll);
   }
 
-  carga.reviewActions = Object.freeze({ attach, approveSelected, candidateToAgendaItem, addManualRow, saveCandidate });
+  carga.reviewActions = Object.freeze({ attach, approveSelected, candidateToAgendaItem, addManualRow, saveCandidate, exportAll, exportOne });
 })(window);
