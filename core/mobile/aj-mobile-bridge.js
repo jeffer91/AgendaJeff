@@ -6,6 +6,7 @@
     - Crear un puente compatible con AgendaJeffElectron cuando la app corre fuera de Electron.
     - Permitir que la versión Android/Capacitor use almacenamiento local del WebView.
     - Mantener la misma interfaz básica usada por Inicio, Agenda, Carga Masiva, Ajustes, Diagnóstico y Google Calendar.
+    - Evitar duplicados también en la versión móvil.
 */
 
 (function initAgendaJeffMobileBridge(global) {
@@ -46,18 +47,85 @@
     global.localStorage.setItem(key, JSON.stringify(value));
   }
 
+  function cleanForDuplicate(text) {
+    return String(text || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9 ]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function dateOnly(value) { return String(value || "").slice(0, 10); }
+  function timeOnly(value) { return String(value || "").slice(0, 5); }
+
+  function duplicateKey(item) {
+    const data = item && typeof item === "object" ? item : {};
+    return [
+      data.tipo || "evento",
+      cleanForDuplicate(data.titulo || data.actividad || ""),
+      dateOnly(data.fechaInicio),
+      dateOnly(data.fechaFin) || dateOnly(data.fechaInicio),
+      timeOnly(data.horaInicio),
+      timeOnly(data.horaFin)
+    ].join("|");
+  }
+
+  function hasUsefulDuplicateKey(item) {
+    return duplicateKey(item).replace(/[|]/g, "").length > 0;
+  }
+
+  function findDuplicate(items, item, excludeIdLocal) {
+    const key = duplicateKey(item);
+    if (!hasUsefulDuplicateKey(item)) return null;
+    return (Array.isArray(items) ? items : []).find(function find(existing) {
+      if (!existing || existing.estado === "cancelado") return false;
+      if (excludeIdLocal && existing.idLocal === excludeIdLocal) return false;
+      return duplicateKey(existing) === key;
+    }) || null;
+  }
+
+  function dedupeDb(db) {
+    const data = db && typeof db === "object" ? db : emptyDb();
+    data.items = Array.isArray(data.items) ? data.items : [];
+    data.syncQueue = Array.isArray(data.syncQueue) ? data.syncQueue : [];
+    data.deletedItems = Array.isArray(data.deletedItems) ? data.deletedItems : [];
+
+    const kept = [];
+    const seen = new Set();
+    const removed = [];
+
+    data.items.forEach(function eachItem(item) {
+      if (!item || item.estado === "cancelado" || !hasUsefulDuplicateKey(item)) {
+        kept.push(item);
+        return;
+      }
+      const key = duplicateKey(item);
+      if (seen.has(key)) {
+        removed.push(item);
+        data.deletedItems.push({ idLocal: item.idLocal, deletedAt: now(), reason: "duplicate-mobile-cleanup" });
+        data.syncQueue.push({ id: makeId(), action: "delete", idLocal: item.idLocal, createdAt: now(), status: "pending", reason: "duplicate-mobile-cleanup" });
+        return;
+      }
+      seen.add(key);
+      kept.push(item);
+    });
+
+    data.items = kept;
+    data.duplicatesRemoved = removed.length;
+    return data;
+  }
+
   function readDb() {
-    const db = readJson(DB_KEY, null) || emptyDb();
-    db.items = Array.isArray(db.items) ? db.items : [];
-    db.syncQueue = Array.isArray(db.syncQueue) ? db.syncQueue : [];
-    db.deletedItems = Array.isArray(db.deletedItems) ? db.deletedItems : [];
-    return db;
+    return dedupeDb(readJson(DB_KEY, null) || emptyDb());
   }
 
   function writeDb(db) {
-    db.updatedAt = now();
-    writeJson(DB_KEY, db);
-    return db;
+    const cleanDb = dedupeDb(db);
+    cleanDb.updatedAt = now();
+    writeJson(DB_KEY, cleanDb);
+    return cleanDb;
   }
 
   function makeId() {
@@ -89,10 +157,10 @@
       idFirebase: data.idFirebase || "",
       idGoogleCalendar: data.idGoogleCalendar || "",
       tipo: data.tipo || "evento",
-      titulo: data.titulo || data.title || "Sin título",
+      titulo: data.titulo || data.actividad || data.title || "Sin título",
       descripcion: data.descripcion || data.description || "",
       fechaInicio: data.fechaInicio || data.startDate || "",
-      fechaFin: data.fechaFin || data.endDate || "",
+      fechaFin: data.fechaFin || data.endDate || data.fechaInicio || "",
       horaInicio,
       horaFin: data.horaFin || data.endTime || "",
       todoDia: Boolean(data.todoDia || data.allDay || !horaInicio),
@@ -124,30 +192,40 @@
       if (view === "today") return item.fechaInicio === today;
       if (view === "upcoming") return item.fechaInicio && item.fechaInicio > today && item.estado !== "completado" && item.estado !== "cancelado";
       if (view === "pending") return item.tipo === "pendiente" && item.estado !== "completado" && item.estado !== "cancelado";
-      return true;
+      return item.estado !== "cancelado";
     });
   }
 
   async function ensureLocalDatabase() {
     const db = readDb();
     writeDb(db);
-    return result(true, "Base móvil verificada.", { mode: "mobile-localstorage", items: db.items.length });
+    return result(true, "Base móvil verificada.", { mode: "mobile-localstorage", items: db.items.length, duplicatesRemoved: db.duplicatesRemoved || 0 });
   }
 
   async function readAgendaData() {
-    return result(true, "Base móvil leída.", { data: readDb() });
+    const db = readDb();
+    writeDb(db);
+    return result(true, "Base móvil leída.", { data: db, duplicatesRemoved: db.duplicatesRemoved || 0 });
   }
 
   async function queryAgendaItems(filters) {
     const db = readDb();
+    writeDb(db);
     const items = filterItems(db.items, filters);
-    return result(true, "Consulta móvil ejecutada.", { items, total: items.length });
+    return result(true, "Consulta móvil ejecutada.", { items, total: items.length, duplicatesRemoved: db.duplicatesRemoved || 0 });
   }
 
   async function saveAgendaItem(item) {
     const db = readDb();
     const normalized = normalizeItem(item);
     const index = db.items.findIndex(function find(existing) { return existing.idLocal === normalized.idLocal; });
+    const duplicate = findDuplicate(db.items, normalized, normalized.idLocal);
+
+    if (duplicate) {
+      writeDb(db);
+      return result(false, "Registro duplicado omitido en móvil.", { duplicate: true, duplicateIdLocal: duplicate.idLocal, item: normalized });
+    }
+
     const action = index >= 0 ? "update" : "create";
     if (index >= 0) db.items[index] = { ...db.items[index], ...normalized };
     else db.items.push(normalized);
@@ -218,7 +296,7 @@
     isElectron: false,
     isMobileBridge: true,
     platform: "android-web",
-    versions: Object.freeze({ mobileBridge: "1.1.0" }),
+    versions: Object.freeze({ mobileBridge: "1.2.0" }),
     ping: function ping() { return result(true, "Puente móvil responde.", { mode: "mobile" }); },
     getEnvironment,
     openExternal: function openExternal(url) { if (url) global.open(url, "_blank"); return result(true, "URL abierta.", { url }); },
