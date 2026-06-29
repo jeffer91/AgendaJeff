@@ -4,8 +4,8 @@
 
   Función:
     - Pantalla principal de AgendaJeff.
-    - Mostrar resumen del día, próximos 7 días, pendientes, vencidos y estado de sincronización.
-    - Permitir acciones rápidas sin tocar los módulos de conexiones.
+    - Mostrar resumen del día y tarjetas-filtro como menú.
+    - Mostrar únicamente el listado seleccionado: hoy, próximos, próximos 7 días, pendientes, vencidos, sincronización o errores.
 -->
 
 <!DOCTYPE html>
@@ -22,7 +22,7 @@
       <div>
         <p class="in-eyebrow">AgendaJeff · Inicio</p>
         <h1 id="inPageTitle">Resumen del día</h1>
-        <p class="in-hero-text">Vista principal para revisar lo importante: hoy, próximos 7 días, pendientes, vencidos y sincronización.</p>
+        <p class="in-hero-text">Usa las tarjetas como menú para ver solo el grupo de eventos que necesitas revisar.</p>
         <div class="in-hero-actions">
           <button class="in-btn in-btn-primary" type="button" data-action="refresh">Actualizar</button>
           <button class="in-btn" type="button" data-action="openAgenda">Abrir Agenda</button>
@@ -37,85 +37,48 @@
       </article>
     </section>
 
-    <section class="in-stats" aria-label="Resumen rápido">
-      <article class="in-stat-card">
+    <section class="in-stats" aria-label="Menú de resumen rápido">
+      <button class="in-stat-card is-active" type="button" data-action="filterDashboard" data-filter="today">
         <span>Hoy</span>
         <strong id="inStatToday">0</strong>
-      </article>
-      <article class="in-stat-card">
+      </button>
+      <button class="in-stat-card" type="button" data-action="filterDashboard" data-filter="upcomingAll">
+        <span>Próximos</span>
+        <strong id="inStatUpcomingAll">0</strong>
+      </button>
+      <button class="in-stat-card" type="button" data-action="filterDashboard" data-filter="upcoming7">
         <span>Próximos 7 días</span>
         <strong id="inStatUpcoming">0</strong>
-      </article>
-      <article class="in-stat-card">
+      </button>
+      <button class="in-stat-card" type="button" data-action="filterDashboard" data-filter="pending">
         <span>Pendientes</span>
         <strong id="inStatPending">0</strong>
-      </article>
-      <article class="in-stat-card">
+      </button>
+      <button class="in-stat-card" type="button" data-action="filterDashboard" data-filter="overdue">
         <span>Vencidos</span>
         <strong id="inStatOverdue">0</strong>
-      </article>
-      <article class="in-stat-card">
+      </button>
+      <button class="in-stat-card" type="button" data-action="filterDashboard" data-filter="sync">
         <span>Por sincronizar</span>
         <strong id="inStatSync">0</strong>
-      </article>
-      <article class="in-stat-card">
+      </button>
+      <button class="in-stat-card" type="button" data-action="filterDashboard" data-filter="errors">
         <span>Errores</span>
         <strong id="inStatErrors">0</strong>
-      </article>
+      </button>
     </section>
 
-    <section class="in-grid">
+    <section class="in-active-view">
       <article class="in-panel">
         <div class="in-panel-header">
           <div>
-            <h2>Eventos de hoy</h2>
-            <p>Eventos, recordatorios y pendientes programados para hoy.</p>
+            <h2 id="inActiveTitle">Eventos de hoy</h2>
+            <p id="inActiveDescription">Eventos, recordatorios y pendientes programados para hoy.</p>
           </div>
-          <span class="in-counter" id="inTodayCount">0</span>
+          <span class="in-counter" id="inActiveCount">0</span>
         </div>
-        <div id="inTodayList" class="in-list">
+        <div id="inActiveList" class="in-list">
           <div class="in-empty">Cargando datos locales.</div>
-        </div>
-      </article>
-
-      <article class="in-panel">
-        <div class="in-panel-header">
-          <div>
-            <h2>Próximos 7 días</h2>
-            <p>Agenda cercana para anticipar trabajo y recordatorios.</p>
-          </div>
-          <span class="in-counter" id="inUpcomingCount">0</span>
-        </div>
-        <div id="inUpcomingList" class="in-list">
-          <div class="in-empty">Cargando próximos eventos.</div>
-        </div>
-      </article>
-    </section>
-
-    <section class="in-grid">
-      <article class="in-panel">
-        <div class="in-panel-header">
-          <div>
-            <h2>Pendientes activos</h2>
-            <p>Se mantienen hasta completarse. Avisos base: 06:00 y 17:00.</p>
-          </div>
-          <span class="in-counter" id="inPendingCount">0</span>
-        </div>
-        <div id="inPendingList" class="in-list">
-          <div class="in-empty">Cargando pendientes.</div>
-        </div>
-      </article>
-
-      <article class="in-panel">
-        <div class="in-panel-header">
-          <div>
-            <h2>Vencidos</h2>
-            <p>Registros activos con fecha anterior a hoy.</p>
-          </div>
-          <span class="in-counter is-alert" id="inOverdueCount">0</span>
-        </div>
-        <div id="inOverdueList" class="in-list">
-          <div class="in-empty">Cargando vencidos.</div>
         </div>
       </article>
     </section>
