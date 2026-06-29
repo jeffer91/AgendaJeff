@@ -3,7 +3,7 @@
   "use strict";
   const root = global.AgendaJeffModules = global.AgendaJeffModules || {};
   const carga = root.CargaMasiva = root.CargaMasiva || {};
-  const state = carga.state = carga.state || { started: false, startedAt: "", sources: [], candidates: [], selectedCandidateId: "" };
+  const state = carga.state = carga.state || { started: false, startedAt: "", sources: [], candidates: [], selectedCandidateId: "", duplicateReport: null };
 
   function sourceCard(source, index) {
     const safe = carga.dom.safe;
@@ -71,12 +71,19 @@
       return [];
     }
     let candidates = carga.eventParser.parseSources(state.sources);
+    const originalCount = candidates.length;
     candidates = await carga.duplicates.markDuplicates(candidates);
+    const report = state.duplicateReport || { totalRemoved: Math.max(0, originalCount - candidates.length), internalRemoved: 0, existingRemoved: 0 };
     state.candidates = candidates;
     state.selectedCandidateId = candidates[0] ? candidates[0].id : "";
+    carga.dom.text("cmDuplicateCount", String(report.totalRemoved || 0));
+    carga.dom.text("cmSaveCount", "0");
     carga.reviewRender.renderReview();
     showReviewStep();
-    carga.dom.status("Tabla generada", `${candidates.length} registro(s) listos para editar en pantalla completa.`, "Revisión");
+
+    const message = `Tabla generada: ${candidates.length} registro(s). Duplicados omitidos: ${report.totalRemoved || 0} (${report.internalRemoved || 0} repetidos del archivo, ${report.existingRemoved || 0} ya existentes).`;
+    if (carga.reviewActions && typeof carga.reviewActions.reviewNotice === "function") carga.reviewActions.reviewNotice(message, report.totalRemoved ? "warning" : "success");
+    carga.dom.status("Tabla generada", message, "Revisión");
     return candidates;
   }
 
@@ -86,9 +93,12 @@
     if (paste) paste.value = "";
     if (input) input.value = "";
     carga.sources.clearSources();
+    state.duplicateReport = null;
     renderSources();
     if (carga.reviewRender) carga.reviewRender.renderReview();
     hideReviewStep();
+    carga.dom.text("cmDuplicateCount", "0");
+    carga.dom.text("cmSaveCount", "0");
     carga.dom.status("Carga limpia", "Se borraron fuentes y eventos detectados.", "Listo");
   }
 
