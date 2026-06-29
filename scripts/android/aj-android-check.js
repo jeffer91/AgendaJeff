@@ -4,6 +4,7 @@
 
   Función:
     - Verificar si el proyecto está preparado para generar APK Android con Capacitor.
+    - Fallar claramente si falta el proyecto nativo android/.
 */
 
 "use strict";
@@ -18,6 +19,12 @@ const REQUIRED = [
   "scripts/android/aj-android-prepare.js",
   "android-web/index.html"
 ];
+const REQUIRED_ANDROID_PROJECT = [
+  "android",
+  "android/app",
+  "android/app/build.gradle",
+  "android/app/src/main/AndroidManifest.xml"
+];
 
 function exists(relativePath) {
   return fs.existsSync(path.join(ROOT, relativePath));
@@ -30,20 +37,22 @@ function readPackage() {
 function run() {
   const pkg = readPackage();
   const missing = REQUIRED.filter(function filterMissing(file) { return !exists(file); });
+  const missingAndroidProject = REQUIRED_ANDROID_PROJECT.filter(function filterMissing(file) { return !exists(file); });
   const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
   const missingPackages = ["@capacitor/core", "@capacitor/cli", "@capacitor/android"].filter(function filterPkg(name) { return !deps[name]; });
 
   const result = {
-    ok: missing.length === 0 && missingPackages.length === 0,
+    ok: missing.length === 0 && missingPackages.length === 0 && missingAndroidProject.length === 0,
     missingFiles: missing,
     missingPackages,
-    hasAndroidNativeProject: exists("android"),
+    missingAndroidProject,
+    hasAndroidNativeProject: missingAndroidProject.length === 0,
     next: []
   };
 
-  if (missing.includes("android-web/index.html")) result.next.push("npm run android:prepare");
   if (missingPackages.length) result.next.push("npm install");
-  if (!result.hasAndroidNativeProject) result.next.push("npx cap add android");
+  if (missing.includes("android-web/index.html")) result.next.push("npm run android:prepare");
+  if (missingAndroidProject.length) result.next.push("npx cap add android");
   result.next.push("npx cap sync android");
   result.next.push("cd android && gradlew assembleDebug");
 
