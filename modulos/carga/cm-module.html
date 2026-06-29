@@ -5,7 +5,8 @@
   Función:
     - Pantalla de carga masiva inteligente local.
     - Registrar texto, TXT, CSV y archivos como fuentes.
-    - Procesar fuentes, revisar eventos detectados y guardar aprobados.
+    - Procesar fuentes y abrir una subpantalla interna de revisión editable.
+    - Guardar únicamente registros revisados con campos estándar.
 -->
 
 <!DOCTYPE html>
@@ -22,75 +23,86 @@
     <section class="cm-hero">
       <div>
         <p class="cm-eyebrow">AgendaJeff · Carga Masiva</p>
-        <h1 id="cmPageTitle">Procesar eventos desde fuentes</h1>
-        <p class="cm-hero-text">Pega texto, tablas o carga archivos. Todo pasa primero por revisión antes de guardarse.</p>
+        <h1 id="cmPageTitle">Procesar cronogramas</h1>
+        <p class="cm-hero-text">Pega tablas, horarios, defensas o cronogramas. El paso 2 permite editar todo antes de guardar.</p>
       </div>
       <article class="cm-status-card">
         <span id="cmStatusBadge" class="cm-badge is-ready">Listo</span>
         <h2 id="cmStatusTitle">Carga lista</h2>
-        <p id="cmStatusDescription">Parser local sin IA externa.</p>
+        <p id="cmStatusDescription">Parser local preparado para detectar actividad, fechas y horas.</p>
       </article>
     </section>
 
-    <section class="cm-grid">
-      <article class="cm-panel">
-        <div class="cm-panel-header">
-          <div>
-            <h2>Entrada rápida</h2>
-            <p>Pega texto, tablas o cronogramas copiados.</p>
-          </div>
-        </div>
-        <textarea id="cmPasteBox" class="cm-textarea" rows="10" placeholder="Ejemplo: 12/07/2026 10:00 Defensa de titulación"></textarea>
-        <div class="cm-actions">
-          <button id="cmBtnRegisterText" class="cm-btn cm-btn-primary" type="button">Registrar texto como fuente</button>
-          <button id="cmBtnClear" class="cm-btn" type="button">Limpiar</button>
-        </div>
-      </article>
+    <section id="cmStepOne" class="cm-step" aria-label="Paso 1: fuentes">
+      <div class="cm-step-title">
+        <span class="cm-step-pill">Paso 1</span>
+        <strong>Registrar fuentes</strong>
+      </div>
 
-      <article class="cm-panel">
+      <section class="cm-grid">
+        <article class="cm-panel">
+          <div class="cm-panel-header">
+            <div>
+              <h2>Entrada rápida</h2>
+              <p>Pega texto, tablas copiadas de Excel o cronogramas completos.</p>
+            </div>
+          </div>
+          <textarea id="cmPasteBox" class="cm-textarea" rows="10" placeholder="Pega aquí cronogramas con columnas como: Actividad | Fecha inicio | Fecha fin | Responsable, o defensas con: Día | Aula | Hora | Sede | Cédula | Nombre | Carrera | Tribunal..."></textarea>
+          <div class="cm-actions">
+            <button id="cmBtnRegisterText" class="cm-btn cm-btn-primary" type="button">Registrar texto</button>
+            <button id="cmBtnProcess" class="cm-btn cm-btn-primary" type="button">Procesar y revisar</button>
+            <button id="cmBtnClear" class="cm-btn" type="button">Limpiar</button>
+          </div>
+        </article>
+
+        <article class="cm-panel">
+          <div class="cm-panel-header">
+            <div>
+              <h2>Archivos</h2>
+              <p>TXT y CSV se leen localmente. Excel, PDF, Word e imágenes quedan como fuente para revisión manual.</p>
+            </div>
+          </div>
+          <div id="cmDropzone" class="cm-dropzone">
+            <strong>Soltar archivos aquí</strong>
+            <span>Cada archivo se trata como fuente independiente.</span>
+          </div>
+          <input id="cmFileInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*" />
+        </article>
+      </section>
+
+      <section class="cm-panel">
         <div class="cm-panel-header">
           <div>
-            <h2>Archivos</h2>
-            <p>TXT y CSV se leen localmente. PDF, Word, Excel e imágenes se registran para revisión.</p>
+            <h2>Fuentes registradas</h2>
+            <p>Total: <strong id="cmSourceCount">0</strong></p>
           </div>
         </div>
-        <div id="cmDropzone" class="cm-dropzone">
-          <strong>Soltar archivos aquí</strong>
-          <span>Cada archivo se trata como fuente independiente.</span>
+        <div id="cmSourceList" class="cm-source-list">
+          <div class="cm-empty">Todavía no hay fuentes registradas.</div>
         </div>
-        <input id="cmFileInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*" />
-      </article>
+      </section>
     </section>
 
-    <section class="cm-panel">
-      <div class="cm-panel-header">
+    <section id="cmReviewStep" class="cm-panel cm-review-step" hidden aria-labelledby="cmReviewTitle">
+      <div class="cm-panel-header cm-review-topbar">
         <div>
-          <h2>Fuentes registradas</h2>
-          <p>Total: <strong id="cmSourceCount">0</strong></p>
+          <div class="cm-step-title cm-step-title-inline">
+            <span class="cm-step-pill">Paso 2</span>
+            <strong id="cmReviewTitle">Revisar tabla editable</strong>
+          </div>
+          <p>Campos finales: <strong>Actividad</strong>, <strong>Fecha inicio</strong>, <strong>Fecha fin</strong>, <strong>Hora inicio</strong> y <strong>Hora fin</strong>.</p>
+          <p>Detectados: <strong id="cmDetectedCount">0</strong> · Guardados: <strong id="cmSaveCount">0</strong></p>
         </div>
-        <button id="cmBtnProcess" class="cm-btn cm-btn-primary" type="button">Procesar y revisar</button>
+        <div class="cm-actions cm-actions-top">
+          <button id="cmBtnApproveSelected" class="cm-btn cm-btn-primary" type="button">Guardar seleccionados</button>
+          <button id="cmBtnAddReviewRow" class="cm-btn" type="button">Agregar fila</button>
+          <button id="cmBtnBackToSources" class="cm-btn" type="button">Volver a fuentes</button>
+        </div>
       </div>
-      <div id="cmSourceList" class="cm-source-list">
-        <div class="cm-empty">Todavía no hay fuentes registradas.</div>
-      </div>
-    </section>
 
-    <section id="cmReviewModal" class="cm-modal" hidden>
-      <div class="cm-modal-card" role="dialog" aria-modal="true" aria-labelledby="cmReviewTitle">
-        <div class="cm-panel-header">
-          <div>
-            <h2 id="cmReviewTitle">Revisión de eventos detectados</h2>
-            <p>Detectados: <strong id="cmDetectedCount">0</strong> · Guardados: <strong id="cmSaveCount">0</strong></p>
-          </div>
-          <div class="cm-actions cm-actions-top">
-            <button id="cmBtnApproveSelected" class="cm-btn cm-btn-primary" type="button">Guardar seleccionados</button>
-            <button id="cmBtnCloseModal" class="cm-btn" type="button">Cerrar</button>
-          </div>
-        </div>
-        <div class="cm-review-grid">
-          <div id="cmReviewTable" class="cm-review-table">Sin procesamiento.</div>
-          <div id="cmReviewDetail" class="cm-review-detail">Detalle pendiente.</div>
-        </div>
+      <div class="cm-review-layout">
+        <div id="cmReviewTable" class="cm-review-table">Sin procesamiento.</div>
+        <div id="cmReviewDetail" class="cm-review-detail">Detalle pendiente.</div>
       </div>
     </section>
   </main>
