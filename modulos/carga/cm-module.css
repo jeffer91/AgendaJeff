@@ -290,6 +290,36 @@ textarea { font: inherit; }
   border-bottom: 1px solid var(--cm-border);
 }
 
+.cm-review-notice {
+  display: block;
+  margin: 0 0 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--cm-border);
+  border-radius: 12px;
+  background: #eef4ff;
+  color: var(--cm-primary-dark);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.cm-review-notice.is-success {
+  border-color: rgba(21, 128, 61, 0.25);
+  background: var(--cm-success-soft);
+  color: var(--cm-success);
+}
+
+.cm-review-notice.is-warning {
+  border-color: rgba(180, 83, 9, 0.25);
+  background: var(--cm-warning-soft);
+  color: var(--cm-warning);
+}
+
+.cm-review-notice.is-info {
+  border-color: rgba(37, 99, 235, 0.22);
+  background: #eef4ff;
+  color: var(--cm-primary-dark);
+}
+
 .cm-review-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.65fr);
