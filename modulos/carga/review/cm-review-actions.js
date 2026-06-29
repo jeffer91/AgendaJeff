@@ -80,7 +80,9 @@
   }
 
   function isBackendDuplicate(result) {
-    return Boolean(result && result.ok === false && result.error && (result.error.duplicate || result.error.message === "duplicate"));
+    const error = result && result.error ? result.error : {};
+    const data = result && result.data ? result.data : {};
+    return Boolean(result && result.ok === false && (error.duplicate || error.message === "duplicate" || data.duplicate || data.message === "duplicate"));
   }
 
   async function saveCandidate(candidate, options) {
