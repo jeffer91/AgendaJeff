@@ -175,7 +175,7 @@ function upsertLocalItem(appInstance, input) {
     const existingIndex = cleanup.data.items.findIndex(function findItem(current) { return current.idLocal === item.idLocal; });
     const duplicateIndex = findDuplicateIndex(cleanup.data.items, item, item.idLocal);
 
-    if (duplicateIndex >= 0 && existingIndex < 0) {
+    if (duplicateIndex >= 0) {
       const duplicate = cleanup.data.items[duplicateIndex];
       if (cleanup.duplicatesRemoved > 0) saveLocalData(appInstance, cleanup.data);
       return createError("Registro duplicado omitido. Ya existe un evento con la misma actividad, fecha y hora.", {
