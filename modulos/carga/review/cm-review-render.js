@@ -63,20 +63,21 @@
     makeCell(row, selected, "cm-review-check");
 
     makeCell(row, makeInput(item, "actividad", "textarea"), "cm-review-activity");
-    makeCell(row, makeInput(item, "fechaInicio", "date"));
-    makeCell(row, makeInput(item, "fechaFin", "date"));
-    makeCell(row, makeInput(item, "horaInicio", "time"));
-    makeCell(row, makeInput(item, "horaFin", "time"));
+    makeCell(row, makeInput(item, "fechaInicio", "date"), "cm-review-date");
+    makeCell(row, makeInput(item, "fechaFin", "date"), "cm-review-date");
+    makeCell(row, makeInput(item, "horaInicio", "time"), "cm-review-time");
+    makeCell(row, makeInput(item, "horaFin", "time"), "cm-review-time");
 
     const status = document.createElement("span");
     status.className = `cm-review-status is-${item.status || "revision"}`;
     status.textContent = label(item.status);
-    makeCell(row, status);
+    makeCell(row, status, "cm-review-status-cell");
 
     const actions = document.createElement("div");
     actions.className = "cm-row-actions";
     actions.appendChild(makeButton("Detalle", "detail", item.id, false));
     actions.appendChild(makeButton("Guardar", "save-row", item.id, false));
+    actions.appendChild(makeButton("Exportar", "export-row", item.id, false));
     actions.appendChild(makeButton("Eliminar", "remove", item.id, true));
     makeCell(row, actions, "cm-review-actions-cell");
 
