@@ -1,4 +1,4 @@
-/* cm-event-parser.js · Parser local inteligente para cronogramas y defensas */
+/* cm-event-parser.js · Parser local inteligente para cronogramas, fases y defensas */
 (function (global) {
   "use strict";
   const root = global.AgendaJeffModules = global.AgendaJeffModules || {};
@@ -36,12 +36,12 @@
       const key = normalizeHeader(header);
       if (!key) return;
       if (key === "actividad" || key === "actividad descripcion") map.actividad = index;
-      else if (key === "dia" || key === "día" || key === "fecha" || key === "fecha inicio" || key.includes("fecha inicio")) map.fechaInicio = index;
+      else if (key === "dia" || key === "fecha" || key === "fecha inicio" || key.includes("fecha inicio")) map.fechaInicio = index;
       else if (key === "fecha fin" || key.includes("fecha fin")) map.fechaFin = index;
       else if (key === "hora" || key.includes("hora")) map.hora = index;
       else if (key === "aula") map.aula = index;
       else if (key === "sede" || key === "modalidad") map.sede = index;
-      else if (key === "cedula" || key === "cedula identidad" || key === "cédula") map.cedula = index;
+      else if (key === "cedula" || key === "cedula identidad") map.cedula = index;
       else if (key === "nombre" || key.includes("estudiante")) map.nombre = index;
       else if (key === "carrera") map.carrera = index;
       else if (key === "responsable") map.responsable = index;
@@ -118,7 +118,65 @@
 
   function contextText(context) {
     const list = Array.isArray(context) ? context : [];
-    return list.slice(-3).filter(Boolean).join(" · ");
+    return list.filter(Boolean).join(" · ");
+  }
+
+  function looksLikePhase(text) {
+    return /^fase\s*\d+\b/i.test(normalizeHeader(text));
+  }
+
+  function looksLikeMajorSection(text) {
+    const value = cleanText(text);
+    const normalized = normalizeHeader(value);
+    if (!value || looksLikePhase(value)) return false;
+    if (/^(actividad|fecha inicio|fecha fin|dia|hora|aula|sede|cedula|nombre|carrera)/i.test(normalized)) return false;
+    const letters = value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "");
+    if (letters.length < 5) return false;
+    const upperLetters = value.replace(/[^A-ZÁÉÍÓÚÜÑ]/g, "");
+    return upperLetters.length / Math.max(letters.length, 1) > 0.72;
+  }
+
+  function isContextLine(line, cells) {
+    const text = cleanText(line);
+    if (!text || carga.dateParser.firstDate(text)) return false;
+    if (isHeader(cells)) return false;
+    if (cells.length <= 2) return true;
+    const filled = cells.filter(Boolean);
+    return filled.length <= 2;
+  }
+
+  function createContextState() {
+    return { mainTitle: "", section: "", lastHeaderMode: "" };
+  }
+
+  function getContextParts(state) {
+    const safeState = state || createContextState();
+    return [safeState.mainTitle, safeState.section].filter(Boolean);
+  }
+
+  function updateContext(state, line) {
+    const text = cleanText(line);
+    if (!text) return getContextParts(state);
+
+    if (looksLikePhase(text)) {
+      state.section = text;
+      return getContextParts(state);
+    }
+
+    if (!state.mainTitle) {
+      state.mainTitle = text;
+      state.section = "";
+      return getContextParts(state);
+    }
+
+    if (looksLikeMajorSection(text) || state.lastHeaderMode === "defensa") {
+      state.mainTitle = text;
+      state.section = "";
+      return getContextParts(state);
+    }
+
+    state.section = text;
+    return getContextParts(state);
   }
 
   function parseCronogramaRow(cells, source, index, active, rawLine) {
@@ -126,7 +184,8 @@
     const actividadBase = cell(cells, map.actividad);
     const fechaInicio = carga.dateParser.firstDate(cell(cells, map.fechaInicio) || rawLine);
     const fechaFin = carga.dateParser.firstDate(cell(cells, map.fechaFin)) || fechaInicio;
-    if (!actividadBase && !fechaInicio) return null;
+
+    if (!actividadBase || !fechaInicio) return null;
 
     const range = carga.dateParser.timeRange(cell(cells, map.hora) || rawLine);
     const extras = [];
@@ -195,20 +254,21 @@
     return candidate;
   }
 
-  function parseGenericLine(line, source, index) {
+  function parseGenericLine(line, source, index, context) {
     const text = cleanText(line);
     if (!text || isHeader(toCells(text))) return null;
     const dates = carga.dateParser.allDates(text);
     if (!dates.length) return null;
     const range = carga.dateParser.timeRange(text);
     const actividadBase = carga.dateParser.removeKnownDateTime(text) || text.slice(0, 120);
+    const actividad = buildActivity([contextText(context), actividadBase]);
     const candidate = baseCandidate({
       sourceId: source.id,
       sourceName: source.name,
       sourceType: source.type,
       row: index + 1,
-      actividad: actividadBase,
-      descripcion: text,
+      actividad,
+      descripcion: buildActivity([actividad, text]),
       fechaInicio: dates[0] || "",
       fechaFin: dates[1] || dates[0] || "",
       horaInicio: range.horaInicio,
@@ -218,13 +278,6 @@
     });
     candidate.status = statusFor(candidate);
     return candidate;
-  }
-
-  function isContextLine(line, cells) {
-    if (!line || carga.dateParser.firstDate(line)) return false;
-    if (isHeader(cells)) return false;
-    if (cells.length <= 2) return true;
-    return false;
   }
 
   function parseSource(source) {
@@ -246,8 +299,8 @@
 
     const lines = text.split(/\r?\n/);
     const candidates = [];
+    const contextState = createContextState();
     let active = null;
-    let context = [];
 
     lines.forEach(function eachLine(originalLine, index) {
       const rawLine = String(originalLine || "").trim();
@@ -256,25 +309,24 @@
 
       if (isHeader(cells)) {
         const map = makeMap(cells);
-        active = { mode: headerMode(map), map, context: context.slice(-3) };
+        const mode = headerMode(map);
+        contextState.lastHeaderMode = mode;
+        active = { mode, map, context: getContextParts(contextState) };
+        return;
+      }
+
+      if (isContextLine(rawLine, cells)) {
+        const newContext = updateContext(contextState, rawLine);
+        if (active) active.context = newContext;
         return;
       }
 
       let candidate = null;
       if (active && active.mode === "cronograma") candidate = parseCronogramaRow(cells, source, index, active, rawLine);
       if (active && active.mode === "defensa") candidate = parseDefenseRow(cells, source, index, active, rawLine);
-      if (!candidate) candidate = parseGenericLine(rawLine, source, index);
+      if (!candidate) candidate = parseGenericLine(rawLine, source, index, getContextParts(contextState));
 
-      if (candidate) {
-        candidates.push(candidate);
-        return;
-      }
-
-      if (isContextLine(rawLine, cells)) {
-        context.push(cleanText(rawLine));
-        context = context.slice(-3);
-        if (active) active.context = context.slice(-3);
-      }
+      if (candidate) candidates.push(candidate);
     });
 
     return candidates;
