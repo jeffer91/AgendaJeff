@@ -5,8 +5,8 @@
   Función:
     - Pantalla de carga masiva inteligente local.
     - Registrar texto, TXT, CSV y archivos como fuentes.
-    - Procesar fuentes y abrir una subpantalla interna de revisión editable.
-    - Guardar únicamente registros revisados con campos estándar.
+    - Procesar fuentes y abrir una subpantalla interna de revisión editable a pantalla completa.
+    - Guardar o exportar registros revisados con campos estándar.
 -->
 
 <!DOCTYPE html>
@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="./cm-review.css" />
 </head>
 <body>
-  <main class="cm-page" aria-labelledby="cmPageTitle">
+  <main id="cmPage" class="cm-page" aria-labelledby="cmPageTitle">
     <section class="cm-hero">
       <div>
         <p class="cm-eyebrow">AgendaJeff · Carga Masiva</p>
@@ -95,6 +95,7 @@
         </div>
         <div class="cm-actions cm-actions-top">
           <button id="cmBtnApproveSelected" class="cm-btn cm-btn-primary" type="button">Guardar seleccionados</button>
+          <button id="cmBtnExportAll" class="cm-btn" type="button">Exportar todos</button>
           <button id="cmBtnAddReviewRow" class="cm-btn" type="button">Agregar fila</button>
           <button id="cmBtnBackToSources" class="cm-btn" type="button">Volver a fuentes</button>
         </div>
