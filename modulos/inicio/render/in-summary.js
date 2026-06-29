@@ -4,6 +4,7 @@
 
   Función:
     - Calcular resumen local para la pantalla Inicio.
+    - Separar filtros: hoy, próximos 7 días, próximos globales, pendientes, vencidos, sincronización y errores.
 */
 
 (function initInicioSummary(global) {
@@ -33,6 +34,9 @@
     const upcomingItems = sortByDate(openItems.filter(function filterUpcoming(item) {
       return item.fechaInicio && item.fechaInicio > today && item.fechaInicio <= sevenDays;
     }));
+    const allUpcomingItems = sortByDate(openItems.filter(function filterAllUpcoming(item) {
+      return item.fechaInicio && item.fechaInicio > today;
+    }));
     const pendingItems = sortByDate(openItems.filter(function filterPending(item) { return item.tipo === "pendiente"; }));
     const overdueItems = sortByDate(openItems.filter(function filterOverdue(item) { return item.fechaInicio && item.fechaInicio < today; }));
     const syncPendingItems = sortByDate(items.filter(function filterSync(item) {
@@ -49,6 +53,7 @@
       openTotal: openItems.length,
       todayItems,
       upcomingItems,
+      allUpcomingItems,
       pendingItems,
       overdueItems,
       syncPendingItems,
