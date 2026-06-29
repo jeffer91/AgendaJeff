@@ -71,6 +71,7 @@
 
 .cm-edit-table tr.needs-review td { background: #fffdf7; }
 .cm-edit-table tr.is-muted td { opacity: 0.62; }
+.cm-edit-table tr.is-muted .cm-review-status.is-guardado { opacity: 1; }
 
 .cm-edit-table input,
 .cm-edit-table textarea {
@@ -134,7 +135,8 @@
   color: var(--cm-muted);
 }
 
-.cm-review-status.is-listo {
+.cm-review-status.is-listo,
+.cm-review-status.is-guardado {
   background: var(--cm-success-soft);
   color: var(--cm-success);
 }
