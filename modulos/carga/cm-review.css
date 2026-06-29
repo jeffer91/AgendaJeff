@@ -3,93 +3,183 @@
   background: #eef4ff;
 }
 
-.cm-actions-top {
-  margin-top: 0;
+.cm-review-table {
+  min-height: 220px;
+  overflow: hidden;
 }
 
-.cm-review-table {
-  display: grid;
-  gap: 12px;
-  max-height: 68vh;
+.cm-review-table-wrap {
+  width: 100%;
   overflow: auto;
 }
 
-.cm-review-card {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--cm-border);
-  border-radius: 16px;
+.cm-edit-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
   background: #ffffff;
+  border: 1px solid var(--cm-border);
+  border-radius: 12px;
 }
 
-.cm-review-card-head,
-.cm-review-row,
-.cm-review-actions {
+.cm-edit-table th,
+.cm-edit-table td {
+  border-bottom: 1px solid var(--cm-border);
+  border-right: 1px solid var(--cm-border);
+  padding: 7px;
+  vertical-align: top;
+}
+
+.cm-edit-table th:last-child,
+.cm-edit-table td:last-child { border-right: 0; }
+.cm-edit-table tr:last-child td { border-bottom: 0; }
+
+.cm-edit-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eef4ff;
+  color: var(--cm-primary-dark);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cm-edit-table tr.needs-review td { background: #fffdf7; }
+.cm-edit-table tr.is-muted td { opacity: 0.62; }
+
+.cm-edit-table input,
+.cm-edit-table textarea {
+  width: 100%;
+  min-height: 30px;
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #ffffff;
+  color: var(--cm-text);
+  outline: none;
+  font-size: 12px;
+}
+
+.cm-edit-table textarea {
+  min-height: 48px;
+  resize: vertical;
+}
+
+.cm-edit-table input:focus,
+.cm-edit-table textarea:focus {
+  border-color: var(--cm-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.cm-review-check {
+  width: 72px;
+  text-align: center;
+}
+
+.cm-review-check input {
+  width: 18px;
+  height: 18px;
+  min-height: auto;
+  accent-color: var(--cm-primary);
+}
+
+.cm-review-activity { min-width: 300px; }
+.cm-review-actions-cell { min-width: 180px; }
+
+.cm-row-actions {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.cm-review-card-head {
-  justify-content: space-between;
-}
-
-.cm-review-field {
-  display: grid;
-  gap: 6px;
-  min-width: 160px;
-  flex: 1;
-  color: var(--cm-text);
-  font-size: 12px;
+.cm-review-status {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 10px;
   font-weight: 900;
-}
-
-.cm-review-field input {
-  width: 100%;
-  border: 1px solid var(--cm-border);
-  border-radius: 12px;
-  padding: 9px 10px;
-  outline: none;
-}
-
-.cm-review-field input:focus {
-  border-color: var(--cm-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
-.cm-review-meta {
+  white-space: nowrap;
+  background: #f1f5f9;
   color: var(--cm-muted);
-  font-size: 12px;
 }
 
-.cm-detail-card h3 {
-  margin-top: 0;
+.cm-review-status.is-listo {
+  background: var(--cm-success-soft);
+  color: var(--cm-success);
 }
 
-.cm-detail-card pre,
+.cm-review-status.is-falta_fecha,
+.cm-review-status.is-falta_actividad,
+.cm-review-status.is-requiere_revision {
+  background: var(--cm-warning-soft);
+  color: var(--cm-warning);
+}
+
+.cm-review-status.is-posible_duplicado {
+  background: var(--cm-danger-soft);
+  color: var(--cm-danger);
+}
+
+.cm-review-detail {
+  align-self: start;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.cm-review-detail h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.cm-detail-summary {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 8px;
+  color: var(--cm-muted);
+}
+
+.cm-detail-summary strong {
+  color: var(--cm-text);
+  line-height: 1.25;
+}
+
+.cm-detail-summary span { font-size: 12px; }
+
 .cm-review-detail pre {
   overflow: auto;
-  max-height: 54vh;
+  max-height: 300px;
   margin: 0;
-  padding: 12px;
-  border-radius: 14px;
+  padding: 10px;
+  border-radius: 12px;
   background: #0f172a;
   color: #dbeafe;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.35;
+  white-space: pre-wrap;
 }
 
 .cm-btn-small {
-  min-height: 34px;
-  padding: 7px 10px;
-  border-radius: 12px;
-  font-size: 12px;
+  min-height: 28px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 11px;
 }
 
 .cm-btn-danger {
   border-color: rgba(180, 35, 24, 0.25);
   background: #fef3f2;
   color: #b42318;
+}
+
+@media (max-width: 720px) {
+  .cm-review-table { padding: 8px; }
+  .cm-edit-table { min-width: 860px; }
 }
