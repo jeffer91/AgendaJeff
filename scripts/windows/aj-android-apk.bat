@@ -11,17 +11,25 @@ npm run android:prepare
 if errorlevel 1 goto error
 
 echo.
-echo 2. Verificando Capacitor
+echo 2. Verificando proyecto nativo Android
+if not exist android\app\build.gradle (
+  echo Proyecto Android no encontrado. Se creara con Capacitor.
+  npx cap add android
+  if errorlevel 1 goto error
+)
+
+echo.
+echo 3. Verificando Capacitor
 npm run android:check
 if errorlevel 1 goto missing
 
 echo.
-echo 3. Sincronizando Android
+echo 4. Sincronizando Android
 npx cap sync android
 if errorlevel 1 goto error
 
 echo.
-echo 4. Construyendo APK debug
+echo 5. Construyendo APK debug
 cd android
 call gradlew assembleDebug
 if errorlevel 1 goto error
@@ -36,10 +44,10 @@ goto end
 
 :missing
 echo.
-echo Si es primera vez ejecuta:
-echo npm install
-echo npx cap add android
-echo Luego vuelve a ejecutar este BAT.
+echo Faltan requisitos para Android.
+echo Ejecuta npm install y confirma que Java JDK y Android Studio/SDK esten instalados.
+echo Luego vuelve a ejecutar: npm run android:apk
+echo.
 exit /b 1
 
 :error
