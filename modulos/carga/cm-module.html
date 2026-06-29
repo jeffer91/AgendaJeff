@@ -7,6 +7,7 @@
     - Registrar texto, TXT, CSV y archivos como fuentes.
     - Procesar fuentes y abrir una subpantalla interna de revisión editable a pantalla completa.
     - Guardar o exportar registros revisados con campos estándar.
+    - Mostrar mensajes visibles de guardado y depuración de duplicados.
 -->
 
 <!DOCTYPE html>
@@ -91,7 +92,7 @@
             <strong id="cmReviewTitle">Revisar tabla editable</strong>
           </div>
           <p>Campos finales: <strong>Actividad</strong>, <strong>Fecha inicio</strong>, <strong>Fecha fin</strong>, <strong>Hora inicio</strong> y <strong>Hora fin</strong>.</p>
-          <p>Detectados: <strong id="cmDetectedCount">0</strong> · Guardados: <strong id="cmSaveCount">0</strong></p>
+          <p>Detectados: <strong id="cmDetectedCount">0</strong> · Guardados: <strong id="cmSaveCount">0</strong> · Duplicados omitidos: <strong id="cmDuplicateCount">0</strong></p>
         </div>
         <div class="cm-actions cm-actions-top">
           <button id="cmBtnApproveSelected" class="cm-btn cm-btn-primary" type="button">Guardar seleccionados</button>
@@ -100,6 +101,8 @@
           <button id="cmBtnBackToSources" class="cm-btn" type="button">Volver a fuentes</button>
         </div>
       </div>
+
+      <div id="cmReviewNotice" class="cm-review-notice" role="status" aria-live="polite" hidden></div>
 
       <div class="cm-review-layout">
         <div id="cmReviewTable" class="cm-review-table">Sin procesamiento.</div>
