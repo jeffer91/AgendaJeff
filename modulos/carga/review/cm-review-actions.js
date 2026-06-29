@@ -79,6 +79,10 @@
     carga.state.selectedCandidateId = item.id;
   }
 
+  function isBackendDuplicate(result) {
+    return Boolean(result && result.ok === false && result.error && (result.error.duplicate || result.error.message === "duplicate"));
+  }
+
   async function saveCandidate(candidate, options) {
     const opts = options || {};
     const bridge = carga.dom.bridge();
@@ -108,6 +112,15 @@
     }
 
     const result = await bridge.saveAgendaItem(candidateToAgendaItem(candidate));
+    if (isBackendDuplicate(result)) {
+      candidate.duplicate = true;
+      candidate.selected = false;
+      candidate.status = "posible_duplicado";
+      const message = "No se guardó porque la base local detectó un duplicado.";
+      if (!opts.silent) reviewNotice(message, "warning");
+      carga.dom.status("Duplicado omitido", message, "Depurado");
+      return { ok: false, skipped: true, duplicate: true, message, backendResult: result };
+    }
     if (result && result.ok !== false) {
       candidate.status = "guardado";
       candidate.selected = false;
@@ -209,6 +222,7 @@
       } else if (result && result.skipped) {
         const dup = Number((carga.dom.el("cmDuplicateCount") || {}).textContent || 0) + 1;
         carga.dom.text("cmDuplicateCount", String(dup));
+        reviewNotice("Fila omitida por duplicado. No se volvió a guardar.", "warning");
         carga.reviewRender.renderReview();
       }
     }
