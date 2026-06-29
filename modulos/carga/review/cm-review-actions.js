@@ -13,8 +13,18 @@
     return candidates().find(function (item) { return item.id === id; }) || null;
   }
 
+  function reviewNotice(message, type) {
+    const box = carga.dom.el("cmReviewNotice");
+    if (box) {
+      box.hidden = false;
+      box.className = `cm-review-notice is-${type || "info"}`;
+      box.textContent = message;
+    }
+  }
+
   function refreshStatus(candidate) {
     if (!candidate) return;
+    if (candidate.status === "guardado") return;
     if (candidate.actividad) candidate.titulo = candidate.actividad;
     candidate.status = carga.eventParser.statusFor(candidate);
     if (candidate.duplicate && candidate.status === "listo") candidate.status = "posible_duplicado";
@@ -46,6 +56,7 @@
     item[field] = input.value;
     if (field === "actividad") item.titulo = input.value;
     if (field === "fechaInicio" && !item.fechaFin) item.fechaFin = input.value;
+    if (item.status === "guardado") item.status = "listo";
     refreshStatus(item);
     return item;
   }
@@ -68,19 +79,41 @@
     carga.state.selectedCandidateId = item.id;
   }
 
-  async function saveCandidate(candidate) {
+  async function saveCandidate(candidate, options) {
+    const opts = options || {};
     const bridge = carga.dom.bridge();
     if (!candidate) return { ok: false, message: "Registro no encontrado." };
-    refreshStatus(candidate);
+    if (candidate.status !== "guardado") refreshStatus(candidate);
     if (!candidate.fechaInicio || !(candidate.actividad || candidate.titulo)) {
-      carga.dom.status("Falta información", "Completa actividad y fecha inicio antes de guardar.", "Revisión");
-      return { ok: false, message: "Falta actividad o fecha." };
+      const message = "Completa actividad y fecha inicio antes de guardar.";
+      if (!opts.silent) reviewNotice(message, "warning");
+      carga.dom.status("Falta información", message, "Revisión");
+      return { ok: false, message: "Falta actividad o fecha.", invalid: true };
     }
     if (!bridge || typeof bridge.saveAgendaItem !== "function") {
-      carga.dom.status("Sin Electron", "Abre la app como escritorio para guardar en la base local.", "Pendiente");
+      const message = "Abre la app como escritorio para guardar en la base local.";
+      if (!opts.silent) reviewNotice(message, "warning");
+      carga.dom.status("Sin Electron", message, "Pendiente");
       return { ok: false, message: "Puente Electron no disponible." };
     }
-    return bridge.saveAgendaItem(candidateToAgendaItem(candidate));
+
+    const duplicate = carga.duplicates && typeof carga.duplicates.findExistingDuplicate === "function" ? await carga.duplicates.findExistingDuplicate(candidate) : null;
+    if (duplicate) {
+      candidate.duplicate = true;
+      candidate.status = "posible_duplicado";
+      const message = "No se guardó porque ya existe un evento igual en la base local.";
+      if (!opts.silent) reviewNotice(message, "warning");
+      carga.dom.status("Duplicado omitido", message, "Depurado");
+      return { ok: false, skipped: true, duplicate: true, message };
+    }
+
+    const result = await bridge.saveAgendaItem(candidateToAgendaItem(candidate));
+    if (result && result.ok !== false) {
+      candidate.status = "guardado";
+      candidate.selected = false;
+      candidate.duplicate = false;
+    }
+    return result;
   }
 
   function exportRows(rows, filename) {
@@ -124,16 +157,19 @@
   function exportAll() {
     const rows = candidates();
     if (!rows.length) {
+      reviewNotice("No hay filas para exportar.", "warning");
       carga.dom.status("Sin registros", "No hay filas para exportar.", "Revisión");
       return;
     }
     exportRows(rows, `agendaJeff-carga-masiva-${new Date().toISOString().slice(0, 10)}.csv`);
+    reviewNotice(`${rows.length} fila(s) exportadas en CSV.`, "success");
     carga.dom.status("Exportación lista", `${rows.length} fila(s) exportadas en CSV.`, "Exportado");
   }
 
   function exportOne(candidate) {
     if (!candidate) return;
     exportRows([candidate], `agendaJeff-${safeFilename(candidate.actividad || candidate.titulo)}.csv`);
+    reviewNotice("Se exportó la fila seleccionada en CSV.", "success");
     carga.dom.status("Fila exportada", "Se exportó la fila seleccionada en CSV.", "Exportado");
   }
 
@@ -153,6 +189,7 @@
     if (action === "remove") {
       carga.state.candidates = candidates().filter(function (candidate) { return candidate.id !== id; });
       carga.reviewRender.renderReview();
+      reviewNotice("Fila eliminada de la revisión.", "info");
       return;
     }
 
@@ -164,9 +201,15 @@
     if (action === "save-row" && item) {
       const result = await saveCandidate(item);
       if (result && result.ok !== false) {
-        carga.dom.status("Fila guardada", "El registro seleccionado fue enviado a la base local.", "Guardado");
         const saved = Number((carga.dom.el("cmSaveCount") || {}).textContent || 0) + 1;
         carga.dom.text("cmSaveCount", String(saved));
+        reviewNotice("Fila guardada correctamente. Ya no queda seleccionada para evitar doble guardado.", "success");
+        carga.dom.status("Fila guardada", "El registro seleccionado fue enviado a la base local.", "Guardado");
+        carga.reviewRender.renderReview();
+      } else if (result && result.skipped) {
+        const dup = Number((carga.dom.el("cmDuplicateCount") || {}).textContent || 0) + 1;
+        carga.dom.text("cmDuplicateCount", String(dup));
+        carga.reviewRender.renderReview();
       }
     }
   }
@@ -203,25 +246,60 @@
     candidates().push(item);
     carga.state.selectedCandidateId = item.id;
     carga.reviewRender.renderReview();
+    reviewNotice("Fila agregada. Completa la información antes de guardar.", "info");
     carga.dom.status("Fila agregada", "Completa la fila manual en la tabla editable.", "Revisión");
   }
 
   async function approveSelected() {
-    const selected = candidates().filter(function (item) {
+    const allSelected = candidates().filter(function (item) { return item.selected; });
+    if (!allSelected.length) {
+      reviewNotice("No hay filas seleccionadas para guardar.", "warning");
+      return { ok: false, saved: 0, skipped: 0 };
+    }
+
+    const seen = new Set();
+    const validUnique = [];
+    let invalid = 0;
+    let repeatedInsideSelection = 0;
+
+    allSelected.forEach(function eachSelected(item) {
       refreshStatus(item);
-      return item.selected && item.fechaInicio && (item.actividad || item.titulo);
+      if (!item.fechaInicio || !(item.actividad || item.titulo)) {
+        invalid += 1;
+        return;
+      }
+      const key = carga.duplicates && typeof carga.duplicates.uniqueKey === "function" ? carga.duplicates.uniqueKey(item) : `${item.fechaInicio}|${item.actividad || item.titulo}`;
+      if (seen.has(key)) {
+        repeatedInsideSelection += 1;
+        item.selected = false;
+        item.duplicate = true;
+        item.status = "posible_duplicado";
+        return;
+      }
+      seen.add(key);
+      validUnique.push(item);
     });
 
     const results = [];
-    for (const candidate of selected) {
-      const result = await saveCandidate(candidate);
+    for (const candidate of validUnique) {
+      const result = await saveCandidate(candidate, { silent: true });
       results.push({ candidateId: candidate.id, result });
     }
 
     const saved = results.filter(function (item) { return item.result && item.result.ok !== false; }).length;
-    carga.dom.status("Carga guardada", `${saved} registro(s) enviados a la base local.`, "Guardado");
-    carga.dom.text("cmSaveCount", String(saved));
-    return { ok: true, saved, results };
+    const skippedExisting = results.filter(function (item) { return item.result && item.result.skipped; }).length;
+    const previousSaved = Number((carga.dom.el("cmSaveCount") || {}).textContent || 0);
+    const previousDuplicates = Number((carga.dom.el("cmDuplicateCount") || {}).textContent || 0);
+    const totalSkipped = skippedExisting + repeatedInsideSelection;
+
+    carga.dom.text("cmSaveCount", String(previousSaved + saved));
+    carga.dom.text("cmDuplicateCount", String(previousDuplicates + totalSkipped));
+
+    const message = `Guardado: ${saved}. Omitidos por duplicado: ${totalSkipped}. Incompletos: ${invalid}.`;
+    reviewNotice(message, saved > 0 ? "success" : "warning");
+    carga.dom.status("Carga procesada", message, "Guardado");
+    carga.reviewRender.renderReview();
+    return { ok: true, saved, skipped: totalSkipped, invalid, results };
   }
 
   function attach() {
@@ -242,5 +320,5 @@
     if (exportButton) exportButton.addEventListener("click", exportAll);
   }
 
-  carga.reviewActions = Object.freeze({ attach, approveSelected, candidateToAgendaItem, addManualRow, saveCandidate, exportAll, exportOne });
+  carga.reviewActions = Object.freeze({ attach, approveSelected, candidateToAgendaItem, addManualRow, saveCandidate, exportAll, exportOne, reviewNotice });
 })(window);
